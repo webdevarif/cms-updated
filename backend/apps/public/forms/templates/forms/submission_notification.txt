@@ -1,0 +1,18 @@
+# Email notification text template for form submissions
+# This will be used for plain text email content
+
+Subject: New Form Submission: {{ form.title }}
+
+Form ID: {{ form.form_id }}
+Submitted: {{ submission.created_at|date:"F j, Y, g:i a" }}
+{% if submission.user %}User: {{ submission.user.email }}{% endif %}
+IP Address: {{ submission.ip_address }}
+
+Submission Data:
+{% for field in submission.get_formatted_data %}
+{{ field.label }}: {{ field.value }}
+{% endfor %}
+
+---
+This notification was sent from {{ store.name }}.
+If you believe this is spam, please contact your system administrator.

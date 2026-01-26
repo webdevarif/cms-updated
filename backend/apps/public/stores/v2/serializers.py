@@ -1,11 +1,9 @@
 """
-Public stores serializers placeholder.
+Public stores serializers.
 """
-from rest_framework import serializers
+from apps.stores.serializers_v2 import BaseStorePublicSerializer
 
 
-class StorePublicSerializer(serializers.Serializer):
-    """
-    This is an architectural placeholder. No API surface or behavior defined yet for the public stores interface.
-    """
+class StorePublicSerializer(BaseStorePublicSerializer):
+    """Public store information"""
     pass

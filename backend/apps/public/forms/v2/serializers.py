@@ -2,8 +2,8 @@
 Serializers for forms module.
 """
 from rest_framework import serializers
-from ..models.forms import FormTemplate, EmailTemplate
-from ..models.submissions import FormSubmission, FormSubmissionData
+from apps.forms.models.forms import FormTemplate, EmailTemplate
+from apps.forms.models.submissions import FormSubmission, FormSubmissionData
 
 
 class FormTemplateSerializer(serializers.ModelSerializer):

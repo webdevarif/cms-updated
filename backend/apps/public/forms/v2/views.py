@@ -9,10 +9,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
 from drf_spectacular.utils import extend_schema
 
-from ..models.forms import FormTemplate
-from ..models.submissions import FormSubmission, FormSubmissionData
+from apps.forms.models.forms import FormTemplate
+from apps.forms.models.submissions import FormSubmission, FormSubmissionData
 from .serializers import FormTemplateSerializer, FormSubmissionSerializer
-from ..services import FormService
+from apps.forms.services import FormService
 
 
 class FormRateThrottle(UserRateThrottle):

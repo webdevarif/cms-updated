@@ -15,8 +15,8 @@ class TestEntityService:
         """Test toggle action"""
         from apps.stores.models import Store
         from apps.entities.models import EntityAction, EntityInteraction
-        from apps.entities.v2.services import EntityService
-        from apps.posts.v2.models import Post, PostType
+        from apps.entities.services import EntityService
+        from apps.posts.models import Post, PostType
         
         user = User.objects.create_user(email='test@example.com', password='pass')
         store = Store.objects.create(name='Test Store', owner=user)

@@ -49,8 +49,17 @@ class LoggingMiddleware:
             }
         }
         
-        # Use async for performance
-        log_event_async.delay(log_data)
+        # Use async for performance - TEMPORARILY DISABLED
+        # log_event_async.delay(log_data)
+        
+        # TODO: Re-enable async logging when Celery is configured
+        # For now, log synchronously to avoid connection errors
+        try:
+            from .models import LogEntry
+            LogEntry.objects.create(**log_data)
+        except Exception as e:
+            # Silently fail to avoid breaking the application
+            pass
         
         return response
     

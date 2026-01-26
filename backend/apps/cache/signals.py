@@ -5,6 +5,7 @@ Automatic cache invalidation on model changes.
 """
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.core.cache import cache
 from .services import CacheService
 import logging
 
@@ -171,19 +172,19 @@ def invalidate_store_cache_on_save(sender, instance, **kwargs):
     logger.debug(f"Invalidated all cache for store {instance.slug} on update")
 
 
-@receiver(post_save, sender='themes.Theme')
-def invalidate_theme_cache(sender, instance, **kwargs):
-    """Invalidate theme cache on theme save"""
-    if hasattr(instance, 'store'):
-        store = instance.store
-        
-        # Invalidate theme cache
-        CacheService.delete(store, 'themes', 'theme', str(instance.id))
-        
-        # Invalidate theme listings
-        CacheService.delete_pattern(store, 'themes:theme:*')
-        
-        # Invalidate pages that depend on theme
-        CacheService.delete_pattern(store, 'pages:page:*')
-        
-        logger.debug(f"Invalidated theme cache for {instance.id} in store {store.slug}")
+# @receiver(post_save, sender='themes.Theme')
+# def invalidate_theme_cache(sender, instance, **kwargs):
+#     """Invalidate theme cache on theme save"""
+#     if hasattr(instance, 'store'):
+#         store = instance.store
+#         
+#         # Invalidate theme cache
+#         CacheService.delete(store, 'themes', 'theme', str(instance.id))
+#         
+#         # Invalidate theme listings
+#         CacheService.delete_pattern(store, 'themes:theme:*')
+#         
+#         # Invalidate pages that depend on theme
+#         CacheService.delete_pattern(store, 'pages:page:*')
+#         
+#         logger.debug(f"Invalidated theme cache for {instance.id} in store {store.slug}")

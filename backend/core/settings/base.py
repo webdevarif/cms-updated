@@ -32,7 +32,8 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 # =============================================================================
 # AUTHENTICATION CONFIGURATION
 # =============================================================================
-AUTH_USER_MODEL = 'accounts.User'
+# AUTH_USER_MODEL = 'accounts.User'  # Temporarily commented out for migration
+AUTH_USER_MODEL = 'auth.User'  # Use default for now
 
 # =============================================================================
 # APPLICATION DEFINITION
@@ -56,7 +57,7 @@ INSTALLED_APPS = [
     'core',
     
     # Feature apps
-    'apps.accounts',
+    # 'apps.accounts',  # Temporarily commented out for migration
     'apps.stores',
     'apps.logs',
     'apps.smtp',
@@ -69,9 +70,9 @@ INSTALLED_APPS = [
     'apps.public.search',
     'apps.public.translations',
     'apps.public.ecommerce',
-    'apps.public.giftcards',
+    # 'apps.public.giftcards',  # Temporarily commented out for migration
     'apps.public.metafields',  # Added metafields
-    'apps.webhooks',
+    # 'apps.webhooks',  # Temporarily commented out for migration
     'apps.test',
     'apps.posts',
 ]
@@ -214,40 +215,27 @@ SIMPLE_JWT = {
 # CORS
 # =============================================================================
 CORS_ALLOW_ALL_ORIGINS = DEBUG
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://127.0.0.1:8000').split(',')
 
 # =============================================================================
-# ELASTICSEARCH
+# ELASTICSEARCH - TEMPORARILY DISABLED
 # =============================================================================
-ELASTICSEARCH_HOSTS = ['http://localhost:9200']
-ELASTICSEARCH_TIMEOUT = 30
+# ELASTICSEARCH_HOSTS = ['http://localhost:9200']
+# ELASTICSEARCH_TIMEOUT = 30
 
 # =============================================================================
-# CELERY
+# CELERY - TEMPORARILY DISABLED
 # =============================================================================
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+# CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+# CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
 
 # =============================================================================
-# CACHING
+# CACHING - TEMPORARILY DISABLED
 # =============================================================================
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'KEY_PREFIX': 'cms:',
-        'TIMEOUT': 300,  # 5 minutes default
-    },
-    'translations': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379/2'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'TIMEOUT': 3600,  # 1 hour
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
     }
 }
 

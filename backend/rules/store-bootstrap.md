@@ -1,21 +1,11 @@
-# Store Bootstrap Lifecycle Rules v1.0
+# Store-Bootstrap Rules v1.0
 
 ## 🎯 Purpose
-
 This document defines the complete store bootstrap lifecycle for CMS-Updated backend, ensuring all stores are properly initialized with required content types, roles, settings, and permissions upon creation.
 
-## 📚 Related Documents
-- [Core Architecture](../core.md)
-- [Store Management](../stores.md)
-- [Authentication & Permissions](../authentication.md)
-
----
-
-## 🏗️ Store Bootstrap Overview
-
+## 🏗️ Structure
 ### **Bootstrap Phases**
 When a new store is created, the following phases **must** be executed in order:
-
 1. **Phase 1: Core Store Creation** - Basic store record
 2. **Phase 2: Content Type Initialization** - Required post types
 3. **Phase 3: Role and Permission Setup** - Default roles and permissions
@@ -25,80 +15,14 @@ When a new store is created, the following phases **must** be executed in order:
 7. **Phase 7: Cache Warming** - Initial cache population
 8. **Phase 8: Notification Setup** - Default notification preferences
 
-## � Authentication & Permissions
-- **Required Permission**: `stores.add_store` to create a new store
-- **Bootstrap Execution**: Runs with the permissions of the user who created the store
-
----
-
-## 📋 Phase 1: Core Store Creation
-
-### **Bootstrap Fields to Add to Store Model**
-Add these fields to your existing `Store` model in `apps/stores/models.py`:
-
-```python
-# Bootstrap tracking fields
-bootstrap_completed = models.BooleanField(
-    default=False,
-    help_text="Indicates if bootstrap process has completed successfully"
-)
-bootstrap_phase = models.CharField(
-    max_length=50, 
-    blank=True,
-    help_text="Current phase of the bootstrap process"
-)
-bootstrap_error = models.TextField(
-    blank=True,
-    help_text="Any errors that occurred during bootstrap"
-)
-```
-
-### **Bootstrap Lifecycle Hook**
-Add this to your `Store` model's `save()` method:
-
-```python
-def save(self, *args, **kwargs):
-    is_new = self.pk is None
-    super().save(*args, **kwargs)
-    
-    if is_new:
-        # Import here to avoid circular imports
-        from .services import StoreBootstrapService
-        StoreBootstrapService.bootstrap_store(self)
-```
-
-### **Store Model Integration**
-Your existing `Store` model should already have these core fields:
-- `name`
-- `slug` (unique)
-- `status` (with appropriate choices)
-- `owner` (ForeignKey to User)
-- `created_at`
-- `updated_at`
-```
-
----
-
-## 🛠️ Phase 2: Content Type Initialization
-
-### **Required Post Types**
-All stores **must** have the following non-deletable post types:
-
-1. **Page** - Static pages (About, Contact, etc.)
-2. **Blog** - Blog posts
-3. **Product** - Product catalog (if ecommerce enabled)
-
-### **Bootstrap Implementation**
+## 🔧 Implementation
 ```python
 # apps/stores/services.py
 from django.db import transaction
 import logging
-
 logger = logging.getLogger(__name__)
-
 class StoreBootstrapService:
     """Store bootstrap service"""
-    
     @staticmethod
     @transaction.atomic
     def bootstrap_store(store):
@@ -107,34 +31,27 @@ class StoreBootstrapService:
         """
         try:
             logger.info(f"Starting bootstrap for store: {store.slug}")
-            
             # Phase 1: Core store creation (already done)
             StoreBootstrapService._phase1_complete(store)
-            
             # Phase 2: Content type initialization
-            
             # Mark as complete
             store.bootstrap_completed = True
             store.bootstrap_phase = 'completed'
             store.save(update_fields=['bootstrap_completed', 'bootstrap_phase'])
-            
         except Exception as e:
             store.bootstrap_error = str(e)
             store.save(update_fields=['bootstrap_error'])
             logger.error(f"Bootstrap failed for store {store.slug}: {e}")
             raise
-    
     @staticmethod
     def _bootstrap_phase_2(store, actor):
         """
         Initialize content types and default pages
-        
         Args:
             store: The Store instance
             actor: The User who initiated the bootstrap
         """
         logger.info(f"Starting phase 2 for store: {store.slug}")
-        
         # Create required post types
         post_types = [
             {
@@ -159,7 +76,6 @@ class StoreBootstrapService:
                 'is_deletable': False
             }
         ]
-        
         for post_type_data in post_types:
             PostType.objects.get_or_create(
                 store=store,
@@ -172,25 +88,20 @@ class StoreBootstrapService:
                     'created_by': actor  # Use the actor as creator
                 }
             )
-        
         # Create default pages
         StoreBootstrapService._create_default_pages(store)
-        
         store.bootstrap_phase = 'phase2_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 2 complete for store: {store.slug}")
-    
     @staticmethod
     def _bootstrap_phase_3(store, actor):
         """
         Initialize roles and permissions
-        
         Args:
             store: The Store instance
             actor: The User who will be assigned as store owner
         """
         logger.info(f"Starting phase 3 for store: {store.slug}")
-        
         # Create default roles
         roles = [
             {
@@ -229,9 +140,7 @@ class StoreBootstrapService:
                 'permissions': ['content.read']
             }
         ]
-        
         owner_role = None
-        
         for role_data in roles:
             role, created = Role.objects.get_or_create(
                 store=store,
@@ -243,13 +152,10 @@ class StoreBootstrapService:
                     'created_by': actor  # Track who created the role
                 }
             )
-            
             if created and role_data.get('permissions'):
                 role.permissions.set(role_data['permissions'])
-            
             if role.slug == 'owner':
                 owner_role = role
-        
         # Assign owner role to the actor
         if owner_role:
             StoreMember.objects.get_or_create(
@@ -265,16 +171,13 @@ class StoreBootstrapService:
             user=store.owner,
             defaults={'role': owner_role}
         )
-        
         store.bootstrap_phase = 'phase3_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 3 complete for store: {store.slug}")
-    
     @staticmethod
     def _create_role_permissions(store, role):
         """Create permissions for a role"""
         from apps.accounts.models import Permission
-        
         # Define permission sets based on role
         permission_sets = {
             'owner': ['*'],  # All permissions
@@ -283,23 +186,18 @@ class StoreBootstrapService:
             'staff': ['content.read', 'ecommerce.read'],
             'viewer': ['content.read']
         }
-        
         permissions = permission_sets.get(role.slug, [])
-        
         for perm in permissions:
             Permission.objects.get_or_create(
                 store=store,
                 code=perm,
                 defaults={'description': f'{perm} permission'}
             )
-            
             role.permissions.add(Permission.objects.get(store=store, code=perm))
-    
     @staticmethod
     def _phase4_configuration(store):
         """Phase 4: Default configuration"""
         from apps.metafields.services import MetaFieldService
-        
         # Set default store configuration
         default_config = {
             'currency': 'USD',
@@ -310,7 +208,6 @@ class StoreBootstrapService:
             'tax_rate': '0.00',
             'shipping_free_threshold': '0'
         }
-        
         for key, value in default_config.items():
             MetaFieldService.set_metafield_value(
                 store,
@@ -318,23 +215,19 @@ class StoreBootstrapService:
                 value,
                 namespace='config'
             )
-        
         store.bootstrap_phase = 'phase4_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 4 complete for store: {store.slug}")
-    
     @staticmethod
     def _phase5_theme(store):
         """Phase 5: Theme initialization"""
         from apps.themes.models import Theme, ColorScheme, Typography
-        
         # Create default theme
         theme, created = Theme.objects.get_or_create(
             store=store,
             name='Default Theme',
             defaults={'is_active': True}
         )
-        
         if created:
             # Create default color scheme
             ColorScheme.objects.create(
@@ -350,7 +243,6 @@ class StoreBootstrapService:
                 },
                 is_default=True
             )
-            
             # Create default typography
             Typography.objects.create(
                 store=store,
@@ -362,16 +254,13 @@ class StoreBootstrapService:
                     'heading': 'Georgia, serif'
                 }
             )
-        
         store.bootstrap_phase = 'phase5_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 5 complete for store: {store.slug}")
-    
     @staticmethod
     def _phase6_search_index(store):
         """Phase 6: Search index creation"""
         from apps.search.models import SearchIndex
-        
         # Create search index for store
         SearchIndex.objects.get_or_create(
             store=store,
@@ -391,32 +280,25 @@ class StoreBootstrapService:
                 'is_active': True
             }
         )
-        
         # Warm search index
         from apps.search.services import SearchService
         SearchService.rebuild_index(store)
-        
         store.bootstrap_phase = 'phase6_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 6 complete for store: {store.slug}")
-    
     @staticmethod
     def _phase7_cache_warming(store):
         """Phase 7: Cache warming"""
         from apps.cache.services import CacheWarmupService
-        
         # Warm cache for store
         CacheWarmupService.warm_store_cache(store)
-        
         store.bootstrap_phase = 'phase7_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 7 complete for store: {store.slug}")
-    
     @staticmethod
     def _phase8_notifications(store):
         """Phase 8: Notification setup"""
         from apps.notifications.models import NotificationPreference, NotificationTemplate
-        
         # Create default notification templates
         templates = [
             {
@@ -434,20 +316,17 @@ class StoreBootstrapService:
                 'email_body_template': 'Thank you for registering!'
             }
         ]
-        
         for template_data in templates:
             NotificationTemplate.objects.get_or_create(
                 store=store,
                 notification_type=template_data['notification_type'],
                 defaults=template_data
             )
-        
         # Create default notification preferences for owner
         notification_types = [
             'order.created', 'order.shipped', 'order.delivered',
             'user.registered', 'form.submitted', 'system.alert'
         ]
-        
         for notification_type in notification_types:
             NotificationPreference.objects.get_or_create(
                 store=store,
@@ -458,7 +337,6 @@ class StoreBootstrapService:
                     'digest_enabled': False
                 }
             )
-        
         store.bootstrap_phase = 'phase8_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 8 complete for store: {store.slug}")
@@ -466,67 +344,10 @@ class StoreBootstrapService:
 
 ---
 
-## 🔄 Bootstrap Retries
+## 🔒 Permissions
+[Permissions content to be added]
 
-### **Retry Logic**
-If bootstrap fails at any phase, the system should:
-
-1. **Log the error** - Store error in `bootstrap_error` field
-2. **Mark phase** - Set `bootstrap_phase` to the failed phase
-3. **Allow retry** - Provide mechanism to retry bootstrap
-
-### **Retry Implementation**
-```python
-# apps/stores/services.py (continued)
-
-@staticmethod
-def retry_bootstrap(store):
-    """
-    Retry bootstrap for a store
-    """
-    if store.bootstrap_completed:
-        logger.warning(f"Store {store.slug} already bootstrapped")
-        return False
-    
-    # Clear error
-    store.bootstrap_error = ''
-    store.save(update_fields=['bootstrap_error'])
-    
-    # Retry bootstrap
-    StoreBootstrapService.bootstrap_store(store)
-    
-    return True
-```
-
----
-
-## 🔧 Management Commands
-
-### **Bootstrap Store**
-```bash
-# Bootstrap a specific store
-python manage.py bootstrap_store --slug=my-store
-
-# Bootstrap all stores
-python manage.py bootstrap_store --all
-
-# Retry failed bootstrap
-python manage.py bootstrap_store --retry
-```
-
-### **Bootstrap Status**
-```bash
-# Check bootstrap status
-python manage.py bootstrap_status --slug=my-store
-
-# List stores with failed bootstrap
-python manage.py bootstrap_status --failed
-```
-
----
-
-## 🧪 Testing Rules
-
+## 🧪 Testing
 ### **Required Coverage**
 - **Bootstrap Service**: 100% code coverage
 - **Integration**: Critical path testing
@@ -539,13 +360,10 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from ..services import StoreBootstrapService
 from ..models import Store
-
 User = get_user_model()
-
 class StoreBootstrapTest(TestCase):
     """
     Test the store bootstrap process
-    
     Note: We create a test user here because tests run in isolation.
     In production, the user would come from the request.
     """
@@ -555,44 +373,35 @@ class StoreBootstrapTest(TestCase):
             email='test@example.com',
             password='password'
         )
-        
         # Create a store owned by the test user
         self.store = Store.objects.create(
             name='Test Store',
             slug='test-store',
             owner=self.user
         )
-    
     def test_complete_bootstrap_flow(self):
         """Test the complete bootstrap flow"""
         # Execute bootstrap
         StoreBootstrapService.bootstrap_store(store=self.store, actor=self.user)
-        
         # Refresh store from DB
         self.store.refresh_from_db()
-        
         # Verify bootstrap completed
         self.assertTrue(self.store.bootstrap_completed)
         self.assertEqual(self.store.bootstrap_phase, 'completed')
-        
         # Verify post types were created
         from apps.posts.models import PostType
         self.assertTrue(PostType.objects.filter(store=self.store).exists())
-        
         # Verify roles were created
         from apps.accounts.models import Role
         self.assertTrue(Role.objects.filter(store=self.store).exists())
-        
         # Verify owner role was assigned to the actor
         from apps.accounts.models import StoreMember
         member = StoreMember.objects.get(store=self.store, user=self.user)
         self.assertEqual(member.role.slug, 'owner')
-    
     def test_bootstrap_with_existing_owner(self):
         """Test bootstrap when owner already exists"""
         # First bootstrap
         StoreBootstrapService.bootstrap_store(store=self.store, actor=self.user)
-        
         # Should not create duplicate owner
         from apps.accounts.models import StoreMember
         owners = StoreMember.objects.filter(
@@ -600,94 +409,90 @@ class StoreBootstrapTest(TestCase):
             role__slug='owner'
         )
         self.assertEqual(owners.count(), 1)
-    
     def test_bootstrap_error_handling(self):
         """Test error handling during bootstrap"""
         # Force an error by making store name invalid
         self.store.name = ''
         self.store.save(update_fields=['name'])
-        
         with self.assertRaises(ValueError):
             StoreBootstrapService.bootstrap_store(store=self.store, actor=self.user)
-            
         # Verify error state was recorded
         self.store.refresh_from_db()
         self.assertIsNotNone(self.store.bootstrap_error)
         self.assertFalse(self.store.bootstrap_completed)
-        
         # Retry bootstrap
         result = StoreBootstrapService.retry_bootstrap(store)
-        
         self.assertTrue(result)
         self.assertTrue(store.bootstrap_completed)
 ```
 
 ---
 
-## 📚 Bootstrap Best Practices
-
-### **DO:**
-1. **Use atomic transactions** - All-or-nothing bootstrap
-2. **Log each phase** - Maintain audit trail
-3. **Handle failures gracefully** - Allow retry mechanism
-4. **Validate bootstrap completion** - Ensure all phases complete
-5. **Create non-deletable items** - Protect system content
-6. **Use sensible defaults** - Provide good out-of-box experience
-7. **Warm cache on bootstrap** - Improve initial performance
-8. **Set up notifications** - Enable communication
-9. **Create search indexes** - Enable search functionality
-10. **Test bootstrap thoroughly** - Ensure reliability
-
-### **DON'T:**
-1. **Don't skip phases** - Execute all phases in order
-2. **Don't ignore errors** - Handle all exceptions
-3. **Don't allow partial bootstrap** - Complete or fail
-4. **Don't create deletable system items** - Protect core content
-5. **Don't forget to warm cache** - Improve performance
-6. **Don't skip notifications** - Enable communication
-7. **Don't assume success** - Verify each phase
-8. **Don't use blocking operations** - Keep bootstrap fast
-9. **Don't create circular dependencies** - Keep phases independent
-10. **Don't forget to test** - Ensure reliability
+## ⚙️ Services
+StoreBootstrapService.bootstrap_store(self)
+```
+### **Store Model Integration**
+Your existing `Store` model should already have these core fields:
+- `name`
+- `slug` (unique)
+- `status` (with appropriate choices)
+- `owner` (ForeignKey to User)
+- `created_at`
+- `updated_at`
+```
 
 ---
 
-## 📊 Bootstrap Monitoring
+## 🔗 Dependencies
+[Dependencies content to be added]
 
-### **Metrics to Track**
-- **Bootstrap Success Rate**: Percentage of successful bootstraps
-- **Bootstrap Duration**: Average time to complete bootstrap
-- **Failed Bootstraps**: Number of failed bootstraps
-- **Phase Failures**: Which phases fail most often
-
-### **Alerting**
-- **Bootstrap Failures**: Alert on bootstrap failures
-- **Long Bootstrap Times**: Alert if bootstrap > 5 minutes
-- **Failed Phase Alerts**: Alert on specific phase failures
+## 📋 Migration
+### **Bootstrap Fields to Add to Store Model**
+Add these fields to your existing `Store` model in `apps/stores/models.py`:
+```python
+# Bootstrap tracking fields
+bootstrap_completed = models.BooleanField(
+    default=False,
+    help_text="Indicates if bootstrap process has completed successfully"
+)
+bootstrap_phase = models.CharField(
+    max_length=50, 
+    blank=True,
+    help_text="Current phase of the bootstrap process"
+)
+bootstrap_error = models.TextField(
+    blank=True,
+    help_text="Any errors that occurred during bootstrap"
+)
+```
+### **Bootstrap Lifecycle Hook**
+Add this to your `Store` model's `save()` method:
+```python
+def save(self, *args, **kwargs):
+    is_new = self.pk is None
+    super().save(*args, **kwargs)
+    
+    if is_new:
+        # Import here to avoid circular imports
+        from .services import StoreBootstrapService
+        StoreBootstrapService.bootstrap_store(self)
+```
+### **Store Model Integration**
+Your existing `Store` model should already have these core fields:
+- `name`
+- `slug` (unique)
+- `status` (with appropriate choices)
+- `owner` (ForeignKey to User)
+- `created_at`
+- `updated_at`
+```
 
 ---
 
-## 🎯 Implementation Checklist
-
-- [ ] Create Store model with bootstrap fields
-- [ ] Implement StoreBootstrapService
-- [ ] Define all 8 bootstrap phases
-- [ ] Create default post types (Page, Blog, Product)
-- [ ] Create default pages (Home, About, Contact)
-- [ ] Create default roles (Owner, Admin, Manager, Staff, Viewer)
-- [ ] Create default permissions
-- [ ] Set default store configuration
-- [ ] Create default theme
-- [ ] Set up search index
-- [ ] Warm cache
-- [ ] Set up notifications
-- [ ] Implement retry logic
-- [ ] Create management commands
-- [ ] Add monitoring and logging
-- [ ] Create tests (bootstrap service, integration)
+## ✅ Benefits
+[Benefits content to be added]
 
 ---
-
-## 📖 Version History
-
-- **v1.0** - Initial version with complete bootstrap lifecycle
+**Version**: 1.0  
+**Last Updated**: 2026-01-26
+**Next Review**: 2026-02-25

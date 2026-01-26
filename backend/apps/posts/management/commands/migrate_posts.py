@@ -4,7 +4,7 @@ Management command to migrate legacy posts.
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from apps.stores.models import Store
-from ..v2.models import PostType, Post
+from ...models import PostType, Post
 
 
 class Command(BaseCommand):

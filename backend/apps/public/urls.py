@@ -10,7 +10,7 @@ urlpatterns = [
     path('forms/', include('apps.public.forms.v2.urls')),
     
     # Gift Cards API
-    path('gift-cards/', include('apps.public.giftcards.v2.urls')),
+    # path('gift-cards/', include('apps.public.giftcards.v2.urls')),
     
     # Logs API
     path('logs/', include('apps.logs.v2.urls')),

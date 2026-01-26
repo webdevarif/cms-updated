@@ -1,20 +1,24 @@
-# Queue App Rules v1.0
+# Queue Infrastructure Rules v1.0
+
+## Authority
+- Owner: Infrastructure Lead
+- Enforced By: QueueService, TaskMonitoringService, management commands
+- Scope: Shared Infrastructure
+- Authority Level: INFRASTRUCTURE STANDARD
 
 ## 🎯 Purpose
-
-This document defines strict development rules for the **queue** system in CMS-Updated backend, implementing a unified task queue management system with Celery for asynchronous processing across all modules.
+This document defines SHARED INFRASTRUCTURE rules for the **queue** system in CMS-Updated backend, implementing a unified task queue management system with Celery for asynchronous processing across all modules.
 
 ---
 
-## 🏗️ Queue System Structure
-
-### **Fixed Directory Structure**
+## 🏗️ Structure
+### **Infrastructure Directory Structure**
 ```
 apps/
 ├── queue/
 │   ├── __init__.py
-│   ├── services.py
-│   ├── tasks.py
+│   ├── services.py          # Infrastructure service layer
+│   ├── tasks.py             # Infrastructure task templates
 │   ├── management/
 │   │   └── commands/
 │   │       ├── list_tasks.py
@@ -27,10 +31,10 @@ apps/
 
 ---
 
-## 📋 Task Types
-
-### **Task Categories**
+## 📦 Data Model
+### **Infrastructure Task Categories**
 ```python
+# Infrastructure-provided task categories
 TASK_CATEGORIES = {
     'email': 'Email Sending',
     'webhook': 'Webhook Delivery',
@@ -47,9 +51,8 @@ TASK_CATEGORIES = {
 
 ---
 
-## 🛠️ Services Layer
-
-### **QueueService**
+## ⚙️ Services
+### **Infrastructure QueueService**
 ```python
 # apps/queue/services.py
 from celery import current_app
@@ -59,12 +62,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 class QueueService:
-    """Shared queue management service"""
+    """Infrastructure queue management service"""
     
     @staticmethod
     def enqueue_task(task_name, args=None, kwargs=None, countdown=0, eta=None):
         """
         Enqueue a task for async execution
+        INFRASTRUCTURE PROVIDES: Task queuing mechanism
         """
         task = current_app.send_task(
             task_name,
@@ -81,6 +85,7 @@ class QueueService:
     def get_task_status(task_id):
         """
         Get task status
+        INFRASTRUCTURE PROVIDES: Task status tracking
         """
         result = AsyncResult(task_id)
         
@@ -104,6 +109,7 @@ class QueueService:
     def revoke_task(task_id, terminate=False):
         """
         Revoke a task
+        INFRASTRUCTURE PROVIDES: Task revocation
         """
         current_app.control.revoke(task_id, terminate=terminate)
         logger.info(f"Revoked task: {task_id}")
@@ -113,6 +119,7 @@ class QueueService:
     def retry_task(task_id, countdown=60):
         """
         Retry a failed task
+        INFRASTRUCTURE PROVIDES: Task retry mechanism
         """
         current_app.control.revoke(task_id, terminate=False)
         result = AsyncResult(task_id)
@@ -130,6 +137,7 @@ class QueueService:
     def get_active_tasks():
         """
         Get list of active tasks
+        INFRASTRUCTURE PROVIDES: Active task monitoring
         """
         inspect = current_app.control.inspect()
         active = inspect.active()
@@ -151,6 +159,7 @@ class QueueService:
     def get_scheduled_tasks():
         """
         Get list of scheduled tasks
+        INFRASTRUCTURE PROVIDES: Scheduled task monitoring
         """
         inspect = current_app.control.inspect()
         scheduled = inspect.scheduled()
@@ -171,6 +180,7 @@ class QueueService:
     def get_worker_stats():
         """
         Get worker statistics
+        INFRASTRUCTURE PROVIDES: Worker performance monitoring
         """
         inspect = current_app.control.inspect()
         stats = inspect.stats()
@@ -186,65 +196,18 @@ class QueueService:
         return worker_stats
 ```
 
----
-
-## 🔄 Task Definition Standards
-
-### **Task Template**
-```python
-# Standard task template
-from celery import shared_task
-import logging
-
-logger = logging.getLogger(__name__)
-
-@shared_task(bind=True, max_retries=3)
-def example_task(self, *args, **kwargs):
-    """
-    Example task with retry logic
-    """
-    try:
-        # Task logic here
-        result = perform_operation(*args, **kwargs)
-        
-        logger.info(f"Task completed successfully: {self.request.id}")
-        return result
-        
-    except Exception as exc:
-        logger.error(f"Task failed: {exc}")
-        
-        # Retry with exponential backoff
-        raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
-```
-
-### **Task Best Practices**
-
-1. **Always use `bind=True`** - Access to task context
-2. **Set `max_retries`** - Prevent infinite retries
-3. **Use exponential backoff** - Avoid overwhelming system
-4. **Log all operations** - Maintain audit trail
-5. **Handle exceptions** - Graceful error handling
-6. **Use atomic transactions** - Prevent partial updates
-7. **Validate inputs** - Ensure data integrity
-8. **Document task purpose** - Clear task descriptions
-9. **Set appropriate timeouts** - Prevent hanging tasks
-10. **Use idempotent operations** - Safe to retry
-
----
-
-## 📊 Task Monitoring
-
-### **Task Monitoring Service**
+### **Infrastructure TaskMonitoringService**
 ```python
 # apps/queue/services.py (continued)
 
 class TaskMonitoringService:
-    """Task monitoring service"""
+    """Infrastructure task monitoring service"""
     
     @staticmethod
     def get_task_stats(hours=24):
         """
         Get task statistics for time period
+        INFRASTRUCTURE PROVIDES: Task performance analytics
         """
         from django.utils import timezone
         from datetime import timedelta
@@ -271,6 +234,7 @@ class TaskMonitoringService:
     def get_slow_tasks(threshold_ms=5000):
         """
         Get slow tasks
+        INFRASTRUCTURE PROVIDES: Performance bottleneck identification
         """
         from .models import TaskLog
         
@@ -282,6 +246,7 @@ class TaskMonitoringService:
     def get_failing_tasks(limit=50):
         """
         Get frequently failing tasks
+        INFRASTRUCTURE PROVIDES: Failure pattern analysis
         """
         from .models import TaskLog
         from django.db.models import Count
@@ -296,6 +261,8 @@ class TaskMonitoringService:
     def log_task(task_id, task_name, status, result=None, duration_ms=None, error=None):
         """
         Log task execution
+        INFRASTRUCTURE PROVIDES: Task execution logging
+        APPLICATION MUST: Call this method for task monitoring
         """
         from .models import TaskLog
         
@@ -311,139 +278,29 @@ class TaskMonitoringService:
 
 ---
 
-## 🚀 Celery Configuration
+## 🔐 Security
+### **Infrastructure Security Requirements**
+- INFRASTRUCTURE MUST validate task payloads and arguments
+- INFRASTRUCTURE MUST sanitize inputs before task execution
+- INFRASTRUCTURE MUST enforce rate limits on task creation
+- INFRASTRUCTURE MUST log task execution for audit trails
 
-### **Celery Settings**
-```python
-# settings.py
-
-# Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-
-# Task Settings
-CELERY_TASK_ALWAYS_EAGER = False  # Set to True for testing
-CELERY_TASK_EAGER_PROPAGATES = True
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TIMEZONE = 'UTC'
-CELERY_ENABLE_UTC = True
-
-# Task Routing
-CELERY_TASK_ROUTES = {
-    'apps.email.*': {'queue': 'email'},
-    'apps.webhooks.*': {'queue': 'webhooks'},
-    'apps.notifications.*': {'queue': 'notifications'},
-    'apps.search.*': {'queue': 'search'},
-    'apps.cache.*': {'queue': 'cache'},
-}
-
-# Task Timeouts
-CELERY_TASK_SOFT_TIME_LIMIT = 300  # 5 minutes
-CELERY_TASK_TIME_LIMIT = 360  # 6 minutes
-
-# Task Result Expiry
-CELERY_RESULT_EXPIRES = 3600  # 1 hour
-
-# Worker Concurrency
-CELERY_WORKER_CONCURRENCY = 4
-
-# Task Prefetch
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-
-# Task Acknowledgement
-CELERY_TASK_ACKS_LATE = True
-CELERY_DISABLE_RATE_LIMITS = False
-```
-
-### **Celery Beat Schedule**
-```python
-# settings.py
-from celery.schedules import crontab
-
-CELERY_BEAT_SCHEDULE = {
-    # Email queue processing
-    'process-email-queue': {
-        'task': 'apps.email.tasks.process_email_queue',
-        'schedule': crontab(minute='*/5'),  # Every 5 minutes
-    },
-    
-    # Webhook deliveries
-    'deliver-webhooks': {
-        'task': 'apps.webhooks.tasks.deliver_webhook',
-        'schedule': crontab(minute='*/1'),  # Every minute
-    },
-    
-    # Cache cleanup
-    'cleanup-cache': {
-        'task': 'apps.cache.tasks.clear_cache',
-        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
-    },
-    
-    # Search index rebuild
-    'rebuild-search-index': {
-        'task': 'apps.search.tasks.rebuild_index',
-        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
-    },
-    
-    # Notification cleanup
-    'cleanup-notifications': {
-        'task': 'apps.notifications.tasks.cleanup_old_notifications',
-        'schedule': crontab(hour=4, minute=0),  # Daily at 4 AM
-    },
-    
-    # Log cleanup
-    'cleanup-logs': {
-        'task': 'apps.logs.tasks.cleanup_old_logs',
-        'schedule': crontab(hour=5, minute=0),  # Daily at 5 AM
-    },
-}
-```
+### **Application Security Responsibilities**
+- APPLICATION MUST ensure tasks don't expose sensitive data
+- APPLICATION MUST validate task permissions before execution
+- APPLICATION MUST implement proper error handling
+- APPLICATION MUST NOT include secrets in task arguments
 
 ---
 
-## 🔧 Management Commands
-
-### **List Tasks**
-```bash
-# List active tasks
-python manage.py list_tasks --status=active
-
-# List scheduled tasks
-python manage.py list_tasks --status=scheduled
-
-# List failed tasks
-python manage.py list_tasks --status=failed
-```
-
-### **Retry Failed Tasks**
-```bash
-# Retry all failed tasks
-python manage.py retry_failed_tasks
-
-# Retry specific task
-python manage.py retry_failed_tasks --task-id=abc123
-```
-
-### **Purge Tasks**
-```bash
-# Purge all tasks
-python manage.py purge_tasks
-
-# Purge tasks by queue
-python manage.py purge_tasks --queue=email
-```
-
----
-
-## 🧪 Testing Rules
-
-### **Required Coverage**
+## 🧪 Testing
+### **Infrastructure Testing Requirements**
 - **Services**: 100% code coverage
 - **Tasks**: 100% code coverage
+- **Integration**: Critical path testing
+- **Performance**: Task execution time validation
 
-### **Test Examples**
+### **Infrastructure Test Examples**
 ```python
 # apps/queue/tests/test_services.py
 from django.test import TestCase
@@ -474,225 +331,103 @@ class QueueServiceTest(TestCase):
 
 ---
 
-## 🔗 Integration Examples
+## 🚫 Forbidden Patterns
+### **Infrastructure Forbidden Patterns**
+- MUST NOT execute tasks without proper validation
+- MUST NOT allow unlimited task retries
+- MUST NOT bypass task monitoring
+- MUST NOT ignore task timeout limits
 
-### **Integration with webhooks.md**
+### **Application Forbidden Patterns**
+- MUST NOT include sensitive data in task arguments
+- MUST NOT create tasks without proper error handling
+- MUST NOT ignore task failure notifications
+- MUST NOT use blocking operations in tasks
+
+---
+
+## 🔗 Cross-Module Dependencies
+### **Infrastructure Interface Requirements**
+- ALL modules MUST import from apps.queue.services
+- ALL modules MUST use QueueService for task operations
+- ALL modules MUST use TaskMonitoringService for logging
+- ALL modules MUST follow task naming conventions
+
+### **Application Integration Examples**
 ```python
-# apps/webhooks/tasks.py
+# APPLICATION RESPONSIBILITY: Use infrastructure services
 from celery import shared_task
-import logging
-
-logger = logging.getLogger(__name__)
+from apps.queue.services import TaskMonitoringService
 
 @shared_task(bind=True, max_retries=3)
-def deliver_webhook(self, delivery_id):
+def example_task(self, data_id):
     """
-    Async webhook delivery task
+    APPLICATION MUST: Implement task logic
+    APPLICATION MUST: Use infrastructure monitoring
     """
-    from .models import WebhookDelivery
-    from .services import WebhookService
-    
     try:
-        delivery = WebhookDelivery.objects.select_related('webhook').get(id=delivery_id)
-        result = WebhookService.deliver_webhook_sync(delivery)
+        # Application business logic here
+        result = process_data(data_id)
         
-        # Log task completion
-        from apps.queue.services import TaskMonitoringService
+        # APPLICATION MUST: Log task completion
         TaskMonitoringService.log_task(
             task_id=self.request.id,
-            task_name='deliver_webhook',
+            task_name='example_task',
             status='success',
-            result={'delivery_id': delivery_id}
+            result={'data_id': data_id}
         )
         
-        return {
-            'delivery_id': delivery_id,
-            'status': result.status
-        }
+        return result
         
     except Exception as exc:
-        logger.error(f"Webhook delivery failed: {exc}")
-        
-        # Log task failure
-        from apps.queue.services import TaskMonitoringService
+        # APPLICATION MUST: Log task failure
         TaskMonitoringService.log_task(
             task_id=self.request.id,
-            task_name='deliver_webhook',
+            task_name='example_task',
             status='failed',
             error=str(exc)
         )
         
-        raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
-```
-
-### **Integration with notifications.md**
-```python
-# apps/notifications/tasks.py
-from celery import shared_task
-import logging
-
-logger = logging.getLogger(__name__)
-
-@shared_task(bind=True, max_retries=3)
-def send_notification(self, notification_id):
-    """
-    Async notification sending task
-    """
-    from .models import Notification
-    from .services import NotificationService
-    
-    try:
-        notification = Notification.objects.get(id=notification_id)
-        result = NotificationService.send_notification(notification)
-        
-        # Log task completion
-        from apps.queue.services import TaskMonitoringService
-        TaskMonitoringService.log_task(
-            task_id=self.request.id,
-            task_name='send_notification',
-            status='success',
-            result={'notification_id': notification_id}
-        )
-        
-        return {
-            'notification_id': notification_id,
-            'status': result.status
-        }
-        
-    except Exception as exc:
-        logger.error(f"Notification sending failed: {exc}")
-        
-        # Log task failure
-        from apps.queue.services import TaskMonitoringService
-        TaskMonitoringService.log_task(
-            task_id=self.request.id,
-            task_name='send_notification',
-            status='failed',
-            error=str(exc)
-        )
-        
+        # APPLICATION MUST: Implement retry logic
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 ```
 
 ---
 
-## 📊 Task Logging Model
+## 📝 Notes
+### **Infrastructure Management Commands**
+#### List Tasks
+```bash
+# List active tasks
+python manage.py list_tasks --status=active
 
-### **TaskLog Model**
-```python
-# apps/queue/models.py
-from django.db import models
-from core.models import TenantModel
+# List scheduled tasks
+python manage.py list_tasks --status=scheduled
 
-class TaskLog(TenantModel):
-    """
-    Task execution log for monitoring
-    """
-    
-    # Core fields
-    task_id = models.CharField(max_length=255, db_index=True)
-    task_name = models.CharField(max_length=255, db_index=True)
-    
-    # Status
-    status = models.CharField(
-        max_length=20,
-        choices=[
-            ('pending', 'Pending'),
-            ('started', 'Started'),
-            ('success', 'Success'),
-            ('failed', 'Failed'),
-            ('retrying', 'Retrying'),
-            ('revoked', 'Revoked')
-        ],
-        db_index=True
-    )
-    
-    # Results
-    result = models.JSONField(default=dict, blank=True)
-    error_message = models.TextField(blank=True)
-    
-    # Timing
-    duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
-    # Metadata
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta(TenantModel.Meta):
-        db_table = 'queue_task_log'
-        indexes = [
-            models.Index(fields=['store', 'status', 'created_at']),
-            models.Index(fields=['task_name', 'created_at']),
-        ]
-        ordering = ['-created_at']
-    
-    def __str__(self):
-        return f"{self.task_name} - {self.status}"
+# List failed tasks
+python manage.py list_tasks --status=failed
+```
+
+#### Retry Failed Tasks
+```bash
+# Retry all failed tasks
+python manage.py retry_failed_tasks
+
+# Retry specific task
+python manage.py retry_failed_tasks --task-id=abc123
+```
+
+#### Purge Tasks
+```bash
+# Purge all tasks
+python manage.py purge_tasks
+
+# Purge tasks by queue
+python manage.py purge_tasks --queue=email
 ```
 
 ---
 
-## 📚 Queue Best Practices
-
-### **DO:**
-1. **Use shared tasks** - Define tasks in tasks.py files
-2. **Set appropriate timeouts** - Prevent hanging tasks
-3. **Use exponential backoff** - Avoid overwhelming system
-4. **Log all operations** - Maintain audit trail
-5. **Monitor task queues** - Track performance
-6. **Use idempotent operations** - Safe to retry
-7. **Validate inputs** - Ensure data integrity
-8. **Handle exceptions** - Graceful error handling
-9. **Use atomic transactions** - Prevent partial updates
-10. **Document task purpose** - Clear descriptions
-
-### **DON'T:**
-1. **Don't use eager mode in production** - Always async
-2. **Don't create infinite loops** - Always set max_retries
-3. **Don't ignore errors** - Handle all exceptions
-4. **Don't block on tasks** - Always async
-5. **Don't store large results** - Keep results small
-6. **Don't use long-running tasks** - Break into smaller tasks
-7. **Don't forget to log** - Maintain audit trail
-8. **Don't retry forever** - Set reasonable limits
-9. **Don't use blocking operations** - Keep tasks fast
-10. **Don't assume success** - Always handle failures
-
----
-
-## 📈 Monitoring
-
-### **Metrics to Track**
-- **Task Throughput**: Tasks processed per minute
-- **Task Latency**: Average task duration
-- **Error Rate**: Percentage of failed tasks
-- **Queue Size**: Number of pending tasks
-- **Worker Utilization**: CPU/memory usage
-
-### **Alerting**
-- **High Error Rate**: Alert if error rate > 10%
-- **Large Queue**: Alert if queue size > 1000
-- **Slow Tasks**: Alert if avg duration > 10s
-- **Worker Down**: Alert if worker not responding
-
----
-
-## 🎯 Implementation Checklist
-
-- [ ] Create QueueService with standard methods
-- [ ] Implement TaskMonitoringService
-- [ ] Create TaskLog model
-- [ ] Define task template standards
-- [ ] Create Celery configuration
-- [ ] Set up Celery Beat schedule
-- [ ] Create management commands
-- [ ] Add integration examples
-- [ ] Create tests (services, tasks)
-- [ ] Add monitoring and logging
-- [ ] Document queue best practices
-- [ ] Set up task monitoring
-
----
-
-## 📖 Version History
-
-- **v1.0** - Initial version with Celery integration
+**Version**: 1.0  
+**Last Updated**: 2026-01-26  
+**Next Review**: 2026-02-25

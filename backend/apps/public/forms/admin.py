@@ -26,5 +26,5 @@ class FormSubmissionAdmin(admin.ModelAdmin):
 @admin.register(EmailTemplate)
 class EmailTemplateAdmin(admin.ModelAdmin):
     """Admin for EmailTemplate"""
-    list_display = ['title', 'recipient_type', 'is_active']
-    list_filter = ['recipient_type', 'is_active']
+    list_display = ['name', 'template_type', 'is_active']
+    list_filter = ['template_type', 'is_active']

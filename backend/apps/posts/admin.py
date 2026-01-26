@@ -2,7 +2,7 @@
 Admin configuration for posts app.
 """
 from django.contrib import admin
-from .v2.models import Post, PostType, Taxonomy, Term
+from .models import Post, PostType, Taxonomy, Term
 
 
 @admin.register(PostType)

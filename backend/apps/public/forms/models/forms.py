@@ -2,6 +2,7 @@
 Form models.
 """
 from django.db import models
+from django.conf import settings
 import random
 import string
 from django.core.validators import RegexValidator
@@ -30,7 +31,7 @@ class FormTemplate(TenantModel):
     
     # Configuration
     fields = models.JSONField(default=dict, help_text="Dynamic form fields configuration")
-    settings = models.JSONField(default=dict, help_text="Form settings and options")
+    form_settings = models.JSONField(default=dict, help_text="Form settings and options")
     
     # Status and visibility
     STATUS_CHOICES = [
@@ -53,7 +54,7 @@ class FormTemplate(TenantModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        'auth.User', 
+        settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,

@@ -1,13 +1,11 @@
-# Forms App Rules v1.0
+# Forms Rules v1.0
 
 ## 🎯 Purpose
-
 This document defines strict development rules for the **forms** app in CMS-Updated backend, implementing a dynamic form builder similar to Shopify's with features inspired by Fluent Form, following the clean V2-only architecture.
 
 ---
 
-## 🏗️ Forms App Structure
-
+## 🏗️ Structure
 ### **Fixed Directory Structure**
 ```
 apps/
@@ -49,11 +47,874 @@ apps/
 
 ---
 
-## 📋 Core Models
+## 🔧 Implementation
+All form endpoints must be V2-only with clean architecture:
+#### PublicFormViewSet
+```python
+# apps/public/forms/v2/views.py
+from core.viewsets import TenantViewSet
+from core.permissions import AllowAny
+from drf_spectacular.utils import extend_schema
 
+class PublicFormViewSet(TenantViewSet):
+    """
+    Public form submission endpoints
+    No authentication required
+    """
+    permission_classes = [AllowAny]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    
+    queryset = FormTemplate.objects.filter(status='published', is_active=True)
+    serializer_class = PublicFormTemplateSerializer
+    search_fields = ['title', 'description']
+    ordering = ['title']
+    
+    def get_object(self):
+        """Override to lookup by form_id instead of pk"""
+        form_id = self.kwargs.get('pk')
+        if form_id:
+            return get_object_or_404(self.get_queryset(), form_id=form_id)
+        return super().get_object()
+    
+    @extend_schema(
+        summary="Get Form by ID",
+        description="Get form configuration by 6-digit form ID",
+        responses={200: PublicFormTemplateSerializer}
+    )
+    def retrieve(self, request, pk=None):
+        """Get form by 6-digit form_id"""
+        form_template = self.get_object()
+        serializer = self.get_serializer(form_template)
+        return Response(serializer.data)
+    
+    @extend_schema(
+        summary="Submit Form",
+        description="Submit form data using 6-digit form ID",
+        request=FormSubmissionSerializer,
+        responses={201: FormSubmissionSerializer}
+    )
+    @action(detail=True, methods=['post'])
+    def submit(self, request, pk=None):
+        """Submit form data using service layer"""
+        form_template = self.get_object()
+        
+        from services.form import FormService
+        try:
+            submission = FormService.submit_form(
+                form_template=form_template,
+                data=request.data,
+                store=getattr(request, 'store', None),
+                user=request.user if request.user.is_authenticated else None,
+                ip_address=request.META.get('REMOTE_ADDR'),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')
+            )
+            
+            serializer = FormSubmissionSerializer(submission)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except ValidationError as e:
+            return Response({
+                'error': 'Validation failed',
+                'details': e.detail
+            }, status=status.HTTP_400_BAD_REQUEST)
+```
+
+#### CustomerFormViewSet
+```python
+# apps/customer/forms/v2/views.py
+from core.viewsets import TenantViewSet
+from core.permissions import IsAuthenticated, IsStoreUser
+from drf_spectacular.utils import extend_schema
+
+class CustomerFormViewSet(TenantViewSet):
+    """
+    Customer form management endpoints
+    Requires customer authentication
+    """
+    permission_classes = [IsAuthenticated, IsStoreUser]
+    
+    def get_queryset(self):
+        return FormTemplate.objects.filter(
+            store=self.request.store,
+            created_by=self.request.user
+        )
+    
+    @extend_schema(
+        summary="Create Form",
+        description="Create new form template",
+        request=CreateFormTemplateSerializer,
+        responses={201: FormTemplateSerializer}
+    )
+    def create(self, request, *args, **kwargs):
+        """Create form with automatic owner assignment"""
+        return super().create(request, *args, **kwargs)
+    
+    @extend_schema(
+        summary="Update Form",
+        description="Update form template",
+        request=UpdateFormTemplateSerializer,
+        responses={200: FormTemplateSerializer}
+    )
+    def update(self, request, *args, **kwargs):
+        """Update form with validation"""
+        return super().update(request, *args, **kwargs)
+```
+
+#### DashboardFormViewSet
+```python
+# apps/dashboard/forms/v2/views.py
+from core.viewsets import TenantViewSet
+from core.permissions import IsAuthenticated, IsStoreStaff
+from drf_spectacular.utils import extend_schema
+
+class DashboardFormViewSet(TenantViewSet):
+    """
+    Dashboard form management endpoints
+    Requires staff authentication
+    """
+    permission_classes = [IsAuthenticated, IsStoreStaff]
+    
+    def get_queryset(self):
+        return FormTemplate.objects.filter(store=self.request.store)
+    
+    @extend_schema(
+        summary="List All Forms",
+        description="Get all forms for the store (including drafts)"
+        responses={200: FormTemplateSerializer}
+    )
+    def list(self, request, *args, **kwargs):
+        """Override to include draft forms"""
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    @extend_schema(
+        summary="Publish Form",
+        description="Publish form to make it publicly available",
+        responses={200: dict}
+    )
+    def publish(self, request, pk=None):
+        """Publish form"""
+        form = self.get_object()
+        form.status = 'published'
+        form.save(update_fields=['status'])
+        
+        return Response({
+            'message': f"Form '{form.title}' published successfully",
+            'form_id': form.form_id
+        })
+    
+    @action(detail=True, methods=['post'])
+    @extend_schema(
+        summary="Duplicate Form",
+        description="Create a copy of the form",
+        request=DuplicateFormSerializer,
+        responses={201: FormTemplateSerializer}
+    )
+    def duplicate(self, request, pk=None):
+        """Duplicate form with all fields"""
+        form = self.get_object()
+        
+        from services.form import FormService
+        new_form = FormService.duplicate_form(
+            original_form=form,
+            new_title=request.data.get('title', f"{form.title} (Copy)"),
+            store=form.store,
+            user=request.user
+        )
+        
+        serializer = FormTemplateSerializer(new_form)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+```
+
+---
+
+## 🔒 Permissions
+### **Permission Matrix**
+```python
+# core/permissions.py
+
+class IsFormOwner(BasePermission):
+    """Allow access only to form owner"""
+    
+    def has_object_permission(self, request, view, obj):
+        return (
+            request.user and 
+            request.user.is_authenticated and
+            obj.created_by == request.user
+        )
+
+class CanPublishForm(BasePermission):
+    """Allow publishing if user has permission"""
+    
+    def has_object_permission(self, request, view, obj):
+        return (
+            request.user and 
+            request.user.is_authenticated and
+            (
+                obj.created_by == request.user or
+                request.user.has_perm('forms.publish_form', obj.store)
+            )
+        )
+```
+
+---
+
+## 🧪 Testing
+### **Model Tests**
+```python
+# apps/forms/tests/test_models.py
+from django.test import TestCase
+from django.core.exceptions import ValidationError
+from apps.forms.models import FormTemplate, FormField
+
+class FormTemplateTest(TestCase):
+    def setUp(self):
+        self.store = Store.objects.create(name='Test Store', slug='test-store')
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            username='testuser',
+            password='testpass123'
+        )
+    
+    def test_create_form_template(self):
+        form = FormTemplate.objects.create(
+            store=self.store,
+            title='Contact Form',
+            created_by=self.user,
+            form_id='ABC123'
+        )
+        
+        self.assertEqual(form.title, 'Contact Form')
+        self.assertEqual(form.form_id, 'ABC123')
+        self.assertEqual(form.status, 'draft')
+    
+    def test_form_id_uniqueness(self):
+        FormTemplate.objects.create(
+            store=self.store,
+            title='Form 1',
+            created_by=self.user,
+            form_id='ABC123'
+        )
+        
+        with self.assertRaises(ValidationError):
+            FormTemplate.objects.create(
+                store=self.store,
+                title='Form 2',
+                created_by=self.user,
+                form_id='ABC123'  # Duplicate
+            )
+    
+    def test_auto_generate_form_id(self):
+        form = FormTemplate.objects.create(
+            store=self.store,
+            title='Auto Form',
+            created_by=self.user
+        )
+        
+        self.assertIsNotNone(form.form_id)
+        self.assertEqual(len(form.form_id), 6)
+        self.assertTrue(form.form_id.isalnum())
+```
+
+### **Service Tests**
+```python
+# apps/forms/tests/test_services.py
+from django.test import TestCase
+from unittest.mock import patch
+from apps.forms.services import FormService
+
+class FormServiceTest(TestCase):
+    def setUp(self):
+        self.store = Store.objects.create(name='Test Store', slug='test-store')
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            username='testuser',
+            password='testpass123'
+        )
+    
+    def test_submit_form_success(self):
+        form = FormTemplate.objects.create(
+            store=self.store,
+            title='Test Form',
+            created_by=self.user,
+            form_id='TEST123',
+            fields=[
+                {'type': 'text', 'label': 'Name', 'required': True},
+                {'type': 'email', 'label': 'Email', 'required': True}
+            ]
+        )
+        
+        submission_data = {
+            'Name': 'John Doe',
+            'Email': 'john@example.com'
+        }
+        
+        submission = FormService.submit_form(
+            form_template=form,
+            data=submission_data,
+            store=self.store,
+            user=self.user
+        )
+        
+        self.assertEqual(submission.form, form)
+        self.assertEqual(submission.data['Name'], 'John Doe')
+        self.assertEqual(submission.status, 'submitted')
+    
+    @patch('apps.forms.services.FormService.send_notification_email')
+    def test_submit_form_with_notification(self, mock_email):
+        form = FormTemplate.objects.create(
+            store=self.store,
+            title='Test Form',
+            created_by=self.user,
+            form_id='TEST123',
+            send_notifications=True
+        )
+        
+        submission = FormService.submit_form(
+            form_template=form,
+            data={'Name': 'Test'},
+            store=self.store,
+            user=self.user
+        )
+        
+        mock_email.assert_called_once()
+```
+
+---
+
+## ⚙️ Services
+### **FormService**
+```python
+# apps/forms/services.py
+from django.core.exceptions import ValidationError
+from django.db import transaction
+import uuid
+import logging
+
+logger = logging.getLogger(__name__)
+
+class FormService:
+    @staticmethod
+    def generate_form_id():
+        """Generate unique 6-digit form ID"""
+        while True:
+            form_id = ''.join(random.choices(string.ascii_uppercase + string.digits, 6))
+            if not FormTemplate.objects.filter(form_id=form_id).exists():
+                return form_id
+    
+    @staticmethod
+    def submit_form(form_template, data, store, user=None, ip_address=None, user_agent=''):
+        """Submit form data with validation"""
+        with transaction.atomic():
+            # Validate form fields
+            validated_data = FormService.validate_form_data(form_template, data)
+            
+            # Create submission
+            submission = FormSubmission.objects.create(
+                form=form_template,
+                store=store,
+                user=user,
+                data=validated_data,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                status='submitted'
+            )
+            
+            # Send notifications if configured
+            if form_template.send_notifications:
+                FormService.send_notification_email(submission)
+            
+            # Trigger webhook if configured
+            if form_template.webhook_url:
+                FormService.send_webhook(submission)
+            
+            logger.info(f"Form submitted: {form_template.title} - {submission.id}")
+            return submission
+    
+    @staticmethod
+    def validate_form_data(form_template, data):
+        """Validate form data against field definitions"""
+        validated_data = {}
+        errors = {}
+        
+        for field in form_template.fields:
+            field_name = field.get('name')
+            field_value = data.get(field_name)
+            
+            if field.get('required', False) and not field_value:
+                errors[field_name] = f"{field.get('label', field_name)} is required"
+                continue
+            
+            # Type validation
+            field_type = field.get('type')
+            if field_type == 'email' and field_value:
+                try:
+                    validate_email(field_value)
+                except ValidationError:
+                    errors[field_name] = "Invalid email address"
+            elif field_type == 'url' and field_value:
+                try:
+                    URLValidator()(field_value)
+                except ValidationError:
+                    errors[field_name] = "Invalid URL"
+            
+            validated_data[field_name] = field_value
+        
+        if errors:
+            raise ValidationError(errors)
+        
+        return validated_data
+    
+    @staticmethod
+    def duplicate_form(original_form, new_title, store, user):
+        """Duplicate a form template with all fields"""
+        with transaction.atomic():
+            new_form = FormTemplate.objects.create(
+                store=store,
+                title=new_title,
+                description=original_form.description,
+                created_by=user,
+                form_id=FormService.generate_form_id(),
+                status='draft',
+                fields=original_form.fields.copy(),
+                send_notifications=original_form.send_notifications,
+                webhook_url=original_form.webhook_url,
+                success_message=original_form.success_message,
+                error_message=original_form.error_message
+            )
+            
+            # Copy fields
+            for field in original_form.fields.all():
+                FormField.objects.create(
+                    form=new_form,
+                    **field.__dict__
+                )
+            
+            return new_form
+    
+    @staticmethod
+    def send_notification_email(submission):
+        """Send notification email to form owner"""
+        from core.libs.email import EmailService
+        
+        context = {
+            'submission': submission,
+            'form': submission.form,
+            'store': submission.store
+        }
+        
+        EmailService.send_template_email(
+            to_email=submission.form.created_by.email,
+            subject=f"New Form Submission: {submission.form.title}",
+            template_name='form_submission',
+            context=context
+        )
+    
+    @staticmethod
+    def send_webhook(submission):
+        """Send webhook notification"""
+        import requests
+        
+        try:
+            response = requests.post(
+                submission.form.webhook_url,
+                json={
+                    'event': 'form.submitted',
+                    'form_id': submission.form.form_id,
+                    'submission_id': submission.id,
+                    'data': submission.data,
+                    'timestamp': submission.created_at.isoformat()
+                },
+                timeout=10
+            )
+            logger.info(f"Webhook sent: {response.status_code}")
+        except Exception as e:
+            logger.error(f"Webhook failed: {e}")
+```
+
+---
+
+## 🔗 Dependencies
+```tree
+[Related components with @path references]
+```
+- accounts.md for user authentication and permissions
+- stores.md for store-scoped queries
+- notifications.md for email notifications
+- webhooks.md for webhook integration
+- core.md for base ViewSet and permissions
+```
+
+## 📋 Migration
+### **From Legacy Forms**
+```python
+# apps/forms/management/commands/migrate_forms.py
+from django.core.management.base import BaseCommand
+from django.db import transaction
+
+class Command(BaseCommand):
+    help = 'Migrate legacy forms to new structure'
+    
+    def handle(self, *args, **options):
+        from apps.legacy.models import LegacyForm
+        
+        queryset = LegacyForm.objects.all()
+        
+        with transaction.atomic():
+            for legacy_form in queryset:
+                # Map legacy fields to new structure
+                new_fields = []
+                for field in legacy_form.fields:
+                    new_fields.append({
+                        'type': field.field_type,
+                        'label': field.label,
+                        'required': field.required,
+                        'options': field.options or []
+                    })
+                
+                FormTemplate.objects.create(
+                    store=legacy_form.store,
+                    title=legacy_form.title,
+                    description=legacy_form.description,
+                    created_by=legacy_form.created_by,
+                    form_id=legacy_form.form_id or FormService.generate_form_id(),
+                    fields=new_fields,
+                    status='published' if legacy_form.is_active else 'draft',
+                    created_at=legacy_form.created_at
+                )
+        
+        self.stdout.write(self.style.SUCCESS('Migration completed'))
+```
+
+---
+
+## ✅ Benefits
+- ✅ **Dynamic Form Builder**: Create forms without coding
+- ✅ **Multi-tenant**: Store-scoped form isolation
+- ✅ **Clean Architecture**: V2-only with proper service layer
+- ✅ **Validation**: Built-in field validation and custom rules
+- ✅ **Notifications**: Email and webhook integrations
+- ✅ **Analytics**: Track submissions and form performance
+- ✅ **Security**: Proper permissions and data validation
+
+---
+
+**Version**: 1.0  
+**Last Updated**: 2026-01-26
+**Next Review**: 2026-02-25
+            submission = FormService.submit_form(
+                form_template, request.data, request
+            )
+            
+            serializer = FormSubmissionSerializer(submission)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except ValidationError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+```
+#### DashboardFormViewSet
+```python
+# apps/dashboard/forms/v2/views.py
+from core.viewsets import TenantViewSet
+from core.permissions import IsStoreOwner
+from drf_spectacular.utils import extend_schema
+
+class DashboardFormViewSet(TenantViewSet):
+    """
+    Form management endpoints for dashboard
+    """
+    permission_classes = [IsAuthenticated, IsStoreOwner]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    
+    queryset = FormTemplate.objects.all()
+    serializer_class = FormTemplateSerializer
+    filterset_fields = ['status', 'is_active']
+    search_fields = ['title', 'description']
+    ordering_fields = ['created_at', 'title']
+    ordering = ['-created_at']
+    
+    @extend_schema(
+        summary="Duplicate Form",
+        description="Create duplicate of existing form",
+        responses={201: FormTemplateSerializer}
+    )
+    @action(detail=True, methods=['post'])
+    def duplicate(self, request, pk=None):
+        """Duplicate form template using service layer"""
+        form_template = self.get_object()
+        
+        from services.form import FormService
+        new_form = FormService.duplicate_form(form_template, request.user)
+        
+        serializer = self.get_serializer(new_form)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+```
+---
+
+## 🔒 Permissions
+### **Form Security**
+- **Input Validation**: All form submissions must be validated against field configuration
+- **CSRF Protection**: All form endpoints must have CSRF protection
+- **Rate Limiting**: Implement rate limiting on form submission endpoints
+- **Spam Protection**: Implement CAPTCHA or honeypot fields
+- **Data Sanitization**: Sanitize all user input before storage
+- **Privacy**: Store only necessary data, comply with GDPR
+### **Email Security**
+- **Header Injection**: Prevent email header injection attacks
+- **Recipient Validation**: Validate all email recipients
+- **Attachment Scanning**: Scan uploaded files for malware
+- **Unsubscribe Links**: Include unsubscribe functionality
+---
+
+## 🧪 Testing
+### **Required Coverage**
+- **Models**: 95% code coverage
+- **Views**: 90% code coverage  
+- **Services**: 100% code coverage
+- **Integration**: Critical path testing
+### **Test Examples**
+```python
+# apps/public/forms/tests/test_services.py
+from django.test import TestCase
+from django.core.exceptions import ValidationError
+from ..models import FormTemplate, FormSubmission
+from ..services import FormService
+
+class FormServiceTest(TestCase):
+    def setUp(self):
+        self.store = Store.objects.create(name='Test Store', slug='test-store')
+        self.form_template = FormTemplate.objects.create(
+            store=self.store,
+            title='Test Form',
+            slug='test-form',
+            fields={
+                'email': {
+                    'type': 'email',
+                    'label': 'Email',
+                    'required': True
+                },
+                'message': {
+                    'type': 'textarea',
+                    'label': 'Message',
+                    'required': True
+                }
+            }
+        )
+    
+    def test_submit_form_valid_data(self):
+        """Test form submission with valid data"""
+        data = {
+            'email': 'test@example.com',
+            'message': 'Test message'
+        }
+        
+        submission = FormService.submit_form(self.form_template, data, self.request)
+        
+        self.assertEqual(submission.form_template, self.form_template)
+        self.assertEqual(submission.data, data)
+        self.assertEqual(submission.status, 'pending')
+    
+    def test_submit_form_invalid_data(self):
+        """Test form submission with invalid data"""
+        data = {
+            'email': '',  # Required field missing
+            'message': 'Test message'
+        }
+        
+        with self.assertRaises(ValidationError):
+            FormService.submit_form(self.form_template, data, self.request)
+```
+### **URL Structure**
+#### Main Forms URLs
+```python
+# apps/public/forms/urls.py
+from django.urls import include, path
+
+app_name = 'forms'
+
+urlpatterns = [
+    path('v2/', include('apps.public.forms.v2.urls')),
+]
+
+# apps/customer/forms/urls.py
+urlpatterns = [
+    path('v2/', include('apps.customer.forms.v2.urls')),
+]
+
+# apps/dashboard/forms/urls.py
+urlpatterns = [
+    path('v2/', include('apps.dashboard.forms.v2.urls')),
+]
+
+# Main project URLs
+# config/urls.py
+urlpatterns = [
+    path('v2/api/public/forms/', include('apps.public.forms.urls')),
+    path('v2/api/customer/forms/', include('apps.customer.forms.urls')),
+    path('v2/api/dashboard/forms/', include('apps.dashboard.forms.urls')),
+]
+```
+#### Individual App URLs
+```python
+# apps/public/forms/v2/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from .views import PublicFormViewSet
+
+router = DefaultRouter()
+router.register(r'', PublicFormViewSet, basename='public-forms')
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
+
+# apps/customer/forms/v2/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+from .views import CustomerFormViewSet
+
+router = DefaultRouter()
+router.register(r'submissions', CustomerFormViewSet, basename='customer-forms')
+
+urlpatterns = [
+    path('', include(router.urls)),
+]
+
+# apps/dashboard/forms/v2/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from rest_framework_nested import routers
+
+from .views import (
+    DashboardFormViewSet, FormSubmissionViewSet, EmailTemplateViewSet
+)
+
+router = DefaultRouter()
+router.register(r'forms', DashboardFormViewSet, basename='dashboard-forms')
+router.register(r'submissions', FormSubmissionViewSet, basename='dashboard-submissions')
+router.register(r'email-templates', EmailTemplateViewSet, basename='dashboard-email-templates')
+
+# Nested routes
+forms_router = routers.NestedDefaultRouter(router, r'forms', lookup='form')
+forms_router.register(r'submissions', FormSubmissionViewSet, basename='form-submissions')
+forms_router.register(r'email-templates', EmailTemplateViewSet, basename='form-email-templates')
+
+urlpatterns = [
+    path('', include(router.urls)),
+    path('', include(forms_router.urls)),
+]
+```
+---
+
+## ⚙️ Services
+FormService.send_form_notifications.delay(self.id)
+```
+### **EmailTemplate Model**
+```python
+# apps/public/forms/models/templates.py
+class EmailTemplate(TenantModel):
+    """
+    Email templates for form notifications
+    """
+    
+    # Core fields
+    title = models.CharField(max_length=255)
+    subject = models.CharField(max_length=255)
+    body_html = models.TextField()
+    body_text = models.TextField(blank=True)
+    
+    # Configuration
+    headers = models.JSONField(default=dict, help_text="Custom email headers")
+    variables = models.JSONField(default=dict, help_text="Template variables documentation")
+    
+    # Recipients
+    recipient_type = models.CharField(max_length=20, choices=RECIPIENT_CHOICES, default='admin')
+    recipient_email = models.EmailField(blank=True, help_text="Custom recipient email")
+    auto_detect_recipient = models.BooleanField(default=True, help_text="Auto-detect from form fields")
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        db_table = 'forms_email_template'
+        indexes = [
+            models.Index(fields=['store', 'recipient_type']),
+            models.Index(fields=['is_active']),
+        ]
+        ordering = ['title']
+    
+    def render_with_context(self, context):
+        """Render template with submission data"""
+        from django.template import Template, Context
+        from django.template.loader import render_to_string
+        
+        # Simple variable replacement
+        html_content = self.body_html
+        text_content = self.body_text
+        
+        for key, value in context.items():
+            placeholder = f"{{ {key} }}"
+            html_content = html_content.replace(placeholder, str(value))
+            if text_content:
+                text_content = text_content.replace(placeholder, str(value))
+        
+        return {
+            'html': html_content,
+            'text': text_content,
+            'subject': self.subject.replace('{{ form_title }}', context.get('form_title', ''))
+        }
+```
+---
+
+## 🔗 Dependencies
+### **Required Integrations**
+- **accounts.md**: User authentication and permissions
+- **stores.md**: Store scoping and multi-tenancy
+- **media.md**: File uploads and attachments
+- **smtp.md**: Email sending and tracking
+- **translations.md**: Multi-language form support
+- **logs.md**: Activity logging and audit trails
+### **Integration Examples**
+```python
+# Integration with media.md for file uploads
+class FormField(models.Model):
+    # ... other fields ...
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPE_CHOICES)
+    allow_uploads = models.BooleanField(default=False)
+    upload_max_size = models.IntegerField(default=5242880)  # 5MB
+    
+    def get_upload_media_files(self, submission_data):
+        """Get uploaded media files for this field"""
+        if self.field_type == 'file' and self.allow_uploads:
+            file_ids = submission_data.get(self.name, [])
+            return MediaFile.objects.filter(id__in=file_ids, store=self.store)
+        return MediaFile.objects.none()
+
+# Integration with translations.md
+class FormTemplate(TenantModel):
+    # ... other fields ...
+    
+    def get_translated_field(self, field_name, language_code):
+        """Get translated field configuration"""
+        from services.translation import TranslationService
+        return TranslationService.get_translated_field(
+            self.fields.get(field_name, {}), 
+            language_code,
+            context='form_field'
+        )
+```
+---
+
+## 📋 Migration
 ### **Model Inheritance**
 All forms models must inherit from `TenantModel` for store scoping:
-
 ```python
 from core.models import TenantModel
 from django.db import models
@@ -62,7 +923,6 @@ class FormTemplate(TenantModel):
     # Store-scoped form template model
     pass
 ```
-
 ### **FormTemplate Model**
 ```python
 # apps/public/forms/models/forms.py
@@ -162,7 +1022,6 @@ class FormTemplate(TenantModel):
             'csrfmiddlewaretoken': '{{ csrf_token }}'
         }
 ```
-
 ### **FormSubmission Model**
 ```python
 # apps/public/forms/models/submissions.py
@@ -206,7 +1065,6 @@ class FormSubmission(TenantModel):
         from services.form import FormService
         FormService.send_form_notifications.delay(self.id)
 ```
-
 ### **EmailTemplate Model**
 ```python
 # apps/public/forms/models/templates.py
@@ -262,734 +1120,22 @@ class EmailTemplate(TenantModel):
             'subject': self.subject.replace('{{ form_title }}', context.get('form_title', ''))
         }
 ```
-
 ---
 
-## 🔌 API Endpoints
-
-### **V2-Only Implementation**
-All form endpoints must be V2-only with clean architecture:
-
-#### PublicFormViewSet
-```python
-# apps/public/forms/v2/views.py
-from core.viewsets import TenantViewSet
-from core.permissions import AllowAny
-from drf_spectacular.utils import extend_schema
-
-class PublicFormViewSet(TenantViewSet):
-    """
-    Public form submission endpoints
-    No authentication required
-    """
-    permission_classes = [AllowAny]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
-    queryset = FormTemplate.objects.filter(status='published', is_active=True)
-    serializer_class = PublicFormTemplateSerializer
-    search_fields = ['title', 'description']
-    ordering = ['title']
-    
-    def get_object(self):
-        """Override to lookup by form_id instead of pk"""
-        form_id = self.kwargs.get('pk')
-        if form_id:
-            return get_object_or_404(self.get_queryset(), form_id=form_id)
-        return super().get_object()
-    
-    @extend_schema(
-        summary="Get Form by ID",
-        description="Get form configuration by 6-digit form ID",
-        responses={200: PublicFormTemplateSerializer}
-    )
-    def retrieve(self, request, pk=None):
-        """Get form by 6-digit form_id"""
-        form_template = self.get_object()
-        serializer = self.get_serializer(form_template)
-        return Response(serializer.data)
-    
-    @extend_schema(
-        summary="Submit Form",
-        description="Submit form data using 6-digit form ID",
-        request=FormSubmissionSerializer,
-        responses={201: FormSubmissionSerializer}
-    )
-    @action(detail=True, methods=['post'])
-    def submit(self, request, pk=None):
-        """Submit form data using service layer"""
-        form_template = self.get_object()
-        
-        from services.form import FormService
-        try:
-            submission = FormService.submit_form(
-                form_template, request.data, request
-            )
-            
-            serializer = FormSubmissionSerializer(submission)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
-        except ValidationError as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-```
-
-#### DashboardFormViewSet
-```python
-# apps/dashboard/forms/v2/views.py
-from core.viewsets import TenantViewSet
-from core.permissions import IsStoreOwner
-from drf_spectacular.utils import extend_schema
-
-class DashboardFormViewSet(TenantViewSet):
-    """
-    Form management endpoints for dashboard
-    """
-    permission_classes = [IsAuthenticated, IsStoreOwner]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
-    queryset = FormTemplate.objects.all()
-    serializer_class = FormTemplateSerializer
-    filterset_fields = ['status', 'is_active']
-    search_fields = ['title', 'description']
-    ordering_fields = ['created_at', 'title']
-    ordering = ['-created_at']
-    
-    @extend_schema(
-        summary="Duplicate Form",
-        description="Create duplicate of existing form",
-        responses={201: FormTemplateSerializer}
-    )
-    @action(detail=True, methods=['post'])
-    def duplicate(self, request, pk=None):
-        """Duplicate form template using service layer"""
-        form_template = self.get_object()
-        
-        from services.form import FormService
-        new_form = FormService.duplicate_form(form_template, request.user)
-        
-        serializer = self.get_serializer(new_form)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-```
-
----
-
-## 🛠️ Services Layer
-
-### **Business Logic Centralization**
-All form business logic must be in services.py:
-
-#### FormService
-```python
-# apps/public/forms/services.py
-from django.core.exceptions import ValidationError
-from django.db import transaction
-import logging
-
-logger = logging.getLogger(__name__)
-
-class FormService:
-    """Shared form management service"""
-    
-    @staticmethod
-    @transaction.atomic
-    def submit_form(form_template, data, request):
-        """Process form submission with validation"""
-        # Validate submission data
-        errors = form_template.validate_submission_data(data)
-        if errors:
-            raise ValidationError(errors)
-        
-        # Create submission
-        submission = FormSubmission.objects.create(
-            form_template=form_template,
-            data=data,
-            ip_address=request.META.get('REMOTE_ADDR'),
-            user_agent=request.META.get('HTTP_USER_AGENT', ''),
-            status='pending'
-        )
-        
-        # Log submission
-        log_event_async(
-            user=request.user if request.user.is_authenticated else None,
-            store=form_template.store,
-            action='form_submitted',
-            object_type='form_submission',
-            object_id=submission.id,
-            details={
-                'form_title': form_template.title,
-                'submission_id': submission.id
-            }
-        )
-        
-        # Trigger email notifications
-        if form_template.send_email_notifications:
-            FormService.send_form_notifications.delay(submission.id)
-        
-        return submission
-    
-    @staticmethod
-    def duplicate_form(form_template, user):
-        """Duplicate form template with new slug"""
-        from django.utils.text import slugify
-        
-        new_title = f"{form_template.title} (Copy)"
-        new_slug = slugify(new_title)
-        
-        # Ensure unique slug
-        counter = 1
-        original_slug = new_slug
-        while FormTemplate.objects.filter(store=form_template.store, slug=new_slug).exists():
-            new_slug = f"{original_slug}-{counter}"
-            counter += 1
-        
-        new_form = FormTemplate.objects.create(
-            store=form_template.store,
-            title=new_title,
-            slug=new_slug,
-            description=form_template.description,
-            fields=form_template.fields,
-            settings=form_template.settings,
-            status='draft',
-            created_by=user
-        )
-        
-        # Duplicate email templates
-        for email_template in form_template.email_templates.all():
-            EmailTemplate.objects.create(
-                store=new_form.store,
-                form_template=new_form,
-                title=email_template.title,
-                subject=email_template.subject,
-                body_html=email_template.body_html,
-                body_text=email_template.body_text,
-                headers=email_template.headers,
-                variables=email_template.variables,
-                recipient_type=email_template.recipient_type,
-                recipient_email=email_template.recipient_email,
-                auto_detect_recipient=email_template.auto_detect_recipient
-            )
-        
-        log_event_async(
-            user=user,
-            store=new_form.store,
-            action='form_duplicated',
-            object_type='form_template',
-            object_id=new_form.id,
-            details={
-                'original_form_id': form_template.id,
-                'new_form_title': new_form.title
-            }
-        )
-        
-        return new_form
-```
-
----
-
-## 📧 Email Integration
-
-### **SMTP Integration**
-All email sending must use smtp.md patterns:
-
-#### Async Email Tasks
-```python
-# apps/public/forms/tasks.py
-from celery import shared_task
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-import logging
-
-logger = logging.getLogger(__name__)
-
-@shared_task(bind=True, max_retries=3)
-def send_form_notifications(self, submission_id):
-    """Send form notification emails asynchronously"""
-    try:
-        from .models import FormSubmission
-        from services.smtp import SMTPService
-        
-        submission = FormSubmission.objects.select_related('form_template').get(id=submission_id)
-        form_template = submission.form_template
-        
-        # Get email templates
-        email_templates = form_template.email_templates.filter(is_active=True)
-        
-        for email_template in email_templates:
-            # Prepare context
-            context = {
-                'form_title': form_template.title,
-                'submission_data': submission.data,
-                'submitted_at': submission.submitted_at,
-                'submission_id': submission.id
-            }
-            
-            # Render template
-            rendered = email_template.render_with_context(context)
-            
-            # Determine recipients
-            recipients = FormService.get_email_recipients(
-                email_template, submission.data, form_template.store
-            )
-            
-            # Send via SMTP service
-            SMTPService.send_template_email(
-                template_name='form_notification',
-                recipients=recipients,
-                subject=rendered['subject'],
-                html_content=rendered['html'],
-                text_content=rendered['text'],
-                headers=email_template.headers,
-                store=form_template.store
-            )
-        
-        # Update submission status
-        submission.email_sent = True
-        submission.email_sent_at = timezone.now()
-        submission.status = 'sent'
-        submission.save(update_fields=['email_sent', 'email_sent_at', 'status'])
-        
-    except Exception as exc:
-        logger.error(f"Failed to send form notifications: {exc}")
-        # Update submission status
-        submission.status = 'failed'
-        submission.save(update_fields=['status'])
-        raise self.retry(exc=exc, countdown=60)
-```
-
----
-
-## 🔒 Security Rules
-
-### **Form Security**
-- **Input Validation**: All form submissions must be validated against field configuration
-- **CSRF Protection**: All form endpoints must have CSRF protection
-- **Rate Limiting**: Implement rate limiting on form submission endpoints
-- **Spam Protection**: Implement CAPTCHA or honeypot fields
-- **Data Sanitization**: Sanitize all user input before storage
-- **Privacy**: Store only necessary data, comply with GDPR
-
-### **Email Security**
-- **Header Injection**: Prevent email header injection attacks
-- **Recipient Validation**: Validate all email recipients
-- **Attachment Scanning**: Scan uploaded files for malware
-- **Unsubscribe Links**: Include unsubscribe functionality
-
----
-
-## 📊 Performance Rules
-
+## ✅ Benefits
 ### **Database Optimization**
 - **JSONField Indexing**: Use appropriate indexes for JSONField queries
 - **Query Optimization**: Use select_related and prefetch_related
 - **Bulk Operations**: Use bulk_create for multiple submissions
 - **Caching**: Cache form templates and field configurations
-
 ### **Email Performance**
 - **Async Sending**: All email sending must be asynchronous
 - **Queue Management**: Use Celery for email queue management
 - **Batch Processing**: Batch multiple emails when possible
 - **Retry Logic**: Implement exponential backoff for failed emails
-
 ---
 
-## 💰 Cost/Quota Rules
-
-### **Email Quotas**
-- **Daily Limits**: Implement daily email sending limits per store
-- **Monthly Quotas**: Track monthly email usage
-- **Cost Tracking**: Monitor email service costs
-- **Overage Handling**: Handle quota exceeded scenarios
-
-### **Storage Costs**
-- **Submission Retention**: Define retention policies for form submissions
-- **Attachment Limits**: Limit file upload sizes and counts
-- **Cleanup Tasks**: Implement periodic cleanup of old data
-
 ---
-
-## 🧪 Testing Rules
-
-### **Required Coverage**
-- **Models**: 95% code coverage
-- **Views**: 90% code coverage  
-- **Services**: 100% code coverage
-- **Integration**: Critical path testing
-
-### **Test Examples**
-```python
-# apps/public/forms/tests/test_services.py
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from ..models import FormTemplate, FormSubmission
-from ..services import FormService
-
-class FormServiceTest(TestCase):
-    def setUp(self):
-        self.store = Store.objects.create(name='Test Store', slug='test-store')
-        self.form_template = FormTemplate.objects.create(
-            store=self.store,
-            title='Test Form',
-            slug='test-form',
-            fields={
-                'email': {
-                    'type': 'email',
-                    'label': 'Email',
-                    'required': True
-                },
-                'message': {
-                    'type': 'textarea',
-                    'label': 'Message',
-                    'required': True
-                }
-            }
-        )
-    
-    def test_submit_form_valid_data(self):
-        """Test form submission with valid data"""
-        data = {
-            'email': 'test@example.com',
-            'message': 'Test message'
-        }
-        
-        submission = FormService.submit_form(self.form_template, data, self.request)
-        
-        self.assertEqual(submission.form_template, self.form_template)
-        self.assertEqual(submission.data, data)
-        self.assertEqual(submission.status, 'pending')
-    
-    def test_submit_form_invalid_data(self):
-        """Test form submission with invalid data"""
-        data = {
-            'email': '',  # Required field missing
-            'message': 'Test message'
-        }
-        
-        with self.assertRaises(ValidationError):
-            FormService.submit_form(self.form_template, data, self.request)
-```
-
-### **URL Structure**
-
-#### Main Forms URLs
-```python
-# apps/public/forms/urls.py
-from django.urls import include, path
-
-app_name = 'forms'
-
-urlpatterns = [
-    path('v2/', include('apps.public.forms.v2.urls')),
-]
-
-# apps/customer/forms/urls.py
-urlpatterns = [
-    path('v2/', include('apps.customer.forms.v2.urls')),
-]
-
-# apps/dashboard/forms/urls.py
-urlpatterns = [
-    path('v2/', include('apps.dashboard.forms.v2.urls')),
-]
-
-# Main project URLs
-# config/urls.py
-urlpatterns = [
-    path('v2/api/public/forms/', include('apps.public.forms.urls')),
-    path('v2/api/customer/forms/', include('apps.customer.forms.urls')),
-    path('v2/api/dashboard/forms/', include('apps.dashboard.forms.urls')),
-]
-```
-
-#### Individual App URLs
-```python
-# apps/public/forms/v2/urls.py
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-
-from .views import PublicFormViewSet
-
-router = DefaultRouter()
-router.register(r'', PublicFormViewSet, basename='public-forms')
-
-urlpatterns = [
-    path('', include(router.urls)),
-]
-
-# apps/customer/forms/v2/urls.py
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-
-from .views import CustomerFormViewSet
-
-router = DefaultRouter()
-router.register(r'submissions', CustomerFormViewSet, basename='customer-forms')
-
-urlpatterns = [
-    path('', include(router.urls)),
-]
-
-# apps/dashboard/forms/v2/urls.py
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from rest_framework_nested import routers
-
-from .views import (
-    DashboardFormViewSet, FormSubmissionViewSet, EmailTemplateViewSet
-)
-
-router = DefaultRouter()
-router.register(r'forms', DashboardFormViewSet, basename='dashboard-forms')
-router.register(r'submissions', FormSubmissionViewSet, basename='dashboard-submissions')
-router.register(r'email-templates', EmailTemplateViewSet, basename='dashboard-email-templates')
-
-# Nested routes
-forms_router = routers.NestedDefaultRouter(router, r'forms', lookup='form')
-forms_router.register(r'submissions', FormSubmissionViewSet, basename='form-submissions')
-forms_router.register(r'email-templates', EmailTemplateViewSet, basename='form-email-templates')
-
-urlpatterns = [
-    path('', include(router.urls)),
-    path('', include(forms_router.urls)),
-]
-```
-
----
-
-## � HTML Form Implementation
-
-### **Frontend Integration**
-The 6-digit `form_id` makes it easy to identify and submit forms:
-
-```html
-<!-- Example HTML form generated from FormTemplate -->
-<form action="/v2/api/public/forms/ABC123/submit/" method="POST" enctype="multipart/form-data">
-    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-    <input type="hidden" name="form_id" value="ABC123" data-form-id="ABC123">
-    
-    <!-- Dynamic fields from form_template.fields JSON -->
-    <div class="form-field">
-        <label for="email">Email Address *</label>
-        <input type="email" id="email" name="email" required>
-    </div>
-    
-    <div class="form-field">
-        <label for="message">Message *</label>
-        <textarea id="message" name="message" required></textarea>
-    </div>
-    
-    <button type="submit">Submit Form</button>
-</form>
-
-<!-- JavaScript for enhanced form handling -->
-<script>
-document.querySelector('form[data-form-id]').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formId = this.dataset.formId;
-    const formData = new FormData(this);
-    
-    try {
-        const response = await fetch(`/v2/api/public/forms/${formId}/submit/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-            }
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            alert('Form submitted successfully!');
-            this.reset();
-        } else {
-            alert('Error: ' + result.error);
-        }
-    } catch (error) {
-        alert('Submission failed: ' + error.message);
-    }
-});
-</script>
-```
-
-### **Form Identification Methods**
-
-1. **URL-based**: `/v2/api/public/forms/{form_id}/submit/`
-2. **Hidden Field**: `<input type="hidden" name="form_id" value="ABC123">`
-3. **Data Attribute**: `<form data-form-id="ABC123">`
-4. **URL Parameter**: `?form_id=ABC123` (alternative method)
-
----
-
-### **DFCMS Compatibility**
-Check for existing form-related models in DFCMS:
-
-```python
-# apps/public/forms/migrations/0002_migrate_dfcms_forms.py
-def migrate_dfcms_forms(apps, schema_editor):
-    """Migrate DFCMS form components if they exist"""
-    try:
-        # Check if DFCMS has form models
-        OldForm = apps.get_model('modules', 'Form')
-        OldFormField = apps.get_model('modules', 'FormField')
-        
-        # Migrate to new FormTemplate structure
-        for old_form in OldForm.objects.all():
-            form_template = FormTemplate.objects.create(
-                store=old_form.store,
-                title=old_form.title,
-                slug=old_form.slug,
-                description=old_form.description,
-                fields=migrate_field_configuration(old_form.fields.all()),
-                status='published',
-                is_active=old_form.is_active
-            )
-            
-            # Migrate email templates
-            for old_template in old_form.email_templates.all():
-                EmailTemplate.objects.create(
-                    store=form_template.store,
-                    form_template=form_template,
-                    title=old_template.title,
-                    subject=old_template.subject,
-                    body_html=old_template.body_html,
-                    recipient_type=old_template.recipient_type
-                )
-                
-    except LookupError:
-        # DFCMS form models don't exist, skip migration
-        pass
-```
-
----
-
-## 🔗 Integration Rules
-
-### **Required Integrations**
-- **accounts.md**: User authentication and permissions
-- **stores.md**: Store scoping and multi-tenancy
-- **media.md**: File uploads and attachments
-- **smtp.md**: Email sending and tracking
-- **translations.md**: Multi-language form support
-- **logs.md**: Activity logging and audit trails
-
-### **Integration Examples**
-```python
-# Integration with media.md for file uploads
-class FormField(models.Model):
-    # ... other fields ...
-    field_type = models.CharField(max_length=20, choices=FIELD_TYPE_CHOICES)
-    allow_uploads = models.BooleanField(default=False)
-    upload_max_size = models.IntegerField(default=5242880)  # 5MB
-    
-    def get_upload_media_files(self, submission_data):
-        """Get uploaded media files for this field"""
-        if self.field_type == 'file' and self.allow_uploads:
-            file_ids = submission_data.get(self.name, [])
-            return MediaFile.objects.filter(id__in=file_ids, store=self.store)
-        return MediaFile.objects.none()
-
-# Integration with translations.md
-class FormTemplate(TenantModel):
-    # ... other fields ...
-    
-    def get_translated_field(self, field_name, language_code):
-        """Get translated field configuration"""
-        from services.translation import TranslationService
-        return TranslationService.get_translated_field(
-            self.fields.get(field_name, {}), 
-            language_code,
-            context='form_field'
-        )
-```
-
----
-
-## 📈 Improvement Suggestions
-
-### **Enhanced Features**
-- **Conditional Logic**: Implement field visibility based on other field values
-- **Multi-step Forms**: Support for multi-step form wizards
-- **Webhooks**: Add webhook support for real-time form submissions
-- **Analytics Dashboard**: Track form conversion rates and submission trends
-- **A/B Testing**: Test different form versions for better conversion
-
-### **Security Enhancements**
-- **Advanced CAPTCHA**: Implement reCAPTCHA or hCaptcha integration
-- **IP Blocking**: Block suspicious IP addresses
-- **Rate Limiting**: Implement sophisticated rate limiting algorithms
-- **Content Filtering**: Filter spam content using AI/ML
-
-### **Performance Optimizations**
-- **CDN Integration**: Serve forms via CDN for better performance
-- **Lazy Loading**: Load form fields dynamically as needed
-- **Caching Strategy**: Implement intelligent caching for form configurations
-- **Database Sharding**: Shard submissions table for high-traffic stores
-
----
-
-## 🤖 AI Guidelines
-
-### **Allowed Actions**
-- **Code Generation**: Generate boilerplate code for form fields and validation
-- **Documentation**: Auto-generate API documentation from form configurations
-- **Test Cases**: Generate test cases based on form field configurations
-- **Migration Scripts**: Generate migration scripts for schema changes
-- **Performance Analysis**: Analyze form performance and suggest optimizations
-
-### **Forbidden Actions**
-- **Dynamic Field Logic**: AI cannot implement complex business logic for form fields
-- **Security Implementation**: AI cannot implement security-critical components
-- **Email Templates**: AI cannot generate email template content without explicit requirements
-- **Database Schema**: AI cannot design optimal database schemas without requirements
-- **Production Deployment**: AI cannot deploy to production without human review
-
-### **Review Checklist**
-- [ ] Store scoping properly implemented
-- [ ] All business logic in services layer
-- [ ] Email sending is asynchronous
-- [ ] Input validation implemented
-- [ ] Logging integration complete
-- [ ] Multi-language support added
-- [ ] Media integration working
-- [ ] Security measures in place
-- [ ] Performance optimizations applied
-- [ ] Test coverage meets requirements
-- [ ] Migration scripts tested
-- [ ] Documentation complete
-
----
-
-## 📅 Implementation Timeline
-
-### **Phase 1: Core Infrastructure (Week 1-2)**
-- Set up directory structure and base models
-- Implement FormTemplate and FormSubmission models
-- Create basic V2 API endpoints
-- Set up service layer foundation
-
-### **Phase 2: Email Integration (Week 3-4)**
-- Implement EmailTemplate model
-- Integrate with smtp.md for email sending
-- Add async email tasks with Celery
-- Implement email tracking and analytics
-
-### **Phase 3: Advanced Features (Week 5-6)**
-- Add file upload support with media.md integration
-- Implement multi-language support with translations.md
-- Add conditional field logic
-- Create admin interface for form management
-
-### **Phase 4: Security & Performance (Week 7-8)**
-- Implement security measures (CAPTCHA, rate limiting)
-- Add performance optimizations (caching, indexing)
-- Create comprehensive test suite
-- Implement migration scripts from DFCMS
-
-### **Phase 5: Analytics & Monitoring (Week 9-10)**
-- Add analytics dashboard for form performance
-- Implement webhook support for real-time notifications
-- Add A/B testing capabilities
-- Complete documentation and deployment guides
+**Version**: 1.0  
+**Last Updated**: 2026-01-26
+**Next Review**: 2026-02-25

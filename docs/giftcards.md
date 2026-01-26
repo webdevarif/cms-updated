@@ -136,20 +136,15 @@ class GiftCardService:
         code = kwargs.get('code') or GiftCardService._generate_code()
         
         # Create gift card
-        gift_card = GiftCard.objects.create(
+        gift_card = GiftCardService.create_gift_card(
             store=store,
-            code=code,
             created_by=created_by,
+            code=code,
             **{k: v for k, v in kwargs.items() if k != 'code'}
         )
         
         # Log creation
-        GiftCardHistory.objects.create(
-            gift_card=gift_card,
-            action='created',
-            amount=gift_card.initial_balance,
-            created_by=created_by
-        )
+        # Handled by GiftCardService.create_gift_card
         
         return gift_card
     
@@ -159,35 +154,25 @@ class GiftCardService:
         """
         Redeem a gift card
         """
-        try:
-            gift_card = GiftCard.objects.get(code=code, status='active')
-            
-            if not gift_card.is_redeemable():
-                raise ValidationError("Gift card is not redeemable")
-                
-            if amount > gift_card.current_balance:
-                raise ValidationError("Insufficient balance")
-            
-            # Update balance
-            gift_card.current_balance -= amount
-            if gift_card.current_balance == 0:
-                gift_card.status = 'redeemed'
-            gift_card.save()
-            
-            # Log redemption
-            GiftCardHistory.objects.create(
-                gift_card=gift_card,
-                action='redeemed',
-                amount=amount,
-                order=order,
-                created_by=user,
-                metadata={'method': method}
-            )
-            
-            return gift_card
-            
-        except GiftCard.DoesNotExist:
-            raise ValidationError("Invalid gift card code")
+        gift_card = GiftCard.objects.get(code=code, status='active')
+        if gift_card.is_expired():
+            raise ValueError("Gift card has expired")
+        
+        if amount > gift_card.current_balance:
+            raise ValueError("Insufficient balance")
+        
+        gift_card.current_balance -= amount
+        gift_card.save()
+        
+        GiftCardHistory.objects.create(
+            gift_card=gift_card,
+            action='redeemed',
+            amount=amount,
+            order=order,
+            created_by=user
+        )
+        
+        return gift_card
     
     @staticmethod
     def get_gift_card_balance(code):
@@ -212,8 +197,7 @@ class GiftCardService:
     @staticmethod
     def get_gift_card_analytics(store, start_date=None, end_date=None):
         """Generate analytics for gift cards"""
-        # Implementation for analytics
-        pass
+        return GiftCardQueryHelper.get_store_analytics(store, start_date, end_date)
 ```
 
 ## API Endpoints

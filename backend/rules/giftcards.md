@@ -1,42 +1,58 @@
-# Gift Cards Module
+# Giftcards Rules v1.0
 
-## Overview
-The Gift Cards module provides a comprehensive system for managing digital and physical gift cards, supporting multiple types, redemption flows, and deep e-commerce integration. This document outlines the architecture, models, services, and APIs required to implement this functionality.
+## 🎯 Purpose
+This document defines strict development rules for the **giftcards** app in CMS-Updated backend, implementing a comprehensive gift card management system supporting digital and physical cards, redemption flows, and deep e-commerce integration.
 
-## Table of Contents
-1. [Architecture](#architecture)
-2. [Models](#models)
-3. [Services](#services)
-4. [API Endpoints](#api-endpoints)
-5. [Email Templates](#email-templates)
-6. [Analytics](#analytics)
-7. [E-commerce Integration](#e-commerce-integration)
-8. [Security](#security)
-9. [Performance](#performance)
-10. [Testing](#testing)
-11. [Deployment](#deployment)
+---
 
-## Architecture
+## 🏗️ Structure
+### **Fixed Directory Structure**
+```
+apps/
+├── public/                    # Public APIs (no authentication)
+│   └── giftcards/           # Public gift card APIs
+│       ├── v2/               # Version 2 (Current Only)
+│       │   ├── urls.py
+│       │   ├── views.py
+│       │   ├── serializers.py
+│       │   └── tests.py
+│       ├── models/             # Shared models across versions
+│       │   ├── __init__.py
+│       │   ├── gift_card.py     # GiftCard model
+│       │   └── history.py     # GiftCardHistory model
+│       ├── services.py
+│       └── admin.py
+├── customer/                  # Customer APIs (customer authentication)
+│   └── giftcards/           # Customer gift card APIs
+│       ├── v2/               # Version 2 (Current Only)
+│       │   ├── urls.py
+│       │   ├── views.py
+│       │   ├── serializers.py
+│       │   └── tests.py
+│       └── models/             # Same shared models
+└── dashboard/                 # Dashboard APIs (admin authentication)
+    └── giftcards/           # Dashboard gift card APIs
+        ├── v2/               # Version 2 (Current Only)
+        │   ├── urls.py
+        │   ├── views.py
+        │   ├── serializers.py
+        │   └── tests.py
+        └── models/             # Same shared models
+```
 
-### Key Components
-- **GiftCard**: Core model representing a gift card with balance, status, and metadata
-- **GiftCardHistory**: Audit trail for all gift card transactions
-- **GiftCardService**: Business logic for gift card operations
-- **GiftCardViewSet**: REST API endpoints
-- **GiftCardEmailService**: Handles gift card email notifications
-- **GiftCardAnalytics**: Tracks and reports on gift card usage
+---
 
-### Dependencies
-- `ecommerce` for order integration
-- `smtp` for email notifications
-- `accounts` for user management
-- `logs` for audit trails
-
-## Models
-
-### GiftCard
+## 🔧 Implementation
+### **GiftCard Model**
 ```python
+# apps/public/giftcards/models/gift_card.py
+from django.db import models
+from django.utils import timezone
+from core.models import TenantModel
+
 class GiftCard(TenantModel):
+    """Store-scoped gift card with balance and status tracking"""
+    
     GIFT_CARD_TYPES = (
         ('digital', 'Digital'),
         ('physical', 'Physical'),
@@ -52,6 +68,7 @@ class GiftCard(TenantModel):
         ('voided', 'Voided'),
     )
     
+    # Core fields
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
     code = models.CharField(max_length=20, unique=True, db_index=True)
     initial_balance = models.DecimalField(max_digits=10, decimal_places=2)
@@ -59,22 +76,30 @@ class GiftCard(TenantModel):
     currency = models.CharField(max_length=3, default='USD')
     gift_card_type = models.CharField(max_length=20, choices=GIFT_CARD_TYPES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    
+    # Timing
     expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Sender/Recipient info
     sender_name = models.CharField(max_length=100, blank=True)
     sender_email = models.EmailField(blank=True)
     recipient_name = models.CharField(max_length=100, blank=True)
     recipient_email = models.EmailField(blank=True)
     message = models.TextField(blank=True)
-    metadata = JSONField(default=dict, blank=True)
-    created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     
-    class Meta:
+    # Metadata
+    metadata = models.JSONField(default=dict, blank=True)
+    created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True)
+    
+    class Meta(TenantModel.Meta):
+        db_table = 'giftcards_gift_card'
         indexes = [
             models.Index(fields=['code']),
             models.Index(fields=['status']),
             models.Index(fields=['expires_at']),
+            models.Index(fields=['store', 'status']),
         ]
         ordering = ['-created_at']
     
@@ -92,9 +117,15 @@ class GiftCard(TenantModel):
         )
 ```
 
-### GiftCardHistory
+### **GiftCardHistory Model**
 ```python
+# apps/public/giftcards/models/history.py
+from django.db import models
+from core.models import TenantModel
+
 class GiftCardHistory(TenantModel):
+    """Audit trail for all gift card transactions"""
+    
     ACTION_CHOICES = (
         ('created', 'Created'),
         ('sent', 'Sent'),
@@ -104,16 +135,41 @@ class GiftCardHistory(TenantModel):
         ('voided', 'Voided'),
     )
     
-    gift_card = models.ForeignKey(GiftCard, on_delete=models.CASCADE, related_name='history')
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    order = models.ForeignKey('ecommerce.Order', on_delete=models.SET_NULL, null=True, blank=True)
-    notes = models.TextField(blank=True)
-    metadata = JSONField(default=dict, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
+    # Relationships
+    gift_card = models.ForeignKey(
+        'giftcards.GiftCard', 
+        on_delete=models.CASCADE, 
+        related_name='history'
+    )
+    order = models.ForeignKey(
+        'ecommerce.Order', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
+    )
+    created_by = models.ForeignKey(
+        'accounts.User', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
+    )
     
-    class Meta:
+    # Transaction details
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        null=True, 
+        blank=True
+    )
+    notes = models.TextField(blank=True)
+    
+    # Metadata
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta(TenantModel.Meta):
+        db_table = 'giftcards_history'
         ordering = ['-created_at']
         verbose_name_plural = 'Gift Card History'
     
@@ -121,49 +177,149 @@ class GiftCardHistory(TenantModel):
         return f"{self.gift_card.code} - {self.get_action_display()} - {self.amount if self.amount else ''}"
 ```
 
-## Services
+---
 
-### GiftCardService
+## 🔒 Permissions
+### **Access Control**
+- **Store Owners**: Full CRUD on all gift cards
+- **Staff**: Read-only access to gift cards
+- **Customers**: Can only view their own gift cards
+- **Public**: Limited gift card balance checking
+
+### **Validation Rules**
+- Gift card codes must match regex pattern
+- Prevent duplicate codes
+- Enforce minimum/maximum gift card values
+- Rate limiting for redemption attempts
+
+---
+
+## 🧪 Testing
+### **Unit Tests**
 ```python
+# apps/giftcards/tests/test_models.py
+from django.test import TestCase
+from django.core.exceptions import ValidationError
+from ..models import GiftCard, GiftCardHistory
+
+class GiftCardTests(TestCase):
+    def setUp(self):
+        self.store = Store.objects.create(name='Test Store', slug='test-store')
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            username='testuser',
+            password='testpass123'
+        )
+    
+    def test_gift_card_creation(self):
+        """Test creating a gift card"""
+        gift_card = GiftCard.objects.create(
+            store=self.store,
+            code='TEST123XYZ456',
+            initial_balance=100.00,
+            current_balance=100.00,
+            gift_card_type='digital',
+            created_by=self.user
+        )
+        
+        self.assertEqual(gift_card.code, 'TEST123XYZ456')
+        self.assertEqual(gift_card.current_balance, 100.00)
+        self.assertTrue(gift_card.is_redeemable())
+    
+    def test_gift_card_redemption(self):
+        """Test gift card redemption"""
+        gift_card = GiftCard.objects.create(
+            store=self.store,
+            code='TEST123XYZ456',
+            initial_balance=100.00,
+            current_balance=100.00,
+            created_by=self.user
+        )
+        
+        # Redeem 25.00
+        gift_card.current_balance = 75.00
+        gift_card.save()
+        
+        # Create history entry
+        GiftCardHistory.objects.create(
+            gift_card=gift_card,
+            action='redeemed',
+            amount=25.00,
+            created_by=self.user
+        )
+        
+        self.assertEqual(gift_card.current_balance, 75.00)
+        self.assertEqual(gift_card.history.count(), 1)
+```
+
+---
+
+## ⚙️ Services
+### **GiftCardService**
+```python
+# apps/public/giftcards/services.py
+from django.db import transaction
+from django.core.exceptions import ValidationError
+import string
+import random
+
 class GiftCardService:
+    """Business logic for gift card operations"""
+    
     @staticmethod
     @transaction.atomic
     def create_gift_card(store, created_by, **kwargs):
-        """
-        Create a new gift card with validation and history logging
-        """
-        # Generate unique code
+        """Create a new gift card with validation"""
+        # Generate unique code if not provided
         code = kwargs.get('code') or GiftCardService._generate_code()
         
+        # Validate balance
+        initial_balance = kwargs.get('initial_balance', 0)
+        if initial_balance < 10.00:
+            raise ValidationError("Minimum gift card amount is $10.00")
+        if initial_balance > 1000.00:
+            raise ValidationError("Maximum gift card amount is $1,000.00")
+        
         # Create gift card
-        gift_card = GiftCardService.create_gift_card(
+        gift_card = GiftCard.objects.create(
             store=store,
-            created_by=created_by,
             code=code,
+            initial_balance=initial_balance,
+            current_balance=initial_balance,
+            created_by=created_by,
             **{k: v for k, v in kwargs.items() if k != 'code'}
         )
         
         # Log creation
-        # Handled by GiftCardService.create_gift_card
+        GiftCardHistory.objects.create(
+            gift_card=gift_card,
+            action='created',
+            amount=initial_balance,
+            created_by=created_by
+        )
         
         return gift_card
     
     @staticmethod
     @transaction.atomic
     def redeem_gift_card(code, amount, user=None, order=None, method='online'):
-        """
-        Redeem a gift card
-        """
-        gift_card = GiftCard.objects.get(code=code, status='active')
+        """Redeem a gift card"""
+        try:
+            gift_card = GiftCard.objects.get(code=code, status='active')
+        except GiftCard.DoesNotExist:
+            raise ValidationError("Invalid gift card code")
+        
         if gift_card.is_expired():
-            raise ValueError("Gift card has expired")
+            raise ValidationError("Gift card has expired")
         
         if amount > gift_card.current_balance:
-            raise ValueError("Insufficient balance")
+            raise ValidationError("Insufficient balance")
         
+        # Update balance
         gift_card.current_balance -= amount
         gift_card.save()
         
+        # Create history entry
         GiftCardHistory.objects.create(
             gift_card=gift_card,
             action='redeemed',
@@ -197,293 +353,112 @@ class GiftCardService:
     @staticmethod
     def get_gift_card_analytics(store, start_date=None, end_date=None):
         """Generate analytics for gift cards"""
-        return GiftCardQueryHelper.get_store_analytics(store, start_date, end_date)
+        from .models import GiftCard, GiftCardHistory
+        
+        queryset = GiftCard.objects.filter(store=store)
+        
+        if start_date:
+            queryset = queryset.filter(created_at__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__lte=end_date)
+        
+        # Calculate metrics
+        total_issued = queryset.count()
+        redeemed = queryset.filter(status='redeemed').count()
+        active = queryset.filter(status='active').count()
+        
+        redemption_rate = (redeemed / total_issued * 100) if total_issued > 0 else 0
+        
+        # Breakage calculation
+        breakage = GiftCard.objects.filter(
+            store=store,
+            status='active',
+            expires_at__lt=timezone.now()
+        ).aggregate(total=models.Sum('current_balance'))['total'] or 0
+        
+        return {
+            'total_issued': total_issued,
+            'redeemed': redeemed,
+            'active': active,
+            'redemption_rate': redemption_rate,
+            'breakage': breakage,
+            'total_value': queryset.aggregate(
+                total=models.Sum('initial_balance')
+            )['total'] or 0
+        }
 ```
 
-## API Endpoints
+---
 
-### Base URL: `/api/v2/gift-cards/`
+## 🔗 Dependencies
+```tree
+[Related components with @path references]
+```
+- ecommerce.md for order integration
+- smtp.md for email notifications
+- accounts.md for user management
+- logs.md for audit trails
+- core.md for base models and utilities
 
-#### List/Search Gift Cards (GET)
-- **Permissions**: `IsAuthenticated`, `IsStoreUser`
-- **Query Params**:
-  - `status`: Filter by status (active, redeemed, expired, voided)
-  - `gift_card_type`: Filter by type (digital, physical, etc.)
-  - `search`: Search by code, recipient name, or email
-  - `expires_before`: Filter by expiration date
-  - `ordering`: Sort field (-created_at, current_balance, etc.)
+---
 
-#### Create Gift Card (POST)
-- **Permissions**: `IsAuthenticated`, `IsStoreUser`
-- **Request Body**:
-  ```json
-  {
-    "gift_card_type": "digital",
-    "initial_balance": 100.00,
-    "currency": "USD",
-    "expires_at": "2024-12-31T23:59:59Z",
-    "recipient_name": "John Doe",
-    "recipient_email": "john@example.com",
-    "message": "Enjoy your gift!",
-    "metadata": {}
-  }
-  ```
-
-#### Gift Card Detail (GET /{code})
-- **Permissions**: `IsAuthenticated`, `IsStoreUser`
-- **Response**:
-  ```json
-  {
-    "code": "ABC123XYZ456",
-    "gift_card_type": "digital",
-    "initial_balance": "100.00",
-    "current_balance": "100.00",
-    "currency": "USD",
-    "status": "active",
-    "expires_at": "2024-12-31T23:59:59Z",
-    "recipient_name": "John Doe",
-    "recipient_email": "john@example.com",
-    "created_at": "2023-01-15T10:30:00Z",
-    "history": [
-      {
-        "action": "created",
-        "amount": "100.00",
-        "created_at": "2023-01-15T10:30:00Z"
-      }
-    ]
-  }
-  ```
-
-#### Redeem Gift Card (POST /{code}/redeem)
-- **Permissions**: `IsAuthenticated` (for online) or API key (for in-store)
-- **Request Body**:
-  ```json
-  {
-    "amount": 25.50,
-    "order_id": "ORD-12345",
-    "method": "online" // or "in_store"
-  }
-  ```
-
-## Email Templates
-
-### Gift Card Purchased
-- **Trigger**: When a new gift card is purchased
-- **Recipients**: Sender (confirmation) and Recipient (gift card)
-- **Variables**:
-  - `gift_card_code`
-  - `recipient_name`
-  - `sender_name`
-  - `message`
-  - `amount`
-  - `expiration_date`
-  - `redeem_url`
-
-### Gift Card Redeemed
-- **Trigger**: When a gift card is used
-- **Recipients**: Sender (notification)
-- **Variables**:
-  - `gift_card_code`
-  - `amount_used`
-  - `remaining_balance`
-  - `order_id`
-  - `redemption_date`
-
-## Analytics
-
-### Key Metrics
-1. **Redemption Rate**: Percentage of issued gift cards that have been redeemed
-2. **Breakage**: Value of unredeemed gift cards
-3. **Average Order Value (AOV)**: For orders using gift cards
-4. **Popular Gift Card Types**: Distribution across different types
-5. **Time to Redemption**: Average time between issuance and first use
-
-### Sample Queries
+## 📋 Migration
+### **From Legacy Gift Card System**
 ```python
-# Redemption rate
-total_issued = GiftCard.objects.filter(store=store).count()
-redeemed = GiftCard.objects.filter(store=store, status='redeemed').count()
-redemption_rate = (redeemed / total_issued) * 100 if total_issued > 0 else 0
+# apps/giftcards/management/commands/migrate_giftcards.py
+from django.core.management.base import BaseCommand
+from django.db import transaction
 
-# Breakage
-breakage = GiftCard.objects.filter(
-    store=store, 
-    status='active',
-    expires_at__lt=timezone.now()
-).aggregate(total=Sum('current_balance'))['total'] or 0
-
-# Average Order Value with Gift Cards
-from django.db.models import Avg, F
-orders_with_gift_cards = Order.objects.filter(
-    store=store,
-    gift_card_history__isnull=False
-).annotate(
-    gift_card_total=Sum('gift_card_history__amount')
-).aggregate(
-    avg_order_value=Avg(F('total') + F('gift_card_total'))
-)
+class Command(BaseCommand):
+    help = 'Migrate legacy gift cards to new structure'
+    
+    def handle(self, *args, **options):
+        from apps.legacy.models import LegacyGiftCard
+        from .models import GiftCard, GiftCardHistory
+        
+        with transaction.atomic():
+            for legacy_card in LegacyGiftCard.objects.all():
+                # Create new gift card
+                gift_card = GiftCard.objects.create(
+                    store=legacy_card.store,
+                    code=legacy_card.code,
+                    initial_balance=legacy_card.balance,
+                    current_balance=legacy_card.balance,
+                    gift_card_type=legacy_card.type,
+                    status=legacy_card.status,
+                    expires_at=legacy_card.expires_at,
+                    created_by=legacy_card.created_by
+                )
+                
+                # Migrate history
+                for legacy_history in legacy_card.history.all():
+                    GiftCardHistory.objects.create(
+                        gift_card=gift_card,
+                        action=legacy_history.action,
+                        amount=legacy_history.amount,
+                        order=legacy_history.order,
+                        notes=legacy_history.notes,
+                        created_at=legacy_history.created_at,
+                        created_by=legacy_history.created_by
+                    )
+        
+        self.stdout.write(self.style.SUCCESS('Migration completed'))
 ```
 
-## E-commerce Integration
+---
 
-### Cart Application Flow
-1. Customer applies gift card code to cart
-2. System validates code and checks balance
-3. If valid, apply discount to order total
-4. Store gift card usage in session until checkout
+## ✅ Benefits
+- ✅ **Multi-tenant**: Store-scoped gift card management
+- ✅ **Flexible Types**: Digital, physical, promotional, refund, loyalty cards
+- ✅ **E-commerce Integration**: Deep cart and checkout integration
+- ✅ **Audit Trail**: Complete history tracking
+- ✅ **Email Notifications**: Automated gift card delivery
+- ✅ **Analytics**: Comprehensive reporting and metrics
+- ✅ **Security**: Rate limiting and validation
+- ✅ **Performance**: Optimized with caching and indexing
 
-### Order Processing
-1. On order completion, redeem gift card amount
-2. Create GiftCardHistory entry linked to order
-3. Update gift card balance
-4. Send redemption confirmation if balance remains
+---
 
-### Refunds
-1. If order is refunded, optionally refund amount to gift card
-2. Create new gift card with refunded amount
-3. Link to original order for tracking
-
-## Security
-
-### Rate Limiting
-- 5 redemption attempts per minute per IP
-- 10 gift card lookups per minute per user
-
-### Validation
-- Validate gift card codes against regex pattern
-- Prevent duplicate codes
-- Enforce minimum/maximum gift card values
-
-### Access Control
-- Store staff can view all gift cards
-- Customers can only view their own gift cards
-- API keys required for in-store redemption
-
-## Performance
-
-### Caching
-- Cache gift card balances for 5 minutes
-- Cache gift card validation results for 1 minute
-- Use cache stampede protection
-
-### Database Optimization
-- Index on code, status, expires_at
-- Select related for common queries
-- Use `only()` and `defer()` to limit field selection
-
-### Background Tasks
-- Send emails asynchronously
-- Process batch operations in background
-- Schedule expiration checks
-
-## Testing
-
-### Unit Tests
-- Gift card creation and validation
-- Balance calculations
-- Expiration logic
-- Redemption scenarios
-
-### Integration Tests
-- API endpoints
-- E-commerce flow
-- Email delivery
-- Concurrent redemptions
-
-### Performance Tests
-- Load testing for high-volume redemption
-- Stress testing for concurrent access
-
-## Deployment
-
-### Migrations
-```python
-# 0001_initial.py
-class Migration(migrations.Migration):
-    initial = True
-
-    dependencies = [
-        ('ecommerce', '0001_initial'),
-        ('accounts', '0001_initial'),
-        ('stores', '0001_initial'),
-    ]
-
-    operations = [
-        migrations.CreateModel(
-            name='GiftCard',
-            fields=[
-                # Model fields
-            ],
-            options={
-                'ordering': ['-created_at'],
-                'indexes': [
-                    models.Index(fields=['code'], name='giftcards_g_code_123456_idx'),
-                    models.Index(fields=['status'], name='giftcards_g_status_123456_idx'),
-                    models.Index(fields=['expires_at'], name='giftcards_g_expires_123456_idx'),
-                ],
-            },
-        ),
-        migrations.CreateModel(
-            name='GiftCardHistory',
-            fields=[
-                # Model fields
-            ],
-            options={
-                'ordering': ['-created_at'],
-                'verbose_name_plural': 'Gift Card History',
-            },
-        ),
-    ]
-```
-
-### Required Environment Variables
-```bash
-# Gift card settings
-GIFT_CARD_CODE_LENGTH=12
-GIFT_CARD_CODE_PREFIX=GC
-GIFT_CARD_EXPIRY_DAYS=365
-GIFT_CARD_MIN_AMOUNT=10.00
-GIFT_CARD_MAX_AMOUNT=1000.00
-```
-
-### Monitoring
-- Track gift card creation and redemption rates
-- Monitor for failed redemption attempts
-- Alert on suspicious activity
-
-## Implementation Checklist
-
-### Phase 1: Core Functionality
-- [ ] Create GiftCard and GiftCardHistory models
-- [ ] Implement GiftCardService with basic CRUD operations
-- [ ] Create API endpoints for gift card management
-- [ ] Add unit tests for core functionality
-
-### Phase 2: E-commerce Integration
-- [ ] Integrate with cart/checkout flow
-- [ ] Implement order processing hooks
-- [ ] Add refund handling
-- [ ] Create integration tests
-
-### Phase 3: Email & Notifications
-- [ ] Design email templates
-- [ ] Implement email sending
-- [ ] Add notification preferences
-
-### Phase 4: Analytics & Reporting
-- [ ] Implement analytics queries
-- [ ] Create admin reports
-- [ ] Set up monitoring
-
-### Phase 5: Optimization
-- [ ] Add caching
-- [ ] Optimize database queries
-- [ ] Implement background tasks
-
-## Future Enhancements
-1. Bulk import/export of gift cards
-2. Gift card categories with different rules
-3. Scheduled gift card delivery
-4. Multi-currency support
-5. Gift card marketplaces
-6. Loyalty program integration
+**Version**: 1.0  
+**Last Updated**: 2026-01-26
+**Next Review**: 2026-02-25

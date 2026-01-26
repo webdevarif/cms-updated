@@ -3,7 +3,7 @@ Signals for posts app.
 """
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
-from .v2.models import Post, Taxonomy, Term
+from .models import Post, Taxonomy, Term
 from apps.logs.tasks import log_event_async
 from apps.notifications.services import NotificationService
 from apps.public.translations.services import TranslationService

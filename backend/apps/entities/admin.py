@@ -11,7 +11,6 @@ class EntityActionAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug', 'action_type', 'is_active', 'is_public', 'store']
     list_filter = ['action_type', 'is_active', 'is_public']
     search_fields = ['name', 'slug']
-    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(EntityInteraction)

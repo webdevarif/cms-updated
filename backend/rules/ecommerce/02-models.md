@@ -148,33 +148,6 @@ class Product(models.Model):
         if self.inventory_quantity > 0:
             return 'in_stock'
         if self.allow_backorder and self.backorder_quantity > 0:
-            return 'available_for_backorder'
-        return 'out_of_stock'
-        
-    def get_absolute_url(self):
-        from django.urls import reverse
-        return reverse('product-detail', kwargs={'slug': self.slug})
-    
-    def get_price(self):
-        """Get the current price, considering sales/discounts"""
-        # Implementation for getting price with discounts
-        return self.base_price
-    
-    def get_availability(self):
-        """
-        Get product availability status
-        
-        Note: This method is kept for backward compatibility.
-        Consider using the inventory_status property instead.
-        """
-        return self.inventory_status
-    
-    def update_inventory(self, quantity, action='decrease'):
-        """Update inventory levels"""
-        if not self.track_inventory:
-            return True
-            
-        if action == 'decrease':
             new_quantity = self.inventory_quantity - quantity
             if new_quantity < 0 and not self.allow_backorder:
                 return False

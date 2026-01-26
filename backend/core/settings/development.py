@@ -31,6 +31,16 @@ INTERNAL_IPS = [
     '127.0.0.1',
 ]
 
+# Debug Toolbar configuration
+DEBUG_TOOLBAR_CONFIG = {
+    'SHOW_TOOLBAR_CALLBACK': lambda request: True,
+    'RENDER_PANELS': {
+        'djdt.panels.SQLPanel': {
+            'SQL_WARNING_THRESHOLD': 100,
+        },
+    },
+}
+
 # CORS settings for development
 CORS_ALLOW_ALL_ORIGINS = True
 

@@ -8,19 +8,19 @@ from .models import SmtpConfiguration, EmailTemplate, EmailLog
 @admin.register(SmtpConfiguration)
 class SmtpConfigurationAdmin(admin.ModelAdmin):
     """Admin interface for SmtpConfiguration model"""
-    list_display = ('name', 'provider', 'host', 'port', 'is_default', 'is_verified', 'store')
-    list_filter = ('provider', 'is_default', 'is_verified', 'store')
+    list_display = ('name', 'provider', 'host', 'port', 'is_active', 'store')
+    list_filter = ('provider', 'is_active', 'store')
     search_fields = ('name', 'host', 'username')
-    readonly_fields = ('last_tested', 'created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at')
     fieldsets = (
         (None, {
-            'fields': ('name', 'provider', 'store', 'is_default')
+            'fields': ('name', 'provider', 'store', 'is_active')
         }),
         ('SMTP Settings', {
             'fields': ('host', 'port', 'username', 'password', 'use_tls', 'use_ssl')
         }),
-        ('Status', {
-            'fields': ('is_verified', 'last_tested')
+        ('Limits', {
+            'fields': ('daily_limit', 'hourly_limit')
         }),
         ('Metadata', {
             'fields': ('created_at', 'updated_at'),

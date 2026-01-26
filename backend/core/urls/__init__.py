@@ -11,20 +11,23 @@ urlpatterns = [
     # Admin
     path('admin/', include('core.urls.admin')),
     
+    # Django Debug Toolbar (only in development)
+    path('__debug__/', include('debug_toolbar.urls')),
+    
     # V2 API URLs
     path('', include('core.urls.v2')),
     
     # Public API
-    path('v2/api/public/accounts/', 
-         include('apps.public.accounts.v2.urls', namespace='public_accounts_v2')),
+    # path('v2/api/public/accounts/', 
+    #      include('apps.public.accounts.v2.urls', namespace='public_accounts_v2')),
     
     # Customer API
-    path('v2/api/customer/accounts/',
-         include('apps.customer.accounts.v2.urls', namespace='customer_accounts_v2')),
+    # path('v2/api/customer/accounts/',
+    #      include('apps.customer.accounts.v2.urls', namespace='customer_accounts_v2')),
     
     # Dashboard API
-    path('v2/api/dashboard/accounts/',
-         include('apps.dashboard.accounts.v2.urls', namespace='dashboard_accounts_v2')),
+    # path('v2/api/dashboard/accounts/',
+    #      include('apps.dashboard.accounts.v2.urls', namespace='dashboard_accounts_v2')),
     
     # Logs API
     path('v2/api/logs/', include('apps.logs.v2.urls', namespace='logs_v2')),
@@ -57,7 +60,7 @@ urlpatterns = [
     path('v2/api/dashboard/ecommerce/', include('apps.dashboard.ecommerce.v2.urls', namespace='dashboard_ecommerce_v2')),
     
     # Gift Cards API
-    path('v2/api/gift-cards/', include('apps.public.giftcards.v2.urls', namespace='giftcards_v2')),
+    # path('v2/api/gift-cards/', include('apps.public.giftcards.v2.urls', namespace='giftcards_v2')),
     
     # Metafields API
     path('v2/api/metafields/', include('apps.public.metafields.v2.urls', namespace='metafields_v2')),
@@ -78,7 +81,7 @@ urlpatterns = [
     path('v2/api/translations/', include('apps.public.translations.v2.urls', namespace='translations_v2')),
     
     # Webhooks API
-    path('v2/api/webhooks/', include('apps.webhooks.v2.urls', namespace='webhooks_v2')),
+    # path('v2/api/webhooks/', include('apps.webhooks.v2.urls', namespace='webhooks_v2')),
     
     # Test API
     path('v2/api/test/', include('apps.test.v2.urls', namespace='test_v2')),

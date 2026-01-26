@@ -2,7 +2,7 @@
 
 ## Directory Structure
 ```
-media/
+mediafile/
 ├── __init__.py
 ├── apps.py
 ├── models/
@@ -80,7 +80,7 @@ class MediaFile(models.Model):
     # Relations
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, related_name='media_files')
     folder = models.ForeignKey(
-        'media.MediaFolder', 
+        'mediaFile.MediaFolder', 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True, 

@@ -10,6 +10,60 @@ class ProductService:
     """Business logic for product management"""
     
     @staticmethod
+    def get_product(store, product_id):
+        """
+        Application service: Get product with caching
+        Uses cache infrastructure from @backend/rules/cache.md
+        """
+        from apps.cache.services import CacheService
+        
+        # Try cache first - Uses infrastructure
+        cached = CacheService.get_json(store, 'ecommerce', 'product', product_id)
+        if cached:
+            return cached
+        
+        # Fetch from database
+        try:
+            product = Product.objects.select_related('category').get(
+                store=store, id=product_id, is_active=True
+            )
+        except Product.DoesNotExist:
+            return None
+        
+        # Cache the result - Uses infrastructure
+        data = {
+            'id': product.id,
+            'name': product.name,
+            'sku': product.sku,
+            'description': product.description,
+            'price': float(product.price),
+            'is_active': product.is_active,
+            'is_in_stock': product.is_in_stock(),
+            'category': product.category.name if product.category else None,
+        }
+        CacheService.cache_json(store, 'ecommerce', 'product', product.id, data, timeout=3600)
+        
+        return data
+    
+    @staticmethod
+    def search_products(store, query, filters=None, page=1, page_size=20):
+        """
+        Application service: Search products
+        Uses search infrastructure from @backend/rules/search.md
+        """
+        from apps.search.services import SearchService
+        
+        # Use infrastructure search service
+        return SearchService.search(
+            store=store,
+            query=query,
+            search_type='product',
+            filters=filters,
+            page=page,
+            page_size=page_size
+        )
+    
+    @staticmethod
     def create_product(store, user, data):
         """Create new product with variants and categories"""
         product = Product.objects.create(

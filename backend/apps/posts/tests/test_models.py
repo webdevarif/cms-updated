@@ -14,7 +14,7 @@ class TestPostType:
     def test_create_post_type(self):
         """Test creating a post type"""
         from apps.stores.models import Store
-        from apps.posts.v2.models import PostType
+        from apps.posts.models import PostType
         
         from core.services.user import UserService
         
@@ -36,7 +36,7 @@ class TestPost:
     def test_create_post(self):
         """Test creating a post"""
         from apps.stores.models import Store
-        from apps.posts.v2.models import PostType, Post
+        from apps.posts.models import Post, PostType
         
         from core.services.user import UserService
         
@@ -67,7 +67,7 @@ class TestTaxonomy:
     def test_create_taxonomy(self):
         """Test creating a taxonomy"""
         from apps.stores.models import Store
-        from apps.posts.v2.models import Taxonomy
+        from apps.posts.models import Taxonomy
         
         from core.services.user import UserService
         

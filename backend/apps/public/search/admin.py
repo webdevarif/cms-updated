@@ -8,7 +8,7 @@ from .models import SearchIndex, SearchDocument
 @admin.register(SearchIndex)
 class SearchIndexAdmin(admin.ModelAdmin):
     """Admin for SearchIndex"""
-    list_display = ['name', 'slug', 'is_active']
+    list_display = ['name', 'index_name', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name']
 

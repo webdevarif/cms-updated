@@ -70,7 +70,7 @@ class LogEntry(models.Model):
     message = models.TextField(blank=True)
     
     # User tracking
-    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='log_entries')
     session_id = models.CharField(max_length=100, blank=True)
     
     # Request tracking

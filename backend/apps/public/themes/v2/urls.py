@@ -6,5 +6,6 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'themes', views.ThemePublicViewSet, basename='public-themes')
+router.register(r'templates', views.TemplatePublicViewSet, basename='public-templates')
 
 urlpatterns = router.urls

@@ -6,5 +6,6 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'themes', views.ThemeDashboardViewSet, basename='dashboard-themes')
+router.register(r'templates', views.TemplateDashboardViewSet, basename='dashboard-templates')
 
 urlpatterns = router.urls

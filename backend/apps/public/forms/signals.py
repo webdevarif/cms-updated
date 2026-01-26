@@ -3,7 +3,7 @@ Signals for forms module.
 """
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import FormTemplate
+from apps.forms.models import FormTemplate
 from apps.logs.tasks import log_event_async
 
 

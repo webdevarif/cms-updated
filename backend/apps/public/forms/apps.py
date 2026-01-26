@@ -13,8 +13,8 @@ class FormsConfig(AppConfig):
     def ready(self):
         """Register signals"""
         # Import models here to avoid circular imports
-        from .models.forms import FormTemplate
-        from .signals import form_created_signal
+        from apps.forms.models.forms import FormTemplate
+        from apps.forms.signals import form_created_signal
         from django.db.models.signals import post_save
         post_save.connect(form_created_signal, sender=FormTemplate)
         

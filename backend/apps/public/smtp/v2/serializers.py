@@ -1,11 +1,18 @@
 """
-Public SMTP serializers placeholder.
+Public SMTP serializers.
 """
 from rest_framework import serializers
 
 
 class SmtpPublicSerializer(serializers.Serializer):
-    """
-    This is an architectural placeholder. No API surface or behavior defined yet for the public SMTP interface.
-    """
-    pass
+    """Serializer for SMTP status in public context"""
+    
+    class Meta:
+        fields = ['status', 'webhooks_enabled']
+
+
+class EmailWebhookPublicSerializer(serializers.Serializer):
+    """Serializer for webhook status in public context"""
+    
+    class Meta:
+        fields = ['status', 'webhooks_enabled']

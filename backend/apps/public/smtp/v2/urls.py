@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 
 router = DefaultRouter()
-router.register(r'smtp', views.SmtpPublicViewSet, basename='public-smtp')
+router.register(r'status', views.SmtpPublicViewSet, basename='public-smtp-status')
+router.register(r'webhooks', views.EmailWebhookPublicViewSet, basename='public-smtp-webhooks')
 
 urlpatterns = router.urls

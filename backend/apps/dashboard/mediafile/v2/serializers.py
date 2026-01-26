@@ -1,6 +1,7 @@
 """
 Dashboard mediafile serializers.
 """
+from rest_framework import serializers
 from apps.mediafile.serializers import BaseMediaFileSerializer, BaseMediaFileUploadSerializer, BaseMediaFolderSerializer, BaseMediaFolderTreeSerializer
 
 

@@ -1,3 +1,0 @@
-"""
-Metafields module.
-"""

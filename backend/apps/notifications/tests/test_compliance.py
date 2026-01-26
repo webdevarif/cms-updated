@@ -8,7 +8,7 @@ from apps.notifications.services import NotificationService
 from apps.notifications.models import Notification, NotificationPreference
 from apps.stores.models import Store
 from apps.posts.v2.models import Post, PostType
-from apps.public.ecommerce.models import Product, Order, Inventory
+from apps.ecommerce.models import Product, Order, Inventory
 
 User = get_user_model()
 
@@ -113,7 +113,7 @@ class NotificationComplianceTest(TestCase):
     
     def test_retry_logic_for_failures(self):
         """Test that payment failures have proper retry logic"""
-        from apps.public.ecommerce.services.payment_service import handle_payment_failure
+        from apps.ecommerce.services.payment_service import handle_payment_failure
         
         # Create test payment
         product = Product.objects.create(
@@ -131,7 +131,7 @@ class NotificationComplianceTest(TestCase):
             customer_email="customer@test.com"
         )
         
-        from apps.public.ecommerce.models import Payment, PaymentMethod
+        from apps.ecommerce.models import Payment, PaymentMethod
         payment_method = PaymentMethod.objects.create(
             store=self.store,
             name="Test Method",
@@ -207,7 +207,7 @@ class NotificationComplianceTest(TestCase):
              patch('apps.notifications.services.NotificationService.notify_staff') as mock_staff:
             
             # Create order
-            from apps.public.ecommerce.v2.services import OrderService
+            from apps.ecommerce.v2.services import OrderService
             order = OrderService.create_order(
                 store=self.store,
                 user=self.customer,
@@ -226,14 +226,14 @@ class NotificationComplianceTest(TestCase):
     
     def test_payment_failure_retry(self):
         """Test that payment failures use Celery retry with exponential backoff"""
-        from apps.public.ecommerce.services.payment_service import handle_payment_failure
+        from apps.ecommerce.services.payment_service import handle_payment_failure
         
         # Verify task has proper retry configuration
         self.assertTrue(hasattr(handle_payment_failure, 'retry'))
         self.assertEqual(handle_payment_failure.max_retries, 3)
         
         # Test exponential backoff calculation
-        with patch('apps.public.ecommerce.services.payment_service.handle_payment_failure.retry') as mock_retry:
+        with patch('apps.ecommerce.services.payment_service.handle_payment_failure.retry') as mock_retry:
             # Simulate failure
             handle_payment_failure.retry(exc=Exception("Test error"))
             

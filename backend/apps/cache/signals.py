@@ -97,70 +97,70 @@ def invalidate_post_cache_delete(sender, instance, **kwargs):
         logger.debug(f"Invalidated deleted post cache for {instance.id} in store {store.slug}")
 
 
-@receiver(post_save, sender='ecommerce.Product')
-def invalidate_product_cache(sender, instance, **kwargs):
-    """Invalidate product cache on product save"""
-    if hasattr(instance, 'store'):
-        store = instance.store
-        
-        # Invalidate specific product
-        CacheService.delete(store, 'ecommerce', 'product', str(instance.id))
-        
-        # Invalidate product listings
-        CacheService.delete_pattern(store, 'ecommerce:product:*')
-        
-        logger.debug(f"Invalidated product cache for {instance.id} in store {store.slug}")
+# @receiver(post_save, sender='ecommerce.Product')
+# def invalidate_product_cache(sender, instance, **kwargs):
+#     """Invalidate product cache on product save"""
+#     if hasattr(instance, 'store'):
+#         store = instance.store
+#         
+#         # Invalidate specific product
+#         CacheService.delete(store, 'ecommerce', 'product', str(instance.id))
+#         
+#         # Invalidate product listings
+#         CacheService.delete_pattern(store, 'ecommerce:product:*')
+#         
+#         logger.debug(f"Invalidated product cache for {instance.id} in store {store.slug}")
 
 
-@receiver(post_delete, sender='ecommerce.Product')
-def invalidate_product_cache_delete(sender, instance, **kwargs):
-    """Invalidate product cache on product delete"""
-    if hasattr(instance, 'store'):
-        store = instance.store
-        
-        # Invalidate specific product
-        CacheService.delete(store, 'ecommerce', 'product', str(instance.id))
-        
-        # Invalidate product listings
-        CacheService.delete_pattern(store, 'ecommerce:product:*')
-        
-        logger.debug(f"Invalidated deleted product cache for {instance.id} in store {store.slug}")
+# @receiver(post_delete, sender='ecommerce.Product')
+# def invalidate_product_cache_delete(sender, instance, **kwargs):
+#     """Invalidate product cache on product delete"""
+#     if hasattr(instance, 'store'):
+#         store = instance.store
+#         
+#         # Invalidate specific product
+#         CacheService.delete(store, 'ecommerce', 'product', str(instance.id))
+#         
+#         # Invalidate product listings
+#         CacheService.delete_pattern(store, 'ecommerce:product:*')
+#         
+#         logger.debug(f"Invalidated deleted product cache for {instance.id} in store {store.slug}")
 
 
-@receiver(post_save, sender='translations.Translation')
-def invalidate_translation_cache(sender, instance, **kwargs):
-    """Invalidate translation cache on translation save"""
-    if hasattr(instance, 'store'):
-        store = instance.store
-        
-        # Build cache key
-        cache_key = f"{instance.language.code}:{instance.translation_key.key}"
-        
-        # Invalidate specific translation
-        CacheService.delete(store, 'translations', 'translation', cache_key)
-        
-        # Invalidate translation listings
-        CacheService.delete_pattern(store, 'translations:translation:*')
-        
-        logger.debug(f"Invalidated translation cache for {cache_key} in store {store.slug}")
+# @receiver(post_save, sender='translations.Translation')
+# def invalidate_translation_cache(sender, instance, **kwargs):
+#     """Invalidate translation cache on translation save"""
+#     if hasattr(instance, 'store'):
+#         store = instance.store
+#         
+#         # Build cache key
+#         cache_key = f"{instance.language.code}:{instance.translation_key.key}"
+#         
+#         # Invalidate specific translation
+#         CacheService.delete(store, 'translations', 'translation', cache_key)
+#         
+#         # Invalidate translation listings
+#         CacheService.delete_pattern(store, 'translations:translation:*')
+#         
+#         logger.debug(f"Invalidated translation cache for {cache_key} in store {store.slug}")
 
 
-@receiver(post_delete, sender='translations.Translation')
-def invalidate_translation_cache_delete(sender, instance, **kwargs):
-    """Invalidate translation cache on translation delete"""
-    if hasattr(instance, 'store'):
-        store = instance.store
-        
-        # Build cache key
-        cache_key = f"{instance.language.code}:{instance.translation_key.key}"
-        
-        # Invalidate specific translation
-        CacheService.delete(store, 'translations', 'translation', cache_key)
-        
-        # Invalidate translation listings
-        CacheService.delete_pattern(store, 'translations:translation:*')
-        
-        logger.debug(f"Invalidated deleted translation cache for {cache_key} in store {store.slug}")
+# @receiver(post_delete, sender='translations.Translation')
+# def invalidate_translation_cache_delete(sender, instance, **kwargs):
+#     """Invalidate translation cache on translation delete"""
+#     if hasattr(instance, 'store'):
+#         store = instance.store
+#         
+#         # Build cache key
+#         cache_key = f"{instance.language.code}:{instance.translation_key.key}"
+#         
+#         # Invalidate specific translation
+#         CacheService.delete(store, 'translations', 'translation', cache_key)
+#         
+#         # Invalidate translation listings
+#         CacheService.delete_pattern(store, 'translations:translation:*')
+#         
+#         logger.debug(f"Invalidated deleted translation cache for {cache_key} in store {store.slug}")
 
 
 @receiver(post_save, sender='stores.Store')

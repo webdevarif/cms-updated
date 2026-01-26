@@ -1,3 +1,0 @@
-"""
-Customer ecommerce API.
-"""

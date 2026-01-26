@@ -124,8 +124,9 @@ class Store(models.Model):
         
         # Bootstrap trigger for new stores
         if is_new:
-            from .services import StoreBootstrapService
-            StoreBootstrapService.bootstrap_store(self)
+            # from .services import StoreBootstrapService
+            # StoreBootstrapService.bootstrap_store(self)
+            pass
     
     def _generate_access_code(self):
         """Generate unique 6-digit access code"""
@@ -140,7 +141,7 @@ class Store(models.Model):
     
     def get_metafield(self, namespace, key):
         """Helper to get a metafield value"""
-        from apps.public.metafields.services import MetafieldService
+        from apps.metafields.services import MetafieldService
         return MetafieldService.get_metafield(
             self, 
             namespace=namespace, 
@@ -149,7 +150,7 @@ class Store(models.Model):
     
     def set_metafield(self, namespace, key, value):
         """Helper to set a metafield value"""
-        from apps.public.metafields.services import MetafieldService
+        from apps.metafields.services import MetafieldService
         return MetafieldService.set_metafield(
             self,
             namespace=namespace,
@@ -159,7 +160,7 @@ class Store(models.Model):
     
     def get_all_metafields(self):
         """Get all metafields as a dictionary"""
-        from apps.public.metafields.services import MetafieldService
+        from apps.metafields.services import MetafieldService
         metafields = {}
         for metafield in MetafieldService.get_metafields_for_object(self):
             key = f"{metafield.definition.namespace}.{metafield.definition.key}"

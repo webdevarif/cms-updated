@@ -1,0 +1,13 @@
+"""
+Public test API views.
+"""
+from rest_framework import viewsets, permissions
+
+class TestPublicViewSet(viewsets.ViewSet):
+    """
+    Public test endpoints.
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def list(self, request):
+        return Response({"message": "test public API"})

@@ -1,0 +1,3 @@
+"""
+Posts migrations module.
+"""

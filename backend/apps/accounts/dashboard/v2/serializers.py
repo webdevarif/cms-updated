@@ -1,0 +1,43 @@
+"""
+Dashboard accounts serializers.
+"""
+from rest_framework import serializers
+from apps.accounts.models.user import User
+from apps.accounts.models.store_user import StoreUser
+
+class UserSerializer(serializers.ModelSerializer):
+    """User serializer for dashboard context"""
+    owner_email = serializers.EmailField(source='owner.email', read_only=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'is_active', 'is_staff', 'is_superuser', 'date_joined', 'last_login',
+            'owner_email'
+        ]
+        read_only_fields = ['id', 'date_joined', 'last_login', 'owner_email']
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """User update serializer for dashboard context"""
+    
+    class Meta:
+        model = User
+        fields = [
+            'first_name', 'last_name', 'is_active', 'is_staff'
+        ]
+
+
+class StoreUserSerializer(serializers.ModelSerializer):
+    """Store user serializer for dashboard context"""
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    
+    class Meta:
+        model = StoreUser
+        fields = [
+            'id', 'user', 'user_email', 'user_name', 'role',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']

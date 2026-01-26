@@ -130,3 +130,91 @@ class CanViewFormSubmissions(BasePermission):
     def has_object_permission(self, request, view, obj):
         # For form objects, check store admin permission
         return hasattr(obj, 'store') and obj.store == request.store
+
+
+class AllowAnyPublicRead(BasePermission):
+    """Allow read-only access to public endpoints without authentication"""
+
+    def has_permission(self, request, view):
+        # Allow GET, HEAD, OPTIONS requests (read operations)
+        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return True
+        # For write operations, deny access
+        return False
+
+    def has_object_permission(self, request, view, obj):
+        # Only allow read operations on objects
+        return request.method in ['GET', 'HEAD', 'OPTIONS']
+
+
+class IsAuthenticatedAndStoreOwner(BasePermission):
+    """Allow access only to authenticated users who own the store"""
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+
+        if not hasattr(request, 'store') or not request.store:
+            return False
+
+        # Check if user owns this store
+        return request.store.owner == request.user
+
+    def has_object_permission(self, request, view, obj):
+        if not (request.user and request.user.is_authenticated):
+            return False
+
+        # Check if user owns the store associated with this object
+        if hasattr(obj, 'store'):
+            return obj.store.owner == request.user
+
+        # For user objects, check direct ownership
+        if hasattr(obj, 'user'):
+            return obj.user == request.user
+
+        return False
+
+
+class HasRole(BasePermission):
+    """Flexible permission class that checks for specific roles"""
+
+    def __init__(self, allowed_roles):
+        self.allowed_roles = allowed_roles
+
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+
+        if not hasattr(request, 'store') or not request.store:
+            return False
+
+        # Check if user has any of the allowed roles in this store
+        try:
+            from apps.stores.models import StoreMember
+            membership = StoreMember.objects.get(
+                user=request.user,
+                store=request.store,
+                role__in=self.allowed_roles
+            )
+            return True
+        except StoreMember.DoesNotExist:
+            return False
+
+    def has_object_permission(self, request, view, obj):
+        if not (request.user and request.user.is_authenticated):
+            return False
+
+        # Check if user has required role for this object's store
+        if hasattr(obj, 'store'):
+            try:
+                from apps.stores.models import StoreMember
+                StoreMember.objects.get(
+                    user=request.user,
+                    store=obj.store,
+                    role__in=self.allowed_roles
+                )
+                return True
+            except StoreMember.DoesNotExist:
+                return False
+
+        return False

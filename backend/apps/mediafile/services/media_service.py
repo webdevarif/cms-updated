@@ -8,8 +8,7 @@ from urllib.parse import urljoin
 from django.conf import settings
 from django.utils.text import slugify
 
-from ..models.media_file import MediaFile
-from ..models.media_folder import MediaFolder
+from apps.mediafile.models import MediaFile, MediaFolder
 from ..exceptions import (
     MediaUploadError,
     InvalidFileTypeError,

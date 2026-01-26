@@ -1,3 +1,0 @@
-"""
-Tests for entities app.
-"""

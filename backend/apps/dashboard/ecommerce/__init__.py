@@ -1,3 +1,0 @@
-"""
-Dashboard ecommerce API.
-"""

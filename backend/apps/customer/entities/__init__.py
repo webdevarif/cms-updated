@@ -1,3 +1,0 @@
-"""
-Customer entities package.
-"""

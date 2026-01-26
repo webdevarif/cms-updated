@@ -3,24 +3,25 @@ MediaFolder model for organizing media files.
 """
 from django.db import models
 from django.contrib.auth import get_user_model
+from core.models import TenantModel
 
 User = get_user_model()
 
 
-class MediaFolder(models.Model):
+class MediaFolder(TenantModel):
     """
-    Represents a folder for organizing media files within a store.
+    Store-scoped folder for organizing media files.
     Supports nested folder structure.
     """
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, blank=True)
-    store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, related_name='media_folders')
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_folders')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
+    class Meta(TenantModel.Meta):
+        db_table = 'mediafiles_media_folder'
         unique_together = ('store', 'parent', 'slug')
         ordering = ['name']
         indexes = [

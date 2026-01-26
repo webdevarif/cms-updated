@@ -32,3 +32,9 @@ class Theme(models.Model):
     def get_active_color_scheme(self):
         """Get the default color scheme for this theme"""
         return self.color_schemes.filter(is_default=True).first()
+    
+    def get_color_scheme(self, key=None):
+        """Get a specific color scheme by key"""
+        if key:
+            return self.color_schemes.filter(key=key).first()
+        return self.get_active_color_scheme()

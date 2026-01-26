@@ -2,7 +2,7 @@
 Centralized log query operations.
 """
 from django.db.models import Count
-from .models import LogEntry
+from apps.logs.models import LogEntry
 
 
 class LogQueryHelper:

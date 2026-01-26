@@ -4,13 +4,14 @@ MediaFile model for media management.
 import os
 from django.db import models
 from django.contrib.auth import get_user_model
+from core.models import TenantModel
 
 User = get_user_model()
 
 
-class MediaFile(models.Model):
+class MediaFile(TenantModel):
     """
-    Represents a media file stored in Cloudflare R2 with ImageKit.io processing.
+    Store-scoped media file stored in Cloudflare R2 with ImageKit.io processing.
     """
     # File types and size limits (in bytes)
     IMAGE_MAX_SIZE = 10 * 1024 * 1024  # 10MB
@@ -45,7 +46,6 @@ class MediaFile(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     
     # Relations
-    store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, related_name='media_files')
     folder = models.ForeignKey(
         'mediafile.MediaFolder', 
         on_delete=models.SET_NULL, 
@@ -64,14 +64,15 @@ class MediaFile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    class Meta:
-        ordering = ['-created_at']
+    class Meta(TenantModel.Meta):
+        db_table = 'mediafiles_media_file'
         indexes = [
             models.Index(fields=['store', 'resource_type']),
             models.Index(fields=['store', 'folder']),
             models.Index(fields=['created_at']),
             models.Index(fields=['file_size']),
         ]
+        ordering = ['-created_at']
     
     def __str__(self):
         return self.original_filename

@@ -1,10 +1,13 @@
-""
+"""
 Testing settings for Digital Farmers CMS.
 
 These settings are specific to the testing environment.
 """
 
 from .base import *  # noqa
+
+# Remove debug toolbar in tests
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'debug_toolbar']
 
 # Use in-memory SQLite database for faster tests
 DATABASES = {

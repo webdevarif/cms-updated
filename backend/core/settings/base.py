@@ -26,6 +26,30 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
+# =============================================================================
+# PRODUCTION SECURITY SETTINGS
+# =============================================================================
+# HTTPS and SSL settings (only in production)
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+
+# Security headers
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Session security
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# CSRF security
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 # Frontend URL for email links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
@@ -45,6 +69,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',  # PostgreSQL search support
     
     # Third-party apps
     'rest_framework',
@@ -52,32 +77,36 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
+    'django_ratelimit',  # Rate limiting for production
+    'elasticsearch_dsl',  # Elasticsearch/OpenSearch integration
     
     # Core apps
     'core',
     
     # Feature apps
-    # 'apps.accounts',  # Temporarily commented out for migration
-    'apps.stores',
-    'apps.logs',
+    'apps.accounts',  # Migrated to internal layered structure
+    'apps.stores',  # Migrated to internal layered structure
+    'apps.logs',  # Migrated to internal layered structure
     'apps.smtp',
     'apps.mediafile',
     'apps.notifications',
     'apps.entities',
     'apps.queue',
     'apps.cache',
-    'apps.public.forms',
-    'apps.public.search',
-    'apps.public.translations',
-    'apps.public.ecommerce',
-    # 'apps.public.giftcards',  # Temporarily commented out for migration
-    'apps.public.metafields',  # Added metafields
-    # 'apps.webhooks',  # Temporarily commented out for migration
+    'apps.forms',  # Migrated to internal layered structure
+    'apps.search',  # Re-enabled after migration
+    'apps.translations',
+    'apps.ecommerce',  # Migrated to internal layered structure
+    'apps.giftcards',  # Migrated to internal layered structure
+    'apps.metafields',  # Migrated to internal layered structure
+    'apps.themes',  # Migrated to internal layered structure
+    'apps.webhooks',  # Migrated to internal layered structure
     'apps.test',
     'apps.posts',
 ]
 
 MIDDLEWARE = [
+    'sentry_sdk.integrations.django.middleware.SentryMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -177,14 +206,20 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/hour',
-        'user': '1000/hour',
+        'anon': '50/hour',         # Public layer - stricter limits
+        'user': '500/hour',        # Customer layer - moderate limits
+        'admin': '2000/hour',      # Dashboard layer - generous limits
         'translation': '50/hour',  # For translation API
         'webhook': '200/hour',     # For webhook API
-        'webhook_delivery': '500/hour'  # For webhook delivery endpoints
+        'webhook_delivery': '500/hour',  # For webhook delivery endpoints
+        'search': '100/hour',      # For search endpoints (stricter)
+        'public_api': '150/hour',  # For general public API access
+        'customer_api': '300/hour', # For customer-specific APIs
+        'admin_api': '1000/hour',  # For admin dashboard APIs
     },
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
 }
@@ -282,3 +317,162 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# =============================================================================
+# ELASTICSEARCH / OPENSEARCH CONFIGURATION
+# =============================================================================
+ELASTICSEARCH_HOST = os.getenv('ELASTICSEARCH_HOST', 'localhost')
+ELASTICSEARCH_PORT = int(os.getenv('ELASTICSEARCH_PORT', '9200'))
+ELASTICSEARCH_INDEX_PREFIX = os.getenv('ELASTICSEARCH_INDEX_PREFIX', 'dfcms')
+ELASTICSEARCH_TIMEOUT = int(os.getenv('ELASTICSEARCH_TIMEOUT', '30'))
+
+# Optional authentication
+ELASTICSEARCH_USERNAME = os.getenv('ELASTICSEARCH_USERNAME', '')
+ELASTICSEARCH_PASSWORD = os.getenv('ELASTICSEARCH_PASSWORD', '')
+ELASTICSEARCH_CLOUD_ID = os.getenv('ELASTICSEARCH_CLOUD_ID', '')
+ELASTICSEARCH_API_KEY = os.getenv('ELASTICSEARCH_API_KEY', '')
+
+# Elasticsearch connection settings
+ELASTICSEARCH_SETTINGS = {
+    'hosts': [{
+        'host': ELASTICSEARCH_HOST,
+        'port': ELASTICSEARCH_PORT,
+    }],
+    'timeout': ELASTICSEARCH_TIMEOUT,
+    'max_retries': 3,
+    'retry_on_timeout': True,
+}
+
+# Add authentication if provided
+if ELASTICSEARCH_USERNAME and ELASTICSEARCH_PASSWORD:
+    ELASTICSEARCH_SETTINGS['http_auth'] = (ELASTICSEARCH_USERNAME, ELASTICSEARCH_PASSWORD)
+elif ELASTICSEARCH_API_KEY:
+    ELASTICSEARCH_SETTINGS['api_key'] = ELASTICSEARCH_API_KEY
+# =============================================================================
+# DRF-SPECTACULAR - API Documentation
+# =============================================================================
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Digital Farmers CMS API',
+    'DESCRIPTION': 'Comprehensive API for Digital Farmers Content Management System',
+    'VERSION': '2.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,  # Disable schema serving in production
+    'SWAGGER_UI_DIST': 'SIDECAR',  # Use CDN for Swagger UI
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    # Schema generation settings
+    'SCHEMA_PATH_PREFIX': '/api/v2',
+    'SCHEMA_PATH_PREFIX_TRIM': True,
+    # Authentication
+    'SECURITY': [
+        {
+            'Bearer': {
+                'type': 'apiKey',
+                'name': 'Authorization',
+                'in': 'header',
+                'description': 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"'
+            }
+        }
+    ],
+    'SECURITY_REQUIREMENTS': [
+        {
+            'Bearer': []
+        }
+    ],
+    # Component settings
+    'COMPONENT_SPLIT_REQUEST': True,
+    'COMPONENT_SPLIT_PATCH': True,
+    'SORT_OPERATIONS': False,  # Keep operations in definition order
+    'SORT_OPERATION_PARAMETERS': False,
+    # Tags and grouping
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'User authentication and authorization'},
+        {'name': 'Content Management', 'description': 'Posts, pages, and content operations'},
+        {'name': 'E-commerce', 'description': 'Products, orders, and store management'},
+        {'name': 'Search', 'description': 'Full-text search and indexing'},
+        {'name': 'Themes', 'description': 'Theme management and customization'},
+        {'name': 'Notifications', 'description': 'User notifications and messaging'},
+        {'name': 'Analytics', 'description': 'Reporting and business intelligence'},
+        {'name': 'System', 'description': 'System management and utilities'},
+    ],
+    'EXTERNAL_DOCS': {
+        'description': 'Find more info here',
+        'url': 'https://docs.digitalfarmers.com',
+    },
+    # Extensions
+    'EXTENSIONS_ROOT': {
+        'x-logo': {
+            'url': 'https://digitalfarmers.com/logo.png',
+            'altText': 'Digital Farmers CMS'
+        }
+    },
+    # Custom settings for our multi-tenant architecture
+    'SERVERS': [
+        {
+            'url': '{protocol}://{domain}',
+            'description': 'Store-specific API server',
+            'variables': {
+                'protocol': {
+                    'default': 'https',
+                    'enum': ['http', 'https'],
+                    'description': 'Protocol for API calls'
+                },
+                'domain': {
+                    'default': 'api.digitalfarmers.com',
+                    'description': 'API domain for your store'
+                }
+            }
+        }
+    ],
+    # Enums and constants
+    'ENUM_NAME_OVERRIDES': {
+        'StatusEnum': 'apps.posts.models.Post.STATUS_CHOICES',
+        'OrderStatusEnum': 'apps.ecommerce.models.orders.Order.STATUS_CHOICES',
+        'PaymentStatusEnum': 'apps.ecommerce.models.payments.Payment.STATUS_CHOICES',
+    },
+    # Response examples
+    'ENUM_ADD_EXCLUDE': [
+        'django.db.models.enums.Choices',
+    ],
+}
+
+# =============================================================================
+# SENTRY MONITORING - PRODUCTION ERROR TRACKING
+# =============================================================================
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+
+# Sentry DSN - set via environment variable in production
+SENTRY_DSN = os.getenv('SENTRY_DSN')
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            RedisIntegration(),
+            CeleryIntegration(),
+        ],
+        # Performance monitoring
+        traces_sample_rate=0.1,  # Capture 10% of transactions
+        profiles_sample_rate=0.1,  # Capture 10% of profiles
+        
+        # Environment configuration
+        environment=os.getenv('SENTRY_ENVIRONMENT', 'development'),
+        release=os.getenv('SENTRY_RELEASE', '1.0.0'),
+        
+        # Error tracking configuration
+        send_default_pii=False,  # Don't send personally identifiable information
+        attach_stacktrace=True,
+        
+        # Before send hook for filtering sensitive data
+        before_send=lambda event, hint: event,
+        
+        # Custom tags
+        tags={
+            'service': 'cms-backend',
+            'version': '2.0.0',
+        },
+    )
+

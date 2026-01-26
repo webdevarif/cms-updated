@@ -1,3 +1,0 @@
-"""
-Gift cards module.
-"""

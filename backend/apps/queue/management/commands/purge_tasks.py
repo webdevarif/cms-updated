@@ -2,21 +2,39 @@
 Purge queue tasks management command.
 """
 from django.core.management.base import BaseCommand
+from celery import current_app
 
 
 class Command(BaseCommand):
     help = 'Purge queue tasks'
     
     def add_arguments(self, parser):
-        parser.add_argument('--queue', type=str, help='Purge tasks by queue')
+        parser.add_argument('--queue', type=str, help='Purge tasks by queue name')
+        parser.add_argument('--force', action='store_true', help='Force purge without confirmation')
     
     def handle(self, *args, **options):
         queue = options.get('queue')
+        force = options.get('force')
         
-        if queue:
-            self.stdout.write(f"Purging tasks for queue: {queue}")
-        else:
-            self.stdout.write("Purging all tasks")
+        if not force:
+            if queue:
+                confirm = input(f"Are you sure you want to purge all tasks in queue '{queue}'? (y/N): ")
+            else:
+                confirm = input("Are you sure you want to purge ALL tasks? This action cannot be undone! (y/N): ")
+            
+            if confirm.lower() not in ['y', 'yes']:
+                self.stdout.write("Purge cancelled.")
+                return
         
-        # Implementation will go here
-        self.stdout.write("Task purge functionality to be implemented")
+        try:
+            if queue:
+                # Purge tasks by queue
+                purged_count = current_app.control.purge(destination=[queue])
+                self.stdout.write(self.style.SUCCESS(f"Successfully purged {purged_count} tasks from queue '{queue}'"))
+            else:
+                # Purge all tasks
+                purged_count = current_app.control.purge()
+                self.stdout.write(self.style.SUCCESS(f"Successfully purged {purged_count} tasks from all queues"))
+                
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Error purging tasks: {str(e)}"))

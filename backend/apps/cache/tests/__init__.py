@@ -1,3 +1,1 @@
-"""
-Tests for cache module.
-"""
+# Cache tests

@@ -98,6 +98,52 @@ class User(AbstractBaseUser, PermissionsMixin):
         """Return the user's short name"""
         return self.first_name or self.username
 
+    def has_role(self, role_name, store=None):
+        """Check if user has a specific role in a store"""
+        if not store:
+            # If no store specified, check if user has any global roles
+            return self.is_superuser or self.is_staff
+
+        try:
+            from apps.stores.models import StoreMember
+            membership = StoreMember.objects.get(
+                user=self,
+                store=store,
+                role=role_name,
+                is_active=True
+            )
+            return True
+        except StoreMember.DoesNotExist:
+            return False
+
+    def get_store_role(self, store):
+        """Get user's role in a specific store"""
+        try:
+            from apps.stores.models import StoreMember
+            membership = StoreMember.objects.get(
+                user=self,
+                store=store,
+                is_active=True
+            )
+            return membership.role
+        except StoreMember.DoesNotExist:
+            return None
+
+    def get_store_roles(self):
+        """Get all store roles for this user"""
+        try:
+            from apps.stores.models import StoreMember
+            memberships = StoreMember.objects.filter(
+                user=self,
+                is_active=True
+            ).select_related('store')
+            return {
+                membership.store.slug: membership.role
+                for membership in memberships
+            }
+        except:
+            return {}
+
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         old_email = None

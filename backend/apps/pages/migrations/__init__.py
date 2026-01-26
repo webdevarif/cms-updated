@@ -1,0 +1,3 @@
+"""
+Pages migrations module.
+"""

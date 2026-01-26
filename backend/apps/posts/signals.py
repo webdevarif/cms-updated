@@ -6,7 +6,7 @@ from django.dispatch import receiver
 from .models import Post, Taxonomy, Term
 from apps.logs.tasks import log_event_async
 from apps.notifications.services import NotificationService
-from apps.public.translations.services import TranslationService
+# from apps.translations.services import TranslationService
 
 
 @receiver(post_save, sender=Post)

@@ -3,12 +3,11 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAdminUser
 
-from apps.posts.v2.models import Post
+from apps.posts.models import Post
 from apps.posts.v2.serializers import PostSerializer, PostCreateSerializer
-from apps.posts.v2.views.base import StoreScopedViewSet
 
 
-class DashboardPostViewSet(StoreScopedViewSet):
+class DashboardPostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     permission_classes = [IsAdminUser]
 

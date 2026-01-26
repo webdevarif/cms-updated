@@ -3,12 +3,11 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 
-from apps.posts.v2.models import Post
+from apps.posts.models import Post
 from apps.posts.v2.serializers import PostSerializer, PostCreateSerializer
-from apps.posts.v2.views.base import StoreScopedViewSet
 
 
-class CustomerPostViewSet(StoreScopedViewSet):
+class CustomerPostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     permission_classes = [IsAuthenticated]
 

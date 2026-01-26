@@ -3,12 +3,11 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
 
-from apps.posts.v2.models import Post
+from apps.posts.models import Post
 from apps.posts.v2.serializers import PostSerializer, PostCreateSerializer
-from apps.posts.v2.views.base import StoreScopedViewSet
 
 
-class PublicPostViewSet(StoreScopedViewSet):
+class PublicPostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     permission_classes = [AllowAny]
 

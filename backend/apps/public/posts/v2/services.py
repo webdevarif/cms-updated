@@ -1,6 +1,6 @@
 """Public posts services."""
 
-from apps.posts.v2.services import PostService
+from apps.posts.services import PostService
 
 
 class PublicPostService(PostService):
@@ -9,7 +9,7 @@ class PublicPostService(PostService):
     @staticmethod
     def get_published_posts(store, limit=10):
         """Get published posts for public viewing"""
-        from apps.posts.v2.models import Post
+        from apps.posts.models import Post
         
         return Post.objects.filter(
             store=store,
@@ -19,7 +19,7 @@ class PublicPostService(PostService):
     @staticmethod
     def get_post_by_slug(store, slug):
         """Get published post by slug"""
-        from apps.posts.v2.models import Post
+        from apps.posts.models import Post
         
         try:
             return Post.objects.get(

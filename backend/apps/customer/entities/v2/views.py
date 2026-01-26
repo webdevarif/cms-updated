@@ -10,8 +10,8 @@ from django.contrib.contenttypes.models import ContentType
 
 from core.viewsets import TenantViewSet
 from core.permissions import IsStoreUser
-from apps.entities.v2.serializers import EntityActionSerializer, EntityInteractionSerializer
-from apps.entities.v2.services import EntityService
+from apps.customer.entities.v2.serializers import EntityActionSerializer, EntityInteractionSerializer
+from apps.entities.services import EntityService
 
 
 class CustomerEntityViewSet(TenantViewSet):

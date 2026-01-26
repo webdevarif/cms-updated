@@ -1,7 +1,7 @@
 """Public posts serializers."""
 
 from rest_framework import serializers
-from apps.posts.v2.models import Post
+from apps.posts.models import Post
 
 
 class PostCreateSerializer(serializers.ModelSerializer):

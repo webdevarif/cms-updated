@@ -6,6 +6,8 @@ from rest_framework import viewsets
 
 class NotificationPublicViewSet(viewsets.ViewSet):
     """
-    This is an architectural placeholder. No API surface or behavior defined yet for the public notifications interface.
+    No public notifications available.
+    Notifications are user-specific and require authentication.
+    Use customer layer for user notification access.
     """
     pass

@@ -10,17 +10,24 @@ User = get_user_model()
 
 
 class DashboardMediafileAPITests(APIClient):
+    """Dashboard mediafile API tests"""
+
+    def setUp(self):
+        """Set up test client and user"""
+        super().setUp()
+        self.user = UserFactory.create()
 
 
 # FactoryBoy fixtures
 class UserFactory(factory.django.DjangoModelFactory):
     """User factory for test data"""
+
     class Meta:
         model = User
-        django_get_or_create = ('email',)
+        django_get_or_create = ("email",)
 
-    email = factory.Sequence(lambda n: f'user{n}@example.com')
-    password = 'testpass123'
+    email = factory.Sequence(lambda n: f"user{n}@example.com")
+    password = "testpass123"
 
 
 @pytest.mark.django_db
@@ -30,11 +37,7 @@ class MediaFileViewSetTests:
     @pytest.fixture
     def admin_user(self):
         """Create admin user fixture"""
-        return UserFactory(
-            email='admin@example.com',
-            is_staff=True,
-            is_superuser=True
-        )
+        return UserFactory(email="admin@example.com", is_staff=True, is_superuser=True)
 
     @pytest.fixture
     def anonymous_client(self):
@@ -51,12 +54,12 @@ class MediaFileViewSetTests:
     # List endpoint tests
     def test_list_media_as_admin(self, authenticated_client):
         """Test listing media files as admin"""
-        response = authenticated_client.get('/v2/api/media/')
+        response = authenticated_client.get("/v2/api/media/")
         assert response.status_code == 200
 
     def test_list_media_as_anonymous(self, anonymous_client):
         """Test listing media files as anonymous"""
-        response = anonymous_client.get('/v2/api/media/')
+        response = anonymous_client.get("/v2/api/media/")
         assert response.status_code == 200
 
     # Upload endpoint tests
@@ -67,30 +70,25 @@ class MediaFileViewSetTests:
         from PIL import Image
 
         # Create test image
-        image = Image.new('RGB', (100, 100), color='red')
+        image = Image.new("RGB", (100, 100), color="red")
         image_file = BytesIO()
-        image.save(image_file, 'JPEG')
+        image.save(image_file, "JPEG")
         image_file.seek(0)
 
-        response = authenticated_client.post('/v2/api/media/', {
-            'file': image_file,
-            'name': 'test.jpg'
-        }, format='multipart')
+        response = authenticated_client.post(
+            "/v2/api/media/", {"file": image_file, "name": "test.jpg"}, format="multipart"
+        )
 
         assert response.status_code in [201, 200]
 
     def test_upload_media_as_anonymous(self, anonymous_client):
         """Test uploading media as anonymous (should fail)"""
-        response = anonymous_client.post('/v2/api/media/', {
-            'file': 'test.txt'
-        })
+        response = anonymous_client.post("/v2/api/media/", {"file": "test.txt"})
         assert response.status_code == 401
 
     # Permission tests
     def test_unauthorized_access(self, anonymous_client):
         """Test unauthorized access"""
-        response = anonymous_client.post('/v2/api/media/', {
-            'file': 'test.txt'
-        })
+        response = anonymous_client.post("/v2/api/media/", {"file": "test.txt"})
         assert response.status_code == 401
-        assert 'authentication' in response.data.get('detail', '').lower()
+        assert "authentication" in response.data.get("detail", "").lower()

@@ -1,14 +1,9 @@
 """
 Security middleware for Digital Farmers CMS.
-
-This middleware handles various security-related aspects of the application,
-including request validation, security headers, and protection against
-common web vulnerabilities.
 """
 import re
 
 from django.conf import settings
-from django.middleware.clickjacking import XFrameOptionsMiddleware
 from django.middleware.security import SecurityMiddleware as DjangoSecurityMiddleware
 from django.utils.deprecation import MiddlewareMixin
 
@@ -26,7 +21,7 @@ class SecurityMiddleware(DjangoSecurityMiddleware, MiddlewareMixin):
 
         # Compile regex for allowed hosts for better performance
         self.allowed_hosts_regex = [
-            re.compile(r"^%s$" % re.escape(host).replace("\*", r"[^.]*"))
+            re.compile(r"^%s$" % re.escape(host).replace(r"\*", r"[^.]*"))
             for host in self.allowed_hosts
             if "*" in host
         ]

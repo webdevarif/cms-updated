@@ -1,10 +1,9 @@
 """
-Base services for centralized ORM operations.
+Base service utilities for Digital Farmers CMS.
 """
 import logging
 
 from django.core.exceptions import ValidationError
-from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
@@ -129,8 +128,8 @@ class GiftCardQueryHelper:
         Returns:
             dict: Analytics data
         """
-        from apps.public.giftcards.models import GiftCard, GiftCardHistory
-        from django.db.models import Count, Q, Sum
+        from apps.public.giftcards.models import GiftCard
+        from django.db.models import Q, Sum
         from django.utils import timezone
 
         end_date = end_date or timezone.now()
@@ -170,7 +169,6 @@ class LogQueryHelper:
             dict: Analytics data
         """
         from apps.logs.models import LogEntry
-        from django.db.models import Count
         from django.utils import timezone
 
         since = timezone.now() - timezone.timedelta(days=days)
@@ -265,7 +263,7 @@ class ValidationHelper:
         try:
             validator(url)
             return True
-        except:
+        except Exception:
             return False
 
     @staticmethod
@@ -305,7 +303,7 @@ class CacheHelper:
             from django.core.cache import cache
 
             return cache.get(key, default)
-        except:
+        except Exception:
             return default
 
     @staticmethod
@@ -316,7 +314,7 @@ class CacheHelper:
 
             cache.set(key, value, timeout)
             return True
-        except:
+        except Exception:
             return False
 
     @staticmethod
@@ -327,7 +325,7 @@ class CacheHelper:
 
             cache.delete(key)
             return True
-        except:
+        except Exception:
             return False
 
 

@@ -1,10 +1,10 @@
 """
-Core media utilities for centralized media handling.
+Media utilities for Digital Farmers CMS.
 """
 import logging
 
-from apps.mediafile.models import MediaFolder
-from apps.mediafile.services.media_service import MediaService
+from apps.mediafile.models.mediafile import MediaFile, MediaFolder
+from apps.mediafile.services.mediafile_service import MediaService
 from django.core.files.uploadedfile import UploadedFile
 
 logger = logging.getLogger(__name__)

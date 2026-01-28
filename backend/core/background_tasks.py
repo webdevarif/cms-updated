@@ -2,10 +2,11 @@
 Consolidated background tasks for all modules.
 """
 import logging
-import subprocess
 import os
-import time
+import subprocess
 import threading
+import time
+
 from background_task import background
 from django.utils import timezone
 
@@ -19,7 +20,7 @@ def run_full_test_suite():
         logger.info("Starting full test suite execution via background task")
 
         # Create test run
-        from apps.test.models.models import TestResult, TestRun
+        from apps.test.models.models import TestResult
         from apps.test.services.test_service import TestRunnerService
 
         test_run = TestRunnerService.create_test_run(run_type="full")
@@ -116,7 +117,7 @@ def run_app_tests(app_label):
     try:
         logger.info(f"Starting test execution for app: {app_label}")
 
-        from apps.test.models.models import TestResult, TestRun
+        from apps.test.models.models import TestResult
         from apps.test.services.test_service import TestRunnerService
 
         test_run = TestRunnerService.create_test_run(run_type="app")

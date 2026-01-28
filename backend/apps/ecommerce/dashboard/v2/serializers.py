@@ -141,10 +141,10 @@ class DashboardCollectionSerializer(serializers.ModelSerializer):
         model = ProductCollection
         fields = [
             "id",
-            "name",
+            "title",
             "slug",
             "description",
-            "is_active",
+            "is_featured",
             "product_count",
             "created_at",
             "updated_at",
@@ -345,10 +345,9 @@ class CustomerProfileDashboardSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "user",
+            "first_name",
+            "last_name",
             "phone",
-            "address",
-            "city",
-            "country",
             "order_count",
             "created_at",
             "updated_at",

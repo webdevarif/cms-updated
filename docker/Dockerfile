@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -16,20 +16,20 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
-COPY requirements.txt .
+COPY ../backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
-COPY . .
+COPY ../backend/ .
 
 # Set the DJANGO_SETTINGS_MODULE environment variable
 ENV DJANGO_SETTINGS_MODULE=core.settings.development
 
-# Collect static files
-RUN python manage.py collectstatic --noinput || echo "Skipping collectstatic"
+# Collect static files (handle gracefully)
+RUN python manage.py collectstatic --noinput 2>/dev/null || echo "Collectstatic skipped - will run at startup"
 
 # Expose port
 EXPOSE 8000

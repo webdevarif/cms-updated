@@ -79,6 +79,24 @@ class User(AbstractBaseUser, PermissionsMixin):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Fix reverse accessor conflicts
+    groups = models.ManyToManyField(
+        "auth.Group",
+        verbose_name="groups",
+        blank=True,
+        related_name="custom_user_groups",
+        related_query_name="custom_user",
+        help_text="The groups this user belongs to.",
+    )
+    user_permissions = models.ManyToManyField(
+        "auth.Permission",
+        verbose_name="user permissions",
+        blank=True,
+        related_name="custom_user_permissions",
+        related_query_name="custom_user",
+        help_text="Specific permissions for this user.",
+    )
+
     objects = GlobalUserManager()
 
     USERNAME_FIELD = "email"
@@ -107,9 +125,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         try:
             from apps.stores.models import StoreMember
 
-            membership = StoreMember.objects.get(
-                user=self, store=store, role=role_name, is_active=True
-            )
+            StoreMember.objects.get(user=self, store=store, role=role_name, is_active=True)
             return True
         except StoreMember.DoesNotExist:
             return False
@@ -133,7 +149,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                 "store"
             )
             return {membership.store.slug: membership.role for membership in memberships}
-        except:
+        except Exception:
             return {}
 
     def save(self, *args, **kwargs):

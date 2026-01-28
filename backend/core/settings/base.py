@@ -9,6 +9,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Sentry imports (conditionally loaded)
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+except ImportError:
+    sentry_sdk = None
+    DjangoIntegration = None
+
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 PROJECT_ROOT = BASE_DIR.parent
@@ -77,6 +85,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "drf_spectacular",
+    "drf_spectacular_sidecar",  # Swagger UI static files
     "django_ratelimit",  # Rate limiting for production
     "elasticsearch_dsl",  # Elasticsearch/OpenSearch integration
     # Core apps
@@ -90,21 +99,22 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.entities",
     "apps.queue",
-    "apps.cache",
     "apps.forms",  # Migrated to internal layered structure
     "apps.search",  # Re-enabled after migration
     "apps.translations",
-    "apps.ecommerce",  # Migrated to internal layered structure
-    "apps.giftcards",  # Migrated to internal layered structure
-    "apps.metafields",  # Migrated to internal layered structure
-    "apps.themes",  # Migrated to internal layered structure
-    "apps.webhooks",  # Migrated to internal layered structure
-    "apps.test",
+    "apps.ecommerce",  # Re-enabled
+    "apps.giftcards",  # Re-enabled
+    "apps.metafields",  # Re-enabled
+    "apps.themes",  # Re-enabled
+    "apps.webhooks",  # Re-enabled
+    "apps.test",  # Re-enabled - investigate actual admin template error
     "apps.posts",
+    "django_celery_beat",  # Added for Celery Beat scheduling
+    "background_task",  # Added for django-background-tasks
 ]
 
 MIDDLEWARE = [
-    "sentry_sdk.integrations.django.middleware.SentryMiddleware",
+    # "sentry_sdk.integrations.django.SentryMiddleware",  # Temporarily disabled
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -179,7 +189,18 @@ USE_TZ = True
 # STATIC FILES
 # =============================================================================
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(PROJECT_ROOT, "staticfiles")
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+# Static files finders
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
+
+# Additional static files directories (if needed)
+STATICFILES_DIRS = [
+    # os.path.join(BASE_DIR, "static"),  # Uncomment if you have project-level static files
+]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(PROJECT_ROOT, "media")
@@ -219,7 +240,9 @@ REST_FRAMEWORK = {
         "customer_api": "300/hour",  # For customer-specific APIs
         "admin_api": "1000/hour",  # For admin dashboard APIs
     },
-    "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
+    "USER_AUTHENTICATION_RULE": (
+        "rest_framework_simplejwt.authentication.default_user_authentication_rule"
+    ),
 }
 
 # =============================================================================
@@ -259,18 +282,60 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 # ELASTICSEARCH_TIMEOUT = 30
 
 # =============================================================================
-# CELERY - TEMPORARILY DISABLED
+# CELERY - ENABLED FOR BACKGROUND TASKS
 # =============================================================================
-# CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-# CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+from celery.schedules import crontab
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+
+# Celery Beat Scheduler Configuration
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+CELERY_BEAT_TIMEZONE = "UTC"
+
+# Celery Configuration
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TIMEZONE = "UTC"
+CELERY_ENABLE_UTC = True
+
+# Beat Settings
+CELERY_BEAT_SCHEDULE = {
+    "example-periodic-task": {
+        "task": "apps.search.tasks.rebuild_search_index",
+        "schedule": crontab(minute=0, hour=3),  # Daily at 3 AM UTC
+    },
+}
+
+# =============================================================================
+# DJANGO BACKGROUND TASKS CONFIGURATION
+# =============================================================================
+BACKGROUND_TASKS = {
+    "QUEUES": {
+        "default": 3,  # Number of concurrent tasks
+        "test": 2,  # Separate queue for test tasks
+        "search": 1,  # Separate queue for search tasks
+        "reports": 1,  # Separate queue for report tasks
+    },
+    "MAX_RUN_TIME": 3600,  # Maximum run time in seconds (1 hour)
+    "MAX_ATTEMPTS": 3,  # Maximum retry attempts
+    "RUN_EVERY_TASK_TYPE": False,  # Don't run every task type automatically
+    "BACKGROUND_TASKS_ASYNC_METHODS": ["POST"],  # HTTP methods allowed for async tasks
+    "BACKGROUND_TASKS_ASYNC_URL": "/background-tasks/",  # URL for async task execution
+    "BACKGROUND_TASKS_URLS": [],  # Additional URLs to allow
+}
 
 # =============================================================================
 # CACHING - TEMPORARILY DISABLED
 # =============================================================================
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "unique-snowflake",
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://redis:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
     }
 }
 
@@ -383,12 +448,15 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Comprehensive API for Digital Farmers Content Management System",
     "VERSION": "2.0.0",
     "SERVE_INCLUDE_SCHEMA": False,  # Disable schema serving in production
-    "SWAGGER_UI_DIST": "SIDECAR",  # Use CDN for Swagger UI
+    "SWAGGER_UI_DIST": "SIDECAR",
     "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
     "REDOC_DIST": "SIDECAR",
     # Schema generation settings
-    "SCHEMA_PATH_PREFIX": "/api/v2",
+    "SCHEMA_PATH_PREFIX": "/v2/api",
     "SCHEMA_PATH_PREFIX_TRIM": True,
+    # Disable all preprocessing hooks to avoid import issues
+    "PREPROCESSING_HOOKS": [],
+    "POSTPROCESSING_HOOKS": [],
     # Authentication
     "SECURITY": [
         {
@@ -396,7 +464,10 @@ SPECTACULAR_SETTINGS = {
                 "type": "apiKey",
                 "name": "Authorization",
                 "in": "header",
-                "description": 'JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"',
+                "description": (
+                    "JWT Authorization header using the Bearer scheme. "
+                    'Example: "Authorization: Bearer {token}"'
+                ),
             }
         }
     ],
@@ -447,7 +518,7 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "StatusEnum": "apps.posts.models.Post.STATUS_CHOICES",
         "OrderStatusEnum": "apps.ecommerce.models.orders.Order.STATUS_CHOICES",
-        "PaymentStatusEnum": "apps.ecommerce.models.payments.Payment.STATUS_CHOICES",
+        "PaymentStatusEnum": ("apps.ecommerce.models.payments.Payment.STATUS_CHOICES"),
     },
     # Response examples
     "ENUM_ADD_EXCLUDE": [
@@ -458,36 +529,12 @@ SPECTACULAR_SETTINGS = {
 # =============================================================================
 # SENTRY MONITORING - PRODUCTION ERROR TRACKING
 # =============================================================================
-import sentry_sdk
-from sentry_sdk.integrations.celery import CeleryIntegration
-from sentry_sdk.integrations.django import DjangoIntegration
-from sentry_sdk.integrations.redis import RedisIntegration
-
-# Sentry DSN - set via environment variable in production
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 
-if SENTRY_DSN:
+if SENTRY_DSN and sentry_sdk and DjangoIntegration:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(),
-            RedisIntegration(),
-            CeleryIntegration(),
-        ],
-        # Performance monitoring
-        traces_sample_rate=0.1,  # Capture 10% of transactions
-        profiles_sample_rate=0.1,  # Capture 10% of profiles
-        # Environment configuration
-        environment=os.getenv("SENTRY_ENVIRONMENT", "development"),
-        release=os.getenv("SENTRY_RELEASE", "1.0.0"),
-        # Error tracking configuration
-        send_default_pii=False,  # Don't send personally identifiable information
-        attach_stacktrace=True,
-        # Before send hook for filtering sensitive data
-        before_send=lambda event, hint: event,
-        # Custom tags
-        tags={
-            "service": "cms-backend",
-            "version": "2.0.0",
-        },
+        integrations=[DjangoIntegration()],
+        traces_sample_rate=0.1,
+        send_default_pii=False,
     )

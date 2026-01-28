@@ -18,7 +18,7 @@ class PageService:
         """
         Get page with caching
         """
-        from apps.cache.services import CacheService
+        from core.services.cache_service import CacheService
 
         from ..models import Post
 
@@ -61,7 +61,7 @@ class PageService:
         """
         Get page by slug with caching
         """
-        from apps.cache.services import CacheService
+        from core.services.cache_service import CacheService
 
         from ..models import Post
 
@@ -104,7 +104,7 @@ class PageService:
         """
         Get all published pages for a store with caching
         """
-        from apps.cache.services import CacheService
+        from core.services.cache_service import CacheService
 
         from ..models import Post
 
@@ -147,7 +147,7 @@ class PageService:
         """
         Create a new page
         """
-        from apps.cache.services import CacheService
+        from core.services.cache_service import CacheService
 
         from ..models import Post
 
@@ -170,7 +170,7 @@ class PageService:
         """
         Update a page
         """
-        from apps.cache.services import CacheService
+        from core.services.cache_service import CacheService
 
         # Update page
         for field, value in kwargs.items():
@@ -180,11 +180,11 @@ class PageService:
         # Invalidate cache
         CacheService.delete(page.store, "pages", "page", str(page.id))
         CacheService.delete(page.store, "pages", "page_by_slug", page.slug)
-        CacheService.delete_pattern(page.store, "pages:published_pages_list:*")
+        CacheService.invalidate_module(page.store, "pages")
 
         # If status changed to published, invalidate all page listings
         if "status" in kwargs and kwargs["status"] == "published":
-            CacheService.delete_pattern(page.store, "pages:page:*")
+            CacheService.invalidate_module(page.store, "pages")
 
         logger.info(f"Updated page {page.id} for store {page.store.slug}")
 
@@ -195,12 +195,12 @@ class PageService:
         """
         Delete a page
         """
-        from apps.cache.services import CacheService
+        from core.services.cache_service import CacheService
 
         # Invalidate cache
         CacheService.delete(page.store, "pages", "page", str(page.id))
         CacheService.delete(page.store, "pages", "page_by_slug", page.slug)
-        CacheService.delete_pattern(page.store, "pages:published_pages_list:*")
+        CacheService.invalidate_module(page.store, "pages")
 
         # Delete page
         page.delete()

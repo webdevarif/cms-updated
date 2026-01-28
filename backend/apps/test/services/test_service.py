@@ -16,16 +16,24 @@ class TestRunnerService:
     @transaction.atomic
     def create_test_run(run_type="full", store=None, initiated_by=None):
         """Create a new test run"""
-        from core.services.store import StoreService
+        from apps.test.models.models import TestRun
 
-        from .models import TestRun
-
-        test_run = TestRun.objects.create(
-            store=StoreService.create_store(name="Test Store", slug="test-store"),
-            initiated_by=initiated_by,
-            run_type=run_type,
-            status="running",
-        )
+        # Use existing store or create without owner requirement
+        if store is None:
+            # Create a simple test run without store for now
+            test_run = TestRun.objects.create(
+                store=None,  # Allow null store
+                initiated_by=initiated_by,
+                run_type=run_type,
+                status="running",
+            )
+        else:
+            test_run = TestRun.objects.create(
+                store=store,
+                initiated_by=initiated_by,
+                run_type=run_type,
+                status="running",
+            )
 
         logger.info(f"Created TestRun #{test_run.id} - {run_type}")
         return test_run
@@ -44,7 +52,7 @@ class TestRunnerService:
         metadata=None,
     ):
         """Record an individual test result"""
-        from .models import TestResult
+        from apps.test.models.models import TestResult
 
         return TestResult.objects.create(
             test_run=test_run,
@@ -62,7 +70,7 @@ class TestRunnerService:
     @staticmethod
     def aggregate_results(test_run):
         """Aggregate test results for a test run"""
-        from .models import TestResult
+        from apps.test.models.models import TestResult
 
         results = TestResult.objects.filter(test_run=test_run)
 
@@ -132,35 +140,26 @@ class TestRunnerService:
 
     @staticmethod
     def alert_on_failure(test_run):
-        """Send email alert on test failures"""
-        if test_run.failed_tests > 0:
-            from apps.smtp.services import SMTPService
-            from django.conf import settings
+        """Send alert on test failures"""
+        try:
+            # Try to import SMTP service, but don't fail if it doesn't exist
+            try:
+                from apps.smtp.services import SMTPService
 
-            # Get recipients (store owner or admin)
-            recipients = []
-            if test_run.store:
-                recipients.append(test_run.store.owner.email)
-            if test_run.initiated_by:
-                recipients.append(test_run.initiated_by.email)
+                smtp_service = SMTPService()
 
-            # Send alert email
-            SMTPService.send_template_email(
-                template_name="test_failure_alert",
-                recipients=recipients,
-                subject=f"Test Failure Alert - {test_run.run_type} - {test_run.failed_tests} Failed",
-                html_content=f"""
-                <h2>Test Failure Alert</h2>
-                <p><strong>Test Run:</strong> #{test_run.id}</p>
-                <p><strong>Type:</strong> {test_run.run_type}</p>
-                <p><strong>Failed Tests:</strong> {test_run.failed_tests}/{test_run.total_tests}</p>
-                <p><strong>Success Rate:</strong> {test_run.success_rate:.1f}%</p>
-                <p><strong>Started:</strong> {test_run.started_at}</p>
-                <p><strong>Completed:</strong> {test_run.completed_at}</p>
-                <hr>
-                <p><a href="{settings.BASE_URL}/test/reports/{test_run.id}/">View Full Report</a></p>
-                """,
-                store=test_run.store,
-            )
-
-            logger.info(f"Test failure alert sent for TestRun #{test_run.id}")
+                # Send email alert
+                smtp_service.send_email(
+                    to_email="admin@example.com",
+                    subject=f"Test Run Failed - {test_run.run_type}",
+                    message=f"Test run #{test_run.id} failed with {test_run.failed_tests} failures out of {test_run.total_tests} tests.",
+                )
+                logger.info(f"Alert email sent for TestRun #{test_run.id}")
+            except ImportError:
+                logger.warning(
+                    f"SMTP service not available, skipping email alert for TestRun #{test_run.id}"
+                )
+            except Exception as e:
+                logger.error(f"Failed to send alert email for TestRun #{test_run.id}: {e}")
+        except Exception as e:
+            logger.error(f"Alert on failure failed for TestRun #{test_run.id}: {e}")

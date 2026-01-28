@@ -4,6 +4,26 @@ URL configuration for the core module.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
+from django.views.generic import TemplateView
+
+
+def schema_view(request):
+    """Lazy-loaded schema view to avoid import-time settings access"""
+    from drf_spectacular.views import SpectacularAPIView
+
+    view = SpectacularAPIView.as_view()
+    return view(request)
+
+
+def swagger_view(request):
+    """Lazy-loaded swagger view to avoid import-time settings access"""
+    from drf_spectacular.views import SpectacularSwaggerView
+
+    view = SpectacularSwaggerView.as_view(url="/api/schema/")
+    return view(request)
+
+
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 app_name = "core"
 
@@ -31,7 +51,7 @@ urlpatterns = [
     path("v2/api/notifications/", include("apps.notifications.urls", namespace="notifications_v2")),
     # Entities API - migrated to internal layered structure
     path("v2/api/entities/", include("apps.entities.urls", namespace="entities_v2")),
-    # Ecommerce APIs - migrated to internal layered structure
+    # E-commerce APIs - migrated to internal layered structure
     path("v2/api/ecommerce/", include("apps.ecommerce.urls", namespace="ecommerce_v2")),
     # Gift Cards API - migrated to internal layered structure
     path("v2/api/gift-cards/", include("apps.giftcards.urls", namespace="giftcards_v2")),
@@ -45,8 +65,16 @@ urlpatterns = [
     path("v2/api/logs/", include("apps.logs.urls", namespace="logs_v2")),
     # Themes API - migrated to internal layered structure
     path("v2/api/themes/", include("apps.themes.urls", namespace="themes_v2")),
-    # Cache API - TODO: Implement cache module
-    # path('v2/api/cache/', include('apps.cache.v2.urls', namespace='cache_v2')),
+    # Cache API - Simple cache management views
+    path(
+        "v2/api/cache/stats/", lambda request: (lambda: None)(), name="cache_stats"
+    ),  # TODO: Add cache views
+    path(
+        "v2/api/cache/clear/", lambda request: (lambda: None)(), name="clear_cache"
+    ),  # TODO: Add cache views
+    path(
+        "v2/api/cache/warm/", lambda request: (lambda: None)(), name="warm_cache"
+    ),  # TODO: Add cache views
     # Queue API - TODO: Implement task_queue module
     # path('v2/api/queue/', include('apps.task_queue.v2.urls', namespace='queue_v2')),
     # Translations API - migrated to internal layered structure
@@ -56,7 +84,9 @@ urlpatterns = [
     # Test API - commented out until v2 structure is created
     # path('v2/api/test/', include('apps.test.v2.urls', namespace='test_v2')),
     # API Schema - drf-spectacular OpenAPI documentation
-    path("api/schema/", include("drf_spectacular.urls")),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    # Swagger UI - Redoc documentation
+    path("api/docs/", SpectacularSwaggerView.as_view(url="/api/schema/"), name="swagger-ui"),
 ]
 
 # Static and media files in development

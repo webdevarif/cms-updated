@@ -7,7 +7,7 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .serializers import StorePublicSerializer
+from ..serializers.serializers import StorePublicSerializer
 
 
 class StorePublicViewSet(viewsets.ReadOnlyModelViewSet):

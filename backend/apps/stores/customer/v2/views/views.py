@@ -1,6 +1,7 @@
 """
 Customer stores API views.
 """
+from apps.stores.models import Store
 from apps.stores.services import StoreAccessService, StoreService
 from core.permissions import IsStoreUser
 from drf_spectacular.utils import extend_schema
@@ -9,8 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from ..models import Store
-from .serializers import StoreCustomerSerializer
+from ..serializers.serializers import StoreCustomerSerializer
 
 
 class StoreCustomerViewSet(viewsets.ModelViewSet):

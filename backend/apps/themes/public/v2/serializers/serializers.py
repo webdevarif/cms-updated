@@ -13,11 +13,8 @@ class ThemePublicSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "slug",
-            "description",
-            "preview_image",
-            "is_default",
             "is_active",
             "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_at"]

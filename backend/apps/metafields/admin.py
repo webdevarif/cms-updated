@@ -6,9 +6,9 @@ from .models import Metafield, MetafieldDefinition
 
 @admin.register(MetafieldDefinition)
 class MetafieldDefinitionAdmin(admin.ModelAdmin):
-    list_display = ("store", "namespace", "key", "value_type", "created_at")
+    list_display = ("store", "namespace", "key", "type", "created_at")
     search_fields = ("namespace", "key", "name")
-    list_filter = ("store", "value_type")
+    list_filter = ("store", "type")
 
 
 @admin.register(Metafield)

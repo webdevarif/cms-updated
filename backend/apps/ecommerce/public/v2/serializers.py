@@ -83,7 +83,10 @@ class CartPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cart
-        fields = ["id", "session_key", "items", "total_amount", "created_at", "updated_at"]
+        fields = ["id", "session_key", "items", "total", "created_at", "updated_at"]
+
+    def get_items(self, obj):
+        return CartItemPublicSerializer(obj.items.all(), many=True).data
 
 
 class ReviewPublicSerializer(serializers.ModelSerializer):
@@ -165,36 +168,6 @@ class ReviewPublicSerializer(serializers.ModelSerializer):
         return ip
 
 
-class ProductVariantPublicSerializer(serializers.ModelSerializer):
-    """Public product variant serializer"""
-
-    class Meta:
-        model = ProductVariant
-        fields = [
-            "id",
-            "title",
-            "price",
-            "compare_at_price",
-            "sku",
-            "quantity",
-            "options",
-            "effective_price",
-        ]
-
-
-class CartPublicSerializer(serializers.ModelSerializer):
-    """Public cart serializer"""
-
-    items = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Cart
-        fields = ["id", "session_key", "items", "total_amount", "created_at", "updated_at"]
-
-    def get_items(self, obj):
-        return CartItemPublicSerializer(obj.items.all(), many=True).data
-
-
 class CartItemPublicSerializer(serializers.ModelSerializer):
     """Public cart item serializer"""
 
@@ -210,7 +183,7 @@ class CollectionPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductCollection
-        fields = ["id", "name", "slug", "description", "is_active", "created_at", "updated_at"]
+        fields = ["id", "title", "slug", "description", "is_featured", "created_at", "updated_at"]
 
 
 class CustomerProfilePublicSerializer(serializers.ModelSerializer):
@@ -218,4 +191,4 @@ class CustomerProfilePublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomerProfile
-        fields = ["id", "user", "phone", "address", "city", "country", "created_at", "updated_at"]
+        fields = ["id", "user", "first_name", "last_name", "phone", "created_at", "updated_at"]

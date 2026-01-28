@@ -6,10 +6,15 @@ from apps.accounts.services.account_service import PublicAuthService
 from core.permissions import AllowAnyPublicRead
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAnyPublicRead
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .serializers import PasswordResetSerializer, RegistrationSerializer, UserSerializer
+from .serializers import (
+    LoginSerializer,
+    PasswordResetSerializer,
+    RegistrationSerializer,
+    UserSerializer,
+)
 
 
 class PublicLoginView(generics.GenericAPIView):
@@ -18,6 +23,7 @@ class PublicLoginView(generics.GenericAPIView):
     """
 
     permission_classes = [AllowAnyPublicRead]
+    serializer_class = LoginSerializer
 
     @extend_schema(summary="User login", description="Authenticate user and return JWT token")
     def post(self, request):
@@ -50,6 +56,7 @@ class PublicRegistrationView(generics.GenericAPIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = RegistrationSerializer
 
     @extend_schema(summary="User registration", description="Register new user account")
     def post(self, request):
@@ -76,6 +83,7 @@ class ForgotPasswordView(generics.GenericAPIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = PasswordResetSerializer
 
     @extend_schema(summary="Forgot password", description="Send password reset email")
     def post(self, request):
@@ -83,7 +91,7 @@ class ForgotPasswordView(generics.GenericAPIView):
         serializer = PasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        CustomerAccountService.send_password_reset_email(serializer.validated_data["email"])
+        PublicAuthService.send_password_reset_email(serializer.validated_data["email"])
 
         return Response({"message": "Password reset email sent"})
 
@@ -94,6 +102,7 @@ class ResetPasswordView(generics.GenericAPIView):
     """
 
     permission_classes = [AllowAny]
+    serializer_class = PasswordResetSerializer
 
     @extend_schema(summary="Reset password", description="Reset password with token")
     def post(self, request):
@@ -101,7 +110,7 @@ class ResetPasswordView(generics.GenericAPIView):
         serializer = PasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        CustomerAccountService.reset_password(
+        PublicAuthService.reset_password(
             token=serializer.validated_data["token"],
             new_password=serializer.validated_data["new_password"],
         )

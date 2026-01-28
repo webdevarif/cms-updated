@@ -1,8 +1,8 @@
 """
 Customer themes API views - authenticated theme management and customization.
 """
-from apps.themes.models import Theme, ThemeSettings
-from apps.themes.services import ThemeCustomizationService, ThemeRenderingService
+from apps.themes.models import Theme
+from apps.themes.services import ThemeService
 from core.permissions import IsAuthenticatedAndStoreOwner
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .serializers import ThemeCustomerSerializer, ThemePreviewSerializer, ThemeSettingsSerializer
+from ..serializers.serializers import ThemeCustomerSerializer
 
 
 class ThemeCustomerViewSet(viewsets.ReadOnlyModelViewSet):
@@ -48,9 +48,7 @@ class ThemeCustomerViewSet(viewsets.ReadOnlyModelViewSet):
 
         try:
             # Apply theme to store
-            ThemeCustomizationService.apply_theme_to_store(
-                theme=theme, store=store, user=request.user
-            )
+            ThemeService.apply_theme_to_store(theme=theme, store=store, user=request.user)
 
             return Response(
                 {

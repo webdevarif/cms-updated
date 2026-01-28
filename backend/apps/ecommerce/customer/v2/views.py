@@ -8,6 +8,7 @@ from apps.ecommerce.models.customers import CustomerProfile
 from apps.ecommerce.models.orders import Order, OrderItem
 from apps.ecommerce.models.payments import Payment, PaymentMethod
 from apps.ecommerce.models.products import Product, ProductCategory, ProductVariant
+from apps.ecommerce.models.reviews import Review
 from apps.ecommerce.services.ecommerce_service import EcommerceService
 from core.permissions import IsStoreUser
 from drf_spectacular.utils import extend_schema
@@ -28,6 +29,7 @@ from .serializers import (
     PaymentMethodCustomerSerializer,
     ProductCategoryCustomerSerializer,
     ProductCustomerSerializer,
+    ReviewCustomerSerializer,
 )
 
 

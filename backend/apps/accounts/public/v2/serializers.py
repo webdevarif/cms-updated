@@ -5,7 +5,7 @@ from apps.accounts.models.user import User
 from rest_framework import serializers
 
 
-class UserSerializer(serializers.Serializer):
+class LoginSerializer(serializers.Serializer):
     """User login serializer"""
 
     email = serializers.EmailField()
@@ -20,6 +20,24 @@ class UserSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid credentials")
         return data
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """User serializer for API responses"""
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "username",
+            "first_name",
+            "last_name",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class RegistrationSerializer(serializers.ModelSerializer):

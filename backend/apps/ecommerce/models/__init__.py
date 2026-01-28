@@ -3,7 +3,9 @@ Ecommerce models.
 """
 from .cart import Cart, CartItem
 from .collections import ProductCollection
-from .coupons import Coupon, CouponCampaign
+from .coupons import Coupon, CouponCampaign  # Re-enabled
+
+# from .coupons import Coupon, CouponCampaign  # Temporarily disabled for schema generation
 from .customers import CustomerProfile
 from .inventory import Inventory
 from .orders import Order, OrderItem
@@ -25,8 +27,8 @@ __all__ = [
     "Inventory",
     "Order",
     "OrderItem",
-    "CouponCampaign",
-    "Coupon",
+    "CouponCampaign",  # Re-enabled
+    "Coupon",  # Re-enabled
     "PaymentMethod",
     "Payment",
     "Review",

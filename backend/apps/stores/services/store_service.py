@@ -8,6 +8,9 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from ..models.store import Store
+from ..models.store_settings import StoreSettings
+
 logger = logging.getLogger(__name__)
 
 
@@ -459,10 +462,10 @@ class StoreBootstrapService:
     def _phase7_cache_warming(store):
         """Phase 7: Cache warming"""
         try:
-            from apps.cache.services import CacheWarmupService
+            from core.services.cache_service import CacheWarmupService
 
             # Warm cache for store
-            CacheWarmupService.warm_store_cache(store)
+            CacheWarmupService.warm_store_cache(store.slug)
         except Exception as e:
             logger.warning(f"Phase 7 skipped for store {store.slug}: {e}")
 
@@ -690,7 +693,7 @@ class StoreOnboardingService:
             if default_theme:
                 store.theme = default_theme
                 store.save()
-        except:
+        except Exception:
             # Themes app might not be available, skip theme association
             pass
 

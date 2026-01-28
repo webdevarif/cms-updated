@@ -17,10 +17,10 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "is_active",
-            "date_joined",
-            "last_login",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ["id", "date_joined", "last_login"]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):

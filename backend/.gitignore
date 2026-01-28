@@ -19,6 +19,25 @@ wheels/
 .installed.cfg
 *.egg
 
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Static files
+/static/
+/staticfiles/
+/media/
+
+# Large generated files
+*.map
+schema.json
+swagger-ui-bundle.js
+swagger-ui-bundle.js.map
+redoc.standalone.js
+redoc.standalone.js.map
+
 # Virtual Environment
 venv/
 env/

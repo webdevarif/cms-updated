@@ -10,7 +10,7 @@ from .models import Webhook, WebhookDelivery, WebhookEvent
 class WebhookAdmin(admin.ModelAdmin):
     """Admin for Webhook"""
 
-    list_display = ["name", "url", "is_active", "last_triggered_at"]
+    list_display = ["name", "url", "is_active", "created_at", "updated_at"]
     list_filter = ["is_active"]
     search_fields = ["name", "url"]
 

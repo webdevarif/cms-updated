@@ -76,8 +76,9 @@ class WebhookDeliveryDashboardSerializer(serializers.ModelSerializer):
             "response_status",
             "response_body",
             "error_message",
-            "retry_count",
-            "created_at",
-            "updated_at",
+            "attempt_number",
+            "triggered_at",
+            "delivered_at",
+            "duration_ms",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id"]

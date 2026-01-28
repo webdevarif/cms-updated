@@ -93,7 +93,7 @@ class CollectionCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductCollection
-        fields = ["id", "name", "slug", "description", "is_active", "created_at", "updated_at"]
+        fields = ["id", "title", "slug", "description", "is_featured", "created_at", "updated_at"]
 
 
 class CustomerProfileCustomerSerializer(serializers.ModelSerializer):
@@ -101,7 +101,7 @@ class CustomerProfileCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomerProfile
-        fields = ["id", "user", "phone", "address", "city", "country", "created_at", "updated_at"]
+        fields = ["id", "user", "first_name", "last_name", "phone", "created_at", "updated_at"]
 
 
 class OrderCustomerSerializer(serializers.ModelSerializer):
@@ -122,6 +122,7 @@ class OrderCustomerSerializer(serializers.ModelSerializer):
             "customer_email",
             "customer_phone",
             "notes",
+            "items",
             "created_at",
             "updated_at",
         ]

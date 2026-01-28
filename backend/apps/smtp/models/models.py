@@ -1,9 +1,9 @@
 """
 SMTP models for email configuration.
 """
+from core.fields import EncryptedCharField
 from django.db import models
 from django.utils import timezone
-from fernet_fields import EncryptedCharField
 
 
 class SmtpConfiguration(models.Model):

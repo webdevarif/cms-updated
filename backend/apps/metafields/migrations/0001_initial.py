@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -141,9 +140,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="metafield",
-            index=models.Index(
-                fields=["definition"], name="metafields__definit_da90d2_idx"
-            ),
+            index=models.Index(fields=["definition"], name="metafields__definit_da90d2_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="metafield",

@@ -49,7 +49,7 @@ class StatusChoices:
     SHIPPED = 'shipped'
     DELIVERED = 'delivered'
     CANCELLED = 'cancelled'
-    
+
     DRAFT = 'draft'
     PUBLISHED = 'published'
     ARCHIVED = 'archived'
@@ -111,7 +111,7 @@ def get_product_list(request):
         'images',
         'categories'
     ).all()
-    
+
     # Single query with all related data
     return products
 
@@ -131,7 +131,7 @@ class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     status = models.CharField(max_length=20)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['customer', 'status']),
@@ -157,10 +157,10 @@ class Cart(models.Model):
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     shipping = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+
     def get_total(self):
         return self.total
-    
+
     def recalculate_totals(self):
         self.subtotal = sum(item.get_total() for item in self.items.all())
         self.tax = self.calculate_tax()
@@ -178,13 +178,13 @@ class Cart(models.Model):
 # 1. Product Service
 class ProductService:
     """Centralized product business logic"""
-    
+
     @staticmethod
     def create_product(store, user, data):
         """Create product with validation and logging"""
         # Validate data
         ProductService.validate_product_data(data)
-        
+
         # Create product
         product = Product.objects.create(
             store=store,
@@ -193,14 +193,14 @@ class ProductService:
             sku=data['sku'],
             created_by=user
         )
-        
+
         # Create variants
         if 'variants' in data:
             ProductService.create_variants(product, data['variants'])
-        
+
         # Setup inventory
         ProductService.setup_inventory(product)
-        
+
         # Log creation
         log_event_async(
             user=user,
@@ -209,9 +209,9 @@ class ProductService:
             object_type='product',
             object_id=product.id
         )
-        
+
         return product
-    
+
     @staticmethod
     def update_product_inventory(product, variant, quantity_change, reason):
         """Update inventory with audit trail"""
@@ -220,11 +220,11 @@ class ProductService:
             product=product,
             variant=variant
         )[0]
-        
+
         old_quantity = inventory.quantity
         inventory.quantity += quantity_change
         inventory.save()
-        
+
         # Create transaction record
         InventoryTransaction.objects.create(
             inventory=inventory,
@@ -232,7 +232,7 @@ class ProductService:
             quantity=quantity_change,
             notes=reason
         )
-        
+
         # Log change
         log_event_async(
             user=None,
@@ -251,7 +251,7 @@ class ProductService:
 # 2. Order Service
 class OrderService:
     """Centralized order business logic"""
-    
+
     @staticmethod
     def process_order_payment(order, payment_method, payment_data):
         """Process payment with fraud detection"""
@@ -261,30 +261,30 @@ class OrderService:
             order.status = 'flagged'
             order.save()
             raise ValidationError("Order flagged for review")
-        
+
         # Process payment
         payment = PaymentService.process_payment(
             order, payment_method, payment_data
         )
-        
+
         # Update order status
         if payment.status == 'completed':
             order.payment_status = 'paid'
             order.status = 'confirmed'
             order.save()
-            
+
             # Send confirmation
             EmailService.send_order_confirmation(order)
-            
+
             # Update customer stats
             order.customer.update_statistics()
-        
+
         return payment
 
 # 3. Cart Service
 class CartService:
     """Centralized cart business logic"""
-    
+
     @staticmethod
     def add_item_with_validation(cart, product, variant, quantity):
         """Add item with inventory validation"""
@@ -294,10 +294,10 @@ class CartService:
             product=product,
             variant=variant
         ).first()
-        
+
         if not inventory or inventory.available < quantity:
             raise ValidationError("Insufficient inventory")
-        
+
         # Add or update cart item
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
@@ -305,16 +305,16 @@ class CartService:
             variant=variant,
             defaults={'quantity': quantity}
         )
-        
+
         if not created:
             cart_item.quantity += quantity
-        
+
         # Reserve inventory
         inventory.reserve(cart_item.quantity)
-        
+
         # Recalculate cart totals
         cart.recalculate_totals()
-        
+
         return cart_item
 ```
 
@@ -327,15 +327,15 @@ class EcommerceEvents:
     PRODUCT_CREATED = 'product.created'
     PRODUCT_UPDATED = 'product.updated'
     PRODUCT_DELETED = 'product.deleted'
-    
+
     ORDER_CREATED = 'order.created'
     ORDER_CONFIRMED = 'order.confirmed'
     ORDER_SHIPPED = 'order.shipped'
     ORDER_CANCELLED = 'order.cancelled'
-    
+
     PAYMENT_COMPLETED = 'payment.completed'
     PAYMENT_FAILED = 'payment.failed'
-    
+
     INVENTORY_LOW = 'inventory.low'
     INVENTORY_OUT_OF_STOCK = 'inventory.out_of_stock'
 
@@ -345,7 +345,7 @@ class EventDispatcher:
     def dispatch(event_name, data):
         """Dispatch event to all registered handlers"""
         handlers = EventHandler.get_handlers(event_name)
-        
+
         for handler in handlers:
             try:
                 handler.handle(data)
@@ -359,17 +359,17 @@ class InventoryEventHandler:
     def handle_order_created(data):
         """Handle order created event"""
         order = data['order']
-        
+
         # Reserve inventory
         for item in order.items.all():
             inventory = Inventory.objects.filter(
                 product=item.product,
                 variant=item.variant
             ).first()
-            
+
             if inventory:
                 inventory.reserve(item.quantity)
-                
+
                 # Check for low stock
                 if inventory.available <= 5:
                     EventDispatcher.dispatch(
@@ -383,7 +383,7 @@ class EmailEventHandler:
         """Send order confirmation email"""
         order = data['order']
         send_order_confirmation_email.delay(order.id)
-    
+
     @staticmethod
     def handle_inventory_low(data):
         """Send low stock alert"""
@@ -415,12 +415,12 @@ class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     sku = models.CharField(max_length=100, unique=True)
-    
+
     # Pricing
     price = models.DecimalField(max_digits=10, decimal_places=2)
     compare_at_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
+
     # Inventory
     inventory_quantity = models.IntegerField(default=0)
     inventory_policy = models.CharField(
@@ -432,26 +432,26 @@ class ProductVariant(models.Model):
         ],
         default='deny'
     )
-    
+
     # Physical attributes
     weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     length = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     width = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     height = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
+
     # Variant options (structured)
     option1 = models.CharField(max_length=100, blank=True)
     option2 = models.CharField(max_length=100, blank=True)
     option3 = models.CharField(max_length=100, blank=True)
-    
+
     # Position for ordering
     position = models.IntegerField(default=0)
-    
+
     # Metadata
     barcode = models.CharField(max_length=50, blank=True)
     requires_shipping = models.BooleanField(default=True)
     taxable = models.BooleanField(default=True)
-    
+
     class Meta:
         ordering = ['position']
         indexes = [
@@ -466,7 +466,7 @@ class VariantOption(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variant_options')
     name = models.CharField(max_length=50)  # e.g., "Size", "Color"
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         unique_together = ['product', 'name']
         ordering = ['position']
@@ -476,7 +476,7 @@ class VariantOptionValue(models.Model):
     option = models.ForeignKey(VariantOption, on_delete=models.CASCADE, related_name='values')
     value = models.CharField(max_length=100)  # e.g., "Small", "Red"
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         unique_together = ['option', 'value']
         ordering = ['position']
@@ -493,11 +493,11 @@ class Collection(models.Model):
     slug = models.SlugField(max_length=255)
     description = models.TextField(blank=True)
     image = models.ForeignKey('media.MediaFile', on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     # Smart collection settings
     is_smart = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    
+
     # Sorting
     sort_order = models.CharField(
         max_length=20,
@@ -511,19 +511,19 @@ class Collection(models.Model):
         ],
         default='manual'
     )
-    
+
     # Metadata
     created_by = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['store', 'slug']
 
 class CollectionCondition(models.Model):
     """Rules for smart collections"""
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='conditions')
-    
+
     # Condition definition
     field = models.CharField(
         max_length=50,
@@ -539,7 +539,7 @@ class CollectionCondition(models.Model):
             ('category', 'Category')
         ]
     )
-    
+
     operator = models.CharField(
         max_length=20,
         choices=[
@@ -556,10 +556,10 @@ class CollectionCondition(models.Model):
             ('not_in', 'Not in list')
         ]
     )
-    
+
     value = models.JSONField()  # Flexible value storage
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['position']
 
@@ -570,31 +570,31 @@ class SmartCollectionService:
         """Get products matching smart collection rules"""
         if not collection.is_smart:
             return collection.products.all()
-        
+
         queryset = Product.objects.filter(store=collection.store, status='published')
-        
+
         for condition in collection.conditions.all():
             queryset = SmartCollectionService.apply_condition(queryset, condition)
-        
+
         # Apply sorting
         queryset = SmartCollectionService.apply_sorting(queryset, collection.sort_order)
-        
+
         return queryset.distinct()
-    
+
     @staticmethod
     def apply_condition(queryset, condition):
         """Apply single condition to queryset"""
         field = condition.field
         operator = condition.operator
         value = condition.value
-        
+
         if field == 'title':
             if operator == 'contains':
                 return queryset.filter(title__icontains=value)
             elif operator == 'equals':
                 return queryset.filter(title__iexact=value)
             # ... other operators
-        
+
         elif field == 'price':
             if operator == 'greater_than':
                 return queryset.filter(variants__price__gt=value)
@@ -605,13 +605,13 @@ class SmartCollectionService:
                     variants__price__gte=value[0],
                     variants__price__lte=value[1]
                 )
-        
+
         elif field == 'category':
             if operator == 'equals':
                 return queryset.filter(categories__id=value)
             elif operator == 'in':
                 return queryset.filter(categories__id__in=value)
-        
+
         return queryset
 ```
 
@@ -625,7 +625,7 @@ class DiscountRule(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     # Rule configuration
     rule_type = models.CharField(
         max_length=20,
@@ -638,10 +638,10 @@ class DiscountRule(models.Model):
             ('bundle', 'Bundle Discount')
         ]
     )
-    
+
     # Conditions
     conditions = models.JSONField(default=dict)
-    
+
     # Discount calculation
     discount_type = models.CharField(
         max_length=20,
@@ -652,18 +652,18 @@ class DiscountRule(models.Model):
             ('free_shipping', 'Free Shipping')
         ]
     )
-    
+
     discount_value = models.DecimalField(max_digits=10, decimal_places=2)
-    
+
     # Limits and restrictions
     usage_limit = models.IntegerField(null=True, blank=True)
     usage_limit_per_customer = models.IntegerField(null=True, blank=True)
     minimum_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+
     # Timing
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
-    
+
     # Status
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
@@ -672,28 +672,28 @@ class DiscountRule(models.Model):
 
 class DiscountEngine:
     """Advanced discount calculation engine"""
-    
+
     @staticmethod
     def calculate_discounts(cart, customer=None):
         """Calculate all applicable discounts for cart"""
         discounts = []
         total_discount = Decimal('0.00')
-        
+
         # Get applicable rules
         rules = DiscountEngine.get_applicable_rules(cart.store, cart, customer)
-        
+
         for rule in rules:
             discount = DiscountEngine.calculate_rule_discount(rule, cart, customer)
             if discount['amount'] > 0:
                 discounts.append(discount)
                 total_discount += discount['amount']
-        
+
         return {
             'discounts': discounts,
             'total_discount': total_discount,
             'final_total': cart.get_total() - total_discount
         }
-    
+
     @staticmethod
     def get_applicable_rules(store, cart, customer):
         """Get rules that apply to this cart"""
@@ -703,30 +703,30 @@ class DiscountEngine:
             starts_at__lte=timezone.now(),
             ends_at__gte=timezone.now()
         )
-        
+
         applicable_rules = []
-        
+
         for rule in rules:
             if DiscountEngine.rule_applies(rule, cart, customer):
                 applicable_rules.append(rule)
-        
+
         return applicable_rules
-    
+
     @staticmethod
     def rule_applies(rule, cart, customer):
         """Check if rule applies to cart"""
         conditions = rule.conditions
-        
+
         # Check minimum order amount
         if rule.minimum_order_amount > 0:
             if cart.get_subtotal() < rule.minimum_order_amount:
                 return False
-        
+
         # Check usage limits
         if rule.usage_limit:
             if rule.used_count >= rule.usage_limit:
                 return False
-        
+
         if rule.usage_limit_per_customer and customer:
             customer_usage = Order.objects.filter(
                 customer=customer,
@@ -734,7 +734,7 @@ class DiscountEngine:
             ).count()
             if customer_usage >= rule.usage_limit_per_customer:
                 return False
-        
+
         # Check specific conditions based on rule type
         if rule.rule_type == 'cart_total':
             return DiscountEngine.check_cart_total_conditions(rule, cart)
@@ -742,9 +742,9 @@ class DiscountEngine:
             return DiscountEngine.check_product_conditions(rule, cart)
         elif rule.rule_type == 'customer_specific':
             return DiscountEngine.check_customer_conditions(rule, customer)
-        
+
         return True
-    
+
     @staticmethod
     def calculate_rule_discount(rule, cart, customer):
         """Calculate discount amount for a specific rule"""
@@ -756,7 +756,7 @@ class DiscountEngine:
             discount_amount = cart.get_shipping()
         else:
             discount_amount = Decimal('0.00')
-        
+
         return {
             'rule_id': rule.id,
             'rule_name': rule.name,
@@ -775,13 +775,13 @@ class DiscountEngine:
 # 1. Offline Cart Support
 class OfflineCartService:
     """Service for offline cart functionality"""
-    
+
     @staticmethod
     def sync_cart_when_online(user, offline_cart_data):
         """Sync offline cart when user comes online"""
         try:
             cart = CartService.get_cart_for_user(user)
-            
+
             for item_data in offline_cart_data['items']:
                 # Merge offline items with online cart
                 CartService.add_item_with_validation(
@@ -790,16 +790,16 @@ class OfflineCartService:
                     item_data.get('variant_id'),
                     item_data['quantity']
                 )
-            
+
             return {'status': 'synced', 'cart_id': cart.id}
-        
+
         except Exception as e:
             return {'status': 'error', 'message': str(e)}
 
 # 2. Push Notifications for Order Updates
 class PushNotificationService:
     """Push notifications for order status updates"""
-    
+
     @staticmethod
     def send_order_update_notification(order, status):
         """Send push notification for order update"""
@@ -820,7 +820,7 @@ class PushNotificationService:
                     }
                 ]
             }
-            
+
             send_push_notification.delay(
                 order.customer.user.push_notification_token,
                 message
@@ -829,7 +829,7 @@ class PushNotificationService:
 # 3. One-Click Reorder
 class ReorderService:
     """Service for quick reordering"""
-    
+
     @staticmethod
     def create_reorder(order, user):
         """Create new order from existing order"""
@@ -840,7 +840,7 @@ class ReorderService:
             shipping_address=order.shipping_address,
             status='draft'
         )
-        
+
         # Copy order items
         for item in order.items.all():
             OrderItem.objects.create(
@@ -853,11 +853,11 @@ class ReorderService:
                 unit_price=item.product.get_current_price(),
                 total_price=item.product.get_current_price() * item.quantity
             )
-        
+
         # Recalculate totals
         new_order.calculate_totals()
         new_order.save()
-        
+
         return new_order
 ```
 
@@ -867,7 +867,7 @@ class ReorderService:
 
 class ProductSearchService:
     """Advanced product search with filters"""
-    
+
     @staticmethod
     def search_products(store, query, filters=None, sort=None):
         """Advanced product search"""
@@ -875,7 +875,7 @@ class ProductSearchService:
             store=store,
             status='published'
         )
-        
+
         # Text search
         if query:
             queryset = queryset.filter(
@@ -885,67 +885,67 @@ class ProductSearchService:
                 models.Q(variants__sku__icontains=query) |
                 models.Q(tags__contains=query)
             ).distinct()
-        
+
         # Apply filters
         if filters:
             queryset = ProductSearchService.apply_filters(queryset, filters)
-        
+
         # Apply sorting
         if sort:
             queryset = ProductSearchService.apply_sorting(queryset, sort)
-        
+
         return queryset
-    
+
     @staticmethod
     def apply_filters(queryset, filters):
         """Apply search filters"""
         # Category filter
         if 'category' in filters:
             queryset = queryset.filter(categories__slug=filters['category'])
-        
+
         # Price range filter
         if 'price_min' in filters:
             queryset = queryset.filter(variants__price__gte=filters['price_min'])
         if 'price_max' in filters:
             queryset = queryset.filter(variants__price__lte=filters['price_max'])
-        
+
         # In stock filter
         if 'in_stock' in filters and filters['in_stock']:
             queryset = queryset.filter(
                 variants__inventory_quantity__gt=0
             )
-        
+
         # Attributes filter
         if 'attributes' in filters:
             for attr, value in filters['attributes'].items():
                 queryset = queryset.filter(
                     attributes__contains={attr: value}
                 )
-        
+
         return queryset.distinct()
-    
+
     @staticmethod
     def get_search_suggestions(store, query):
         """Get search suggestions for autocomplete"""
         suggestions = []
-        
+
         # Product title suggestions
         title_matches = Product.objects.filter(
             store=store,
             status='published',
             title__icontains=query
         ).values_list('title', flat=True)[:5]
-        
+
         suggestions.extend(title_matches)
-        
+
         # Category suggestions
         category_matches = ProductCategory.objects.filter(
             store=store,
             name__icontains=query
         ).values_list('name', flat=True)[:3]
-        
+
         suggestions.extend(category_matches)
-        
+
         return list(set(suggestions))[:10]
 ```
 
@@ -957,7 +957,7 @@ class ProductSearchService:
 
 class EcommerceAnalytics:
     """Advanced ecommerce analytics"""
-    
+
     @staticmethod
     def get_sales_report(store, start_date, end_date):
         """Generate comprehensive sales report"""
@@ -965,7 +965,7 @@ class EcommerceAnalytics:
             store=store,
             created_at__range=[start_date, end_date]
         )
-        
+
         report = {
             'summary': {
                 'total_orders': orders.count(),
@@ -984,16 +984,16 @@ class EcommerceAnalytics:
             'customer_analysis': EcommerceAnalytics.get_customer_analysis(orders),
             'revenue_by_category': EcommerceAnalytics.get_revenue_by_category(orders)
         }
-        
+
         return report
-    
+
     @staticmethod
     def get_customer_lifetime_value(store):
         """Calculate customer lifetime value"""
         customers = Customer.objects.filter(
             orders__store=store
         ).distinct()
-        
+
         clv_data = []
         for customer in customers:
             orders = Order.objects.filter(customer=customer, store=store)
@@ -1001,11 +1001,11 @@ class EcommerceAnalytics:
             order_count = orders.count()
             first_order = orders.order_by('created_at').first()
             last_order = orders.order_by('-created_at').first()
-            
+
             if first_order and last_order:
                 days_active = (last_order.created_at - first_order.created_at).days
                 avg_order_value = total_spent / order_count if order_count > 0 else 0
-                
+
                 clv_data.append({
                     'customer_id': customer.id,
                     'customer_name': customer.get_full_name(),
@@ -1015,14 +1015,14 @@ class EcommerceAnalytics:
                     'days_active': days_active,
                     'clv_per_day': total_spent / days_active if days_active > 0 else 0
                 })
-        
+
         return sorted(clv_data, key=lambda x: x['total_spent'], reverse=True)
-    
+
     @staticmethod
     def get_inventory_turnover(store):
         """Calculate inventory turnover ratio"""
         inventory = Inventory.objects.filter(store=store)
-        
+
         turnover_data = []
         for item in inventory:
             # Calculate cost of goods sold
@@ -1031,11 +1031,11 @@ class EcommerceAnalytics:
                 variant=item.variant,
                 order__created_at__gte=timezone.now() - timedelta(days=365)
             ).aggregate(total=models.Sum('quantity'))['total'] or 0
-            
+
             # Calculate turnover
             avg_inventory = (item.quantity + sold_quantity) / 2
             turnover_rate = sold_quantity / avg_inventory if avg_inventory > 0 else 0
-            
+
             turnover_data.append({
                 'product': item.product.title,
                 'variant': item.variant.title if item.variant else 'Default',
@@ -1044,7 +1044,7 @@ class EcommerceAnalytics:
                 'turnover_rate': turnover_rate,
                 'days_of_supply': 365 / turnover_rate if turnover_rate > 0 else 999
             })
-        
+
         return sorted(turnover_data, key=lambda x: x['turnover_rate'], reverse=True)
 ```
 
@@ -1056,7 +1056,7 @@ class EcommerceAnalytics:
 
 class EcommerceCache:
     """Ecommerce-specific caching"""
-    
+
     CACHE_KEYS = {
         'product_list': 'product_list:{store_id}:{page}',
         'product_detail': 'product_detail:{product_id}',
@@ -1064,7 +1064,7 @@ class EcommerceCache:
         'cart_totals': 'cart_totals:{cart_id}',
         'search_results': 'search:{store_id}:{query_hash}'
     }
-    
+
     CACHE_TIMEOUTS = {
         'product_list': 300,  # 5 minutes
         'product_detail': 600,  # 10 minutes
@@ -1072,16 +1072,16 @@ class EcommerceCache:
         'cart_totals': 60,  # 1 minute
         'search_results': 180  # 3 minutes
     }
-    
+
     @staticmethod
     def get_product_list(store_id, page=1):
         """Get cached product list"""
         cache_key = EcommerceCache.CACHE_KEYS['product_list'].format(
             store_id=store_id, page=page
         )
-        
+
         products = cache.get(cache_key)
-        
+
         if not products:
             products = Product.objects.filter(
                 store_id=store_id,
@@ -1089,15 +1089,15 @@ class EcommerceCache:
             ).select_related('store').prefetch_related(
                 'variants', 'images', 'categories'
             )
-            
+
             cache.set(
                 cache_key,
                 products,
                 EcommerceCache.CACHE_TIMEOUTS['product_list']
             )
-        
+
         return products
-    
+
     @staticmethod
     def invalidate_product_cache(product):
         """Invalidate product-related caches"""
@@ -1107,7 +1107,7 @@ class EcommerceCache:
                 product_id=product.id
             )
         )
-        
+
         # Invalidate product list
         for page in range(1, 50):  # Invalidate first 50 pages
             cache.delete(
@@ -1115,7 +1115,7 @@ class EcommerceCache:
                     store_id=product.store_id, page=page
                 )
             )
-        
+
         # Invalidate category tree
         cache.delete(
             EcommerceCache.CACHE_KEYS['category_tree'].format(
@@ -1132,79 +1132,79 @@ class EcommerceCache:
 
 class FraudDetectionEngine:
     """Advanced fraud detection"""
-    
+
     @staticmethod
     def analyze_transaction(order, payment_data):
         """Comprehensive fraud analysis"""
         risk_score = 0
         risk_factors = []
-        
+
         # 1. Order value analysis
         if order.total > 1000:
             risk_score += 15
             risk_factors.append('high_value_order')
-        
+
         # 2. Customer behavior analysis
         customer_risk = FraudDetectionEngine.analyze_customer_behavior(order.customer)
         risk_score += customer_risk['score']
         risk_factors.extend(customer_risk['factors'])
-        
+
         # 3. Geographic analysis
         geo_risk = FraudDetectionEngine.analyze_geographic_risk(
             order.billing_address, order.shipping_address
         )
         risk_score += geo_risk['score']
         risk_factors.extend(geo_risk['factors'])
-        
+
         # 4. Payment method analysis
         payment_risk = FraudDetectionEngine.analyze_payment_method(payment_data)
         risk_score += payment_risk['score']
         risk_factors.extend(payment_risk['factors'])
-        
+
         # 5. Device fingerprinting
         device_risk = FraudDetectionEngine.analyze_device_fingerprint(
             payment_data.get('device_fingerprint')
         )
         risk_score += device_risk['score']
         risk_factors.extend(device_risk['factors'])
-        
+
         return {
             'risk_score': risk_score,
             'risk_factors': risk_factors,
             'recommendation': FraudDetectionEngine.get_recommendation(risk_score),
             'requires_review': risk_score > 70
         }
-    
+
     @staticmethod
     def analyze_customer_behavior(customer):
         """Analyze customer behavior patterns"""
         risk_score = 0
         factors = []
-        
+
         # New customer risk
         if customer.order_count == 0:
             risk_score += 20
             factors.append('new_customer')
-        
+
         # Rapid ordering
         recent_orders = Order.objects.filter(
             customer=customer,
             created_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
-        
+
         if recent_orders > 3:
             risk_score += 25
             factors.append('rapid_ordering')
-        
+
         # Unusual order size
         if customer.total_spent > 0:
             avg_order_value = customer.total_spent / customer.order_count
             current_order = Order.objects.filter(customer=customer).last()
-            
+
             if current_order and current_order.total > avg_order_value * 3:
                 risk_score += 15
                 factors.append('unusual_order_size')
-        
+
         return {'score': risk_score, 'factors': factors}
 ```
 

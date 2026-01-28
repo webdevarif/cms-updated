@@ -68,24 +68,24 @@ apps/
 ## 🔒 Permissions
 class GlobalUserManager(BaseUserManager):
     """Global user manager - users exist across all stores"""
-    
+
     def create_user(self, email, username, password=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
         if not username:
             raise ValueError("The Username field must be set")
-            
+
         email = self.normalize_email(email)
-        
+
         # Check global uniqueness
         if self.model.objects.filter(email=email).exists():
             raise ValueError(f"User with email '{email}' already exists")
         if self.model.objects.filter(username=username).exists():
             raise ValueError(f"User with username '{username}' already exists")
-            
+
         user = self.model(
-            email=email, 
-            username=username, 
+            email=email,
+            username=username,
             **extra_fields
         )
         user.set_password(password)
@@ -111,7 +111,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
-    
+
     # Global fields (no store)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -119,12 +119,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     objects = GlobalUserManager()
-    
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
-    
+
     class Meta:
         db_table = 'accounts_user'
 
@@ -220,12 +220,12 @@ class UserModelTest(TestCase):
 
 ## ⚙️ Services
 UserService.update_user_role(user, serializer.validated_data['role'])
-            
+
             return Response({
                 'message': f'User {user.email} role updated successfully',
                 'new_role': user.role.name
             })
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 ```
 ### **3. REST API Profile Management**
@@ -242,14 +242,14 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     User Profile API - Django REST Framework
     Customer profile management
     """
-    
+
     permission_classes = [IsAuthenticated, IsStoreUser]
     serializer_class = UserProfileSerializer
-    
+
     def get_object(self):
         """Return current user profile"""
         return self.request.user
-    
+
     @extend_schema(
         summary="Get User Profile",
         description="Get current user profile information",
@@ -259,7 +259,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         """Get user profile"""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Update User Profile",
         description="Update current user profile",
@@ -269,24 +269,24 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     def patch(self, request, *args, **kwargs):
         """Update user profile"""
         serializer = self.get_serializer(
-            request.user, 
-            data=request.data, 
+            request.user,
+            data=request.data,
             partial=True
         )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ChangePasswordView(generics.GenericAPIView):
     """
     Password Change API - Django REST Framework
     """
-    
+
     permission_classes = [IsAuthenticated, IsStoreUser]
     serializer_class = PasswordChangeSerializer
-    
+
     @extend_schema(
         summary="Change Password",
         description="Change user password",
@@ -298,22 +298,22 @@ class ChangePasswordView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = request.user
-            
+
             # Verify current password
             if not user.check_password(serializer.validated_data['current_password']):
                 return Response({
                     'error': 'Current password is incorrect',
                     'code': 'INVALID_CURRENT_PASSWORD'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             # Set new password
             user.set_password(serializer.validated_data['new_password'])
             user.save(update_fields=['password'])
-            
+
             return Response({
                 'message': 'Password changed successfully'
             })
-        
+
 
 ### **1. Authentication Service**
 ```python
@@ -472,6 +472,6 @@ Every accounts app development must follow these rules exactly. Any deviation wi
 **Next Review**: 2026-02-25
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

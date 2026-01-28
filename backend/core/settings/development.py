@@ -10,33 +10,33 @@ from .base import *  # noqa
 DEBUG = True
 
 # Allow all hosts in development
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
 
 # Database
-DATABASES['default']['TEST'] = {
-    'NAME': f"test_{DATABASES['default']['NAME']}",
+DATABASES["default"]["TEST"] = {
+    "NAME": f"test_{DATABASES['default']['NAME']}",
 }
 
 # Email backend
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Django Debug Toolbar
 INSTALLED_APPS += [
-    'debug_toolbar',
+    "debug_toolbar",
 ]
 
-MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+MIDDLEWARE = ["debug_toolbar.middleware.DebugToolbarMiddleware"] + MIDDLEWARE
 
 INTERNAL_IPS = [
-    '127.0.0.1',
+    "127.0.0.1",
 ]
 
 # Debug Toolbar configuration
 DEBUG_TOOLBAR_CONFIG = {
-    'SHOW_TOOLBAR_CALLBACK': lambda request: True,
-    'RENDER_PANELS': {
-        'djdt.panels.SQLPanel': {
-            'SQL_WARNING_THRESHOLD': 100,
+    "SHOW_TOOLBAR_CALLBACK": lambda request: True,
+    "RENDER_PANELS": {
+        "djdt.panels.SQLPanel": {
+            "SQL_WARNING_THRESHOLD": 100,
         },
     },
 }
@@ -45,15 +45,15 @@ DEBUG_TOOLBAR_CONFIG = {
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Logging
-LOGGING['loggers'] = {
-    'django': {
-        'handlers': ['console'],
-        'level': 'DEBUG',
-        'propagate': True,
+LOGGING["loggers"] = {
+    "django": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+        "propagate": True,
     },
-    'core': {
-        'handlers': ['console'],
-        'level': 'DEBUG',
-        'propagate': True,
+    "core": {
+        "handlers": ["console"],
+        "level": "DEBUG",
+        "propagate": True,
     },
 }

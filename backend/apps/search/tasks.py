@@ -1,15 +1,15 @@
 """
 Tasks for search module - index optimization and maintenance.
 """
+import logging
+from datetime import timedelta
+
+from apps.search.models.infrastructure import SearchIndex, SearchQuery
+from apps.search.services.infrastructure import SearchService as InfrastructureSearchService
 from celery import shared_task
 from django.contrib.auth import get_user_model
+from django.db.models import Avg, Count, Q
 from django.utils import timezone
-from datetime import timedelta
-from django.db.models import Q, Count, Avg
-import logging
-
-from apps.search.services.infrastructure import SearchService as InfrastructureSearchService
-from apps.search.models.infrastructure import SearchIndex, SearchQuery
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ def rebuild_search_index(self, store_id, content_types=None):
         logger.info(f"Starting search index rebuild for store {store_id}")
 
         from apps.stores.models import Store
+
         store = Store.objects.get(id=store_id)
 
         # Rebuild index for specified content types
@@ -43,8 +44,7 @@ def rebuild_search_index(self, store_id, content_types=None):
 
         # Update last rebuild timestamp
         search_index, created = SearchIndex.objects.get_or_create(
-            store=store,
-            defaults={'last_rebuild': timezone.now()}
+            store=store, defaults={"last_rebuild": timezone.now()}
         )
         if not created:
             search_index.last_rebuild = timezone.now()
@@ -73,7 +73,8 @@ def optimize_search_indices(self):
         logger.info("Starting search indices optimization")
 
         from apps.stores.models import Store
-        active_stores = Store.objects.filter(status='active')
+
+        active_stores = Store.objects.filter(status="active")
 
         optimized_count = 0
         for store in active_stores:
@@ -132,7 +133,8 @@ def generate_search_reports(self):
         logger.info("Starting search reports generation")
 
         from apps.stores.models import Store
-        active_stores = Store.objects.filter(status='active')
+
+        active_stores = Store.objects.filter(status="active")
         reports_generated = 0
 
         for store in active_stores:
@@ -141,12 +143,11 @@ def generate_search_reports(self):
                 thirty_days_ago = timezone.now() - timedelta(days=30)
 
                 report_data = SearchQuery.objects.filter(
-                    store=store,
-                    created_at__gte=thirty_days_ago
+                    store=store, created_at__gte=thirty_days_ago
                 ).aggregate(
-                    total_queries=Count('id'),
-                    avg_results=Avg('results_count'),
-                    no_results_count=Count('id', filter=Q(results_count=0))
+                    total_queries=Count("id"),
+                    avg_results=Avg("results_count"),
+                    no_results_count=Count("id", filter=Q(results_count=0)),
                 )
 
                 # Store or email the report
@@ -174,17 +175,15 @@ def index_document(self, store_id, document_type, document_id, data):
     Async document indexing task
     """
     try:
+        from apps.stores.models import Store
+
         from .models import SearchIndex
         from .services import SearchService
-        from apps.stores.models import Store
 
         store = Store.objects.get(id=store_id)
         result = SearchService.index_document(store, document_type, document_id, data)
 
-        return {
-            'document_id': document_id,
-            'indexed': result
-        }
+        return {"document_id": document_id, "indexed": result}
 
     except Store.DoesNotExist:
         logger.error(f"Store #{store_id} not found")
@@ -201,21 +200,19 @@ def rebuild_index(self, store_id):
     Async index rebuild task
     """
     try:
+        from apps.stores.models import Store
+
         from .models import SearchIndex
         from .services import SearchService
-        from apps.stores.models import Store
 
         store = Store.objects.get(id=store_id)
         result = SearchService.rebuild_index(store)
 
-        return {
-            'store_id': store_id,
-            'rebuilt': result
-        }
+        return {"store_id": store_id, "rebuilt": result}
 
     except Store.DoesNotExist:
         logger.error(f"Store #{store_id} not found")
-        return {'store_id': store_id, 'rebuilt': False}
+        return {"store_id": store_id, "rebuilt": False}
 
     except Exception as exc:
         logger.error(f"Index rebuild failed: {exc}")

@@ -54,7 +54,7 @@ backend/
 class Product(models.Model):
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
     # ... other fields
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'created_at']),
@@ -108,20 +108,20 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    
+
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
     'drf_spectacular',
-    
+
     # Core apps
     'apps.accounts',
     'apps.stores',
     'apps.media',
     'apps.logs',
-    
+
     # Feature apps
     'apps.ecommerce',
     'apps.themes',
@@ -366,35 +366,35 @@ class TenantMiddleware:
     Extracts store from URL path: domain.com/store/[store-slug]/
     Sets request.store for use in explicit ForeignKey queries.
     """
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         try:
             # Extract store from URL path
             store = self.get_store_from_path(request)
-            
+
             if store:
                 request.store = store
                 logger.info(f"Store middleware: Set store to '{store.name}' (ID: {store.id})")
             else:
                 logger.debug("Store middleware: No store detected")
-            
+
             return self.get_response(request)
-            
+
         except Exception as e:
             logger.error(f"Store middleware error: {str(e)}", exc_info=True)
             raise
-    
+
     def get_store_from_path(self, request):
         """
         Extract store from URL path: /store/[slug]/
         """
         from apps.stores.models import Store
-        
+
         path = request.path.strip('/')
-        
+
         # Check for /store/[slug]/ pattern
         if path.startswith('store/'):
             parts = path.split('/')
@@ -403,21 +403,21 @@ class TenantMiddleware:
                 store = Store.objects.filter(slug=store_slug, status='active').first()
                 if store:
                     return store
-        
+
         # Check for X-Store-Slug header (for API requests)
         store_slug = request.headers.get('X-Store-Slug')
         if store_slug:
             store = Store.objects.filter(slug=store_slug, status='active').first()
             if store:
                 return store
-        
+
         # Check session (for admin panel)
         store_id = request.session.get('store_id')
         if store_id:
             store = Store.objects.filter(id=store_id, status='active').first()
             if store:
                 return store
-        
+
         return None
 ```
 
@@ -435,10 +435,10 @@ class SecurityMiddleware:
     """
     Security middleware for request validation and protection.
     """
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         try:
             # Validate request body size
@@ -456,18 +456,18 @@ class SecurityMiddleware:
                         return JsonResponse({
                             'error': 'Invalid request body encoding'
                         }, status=400)
-            
+
             # Add security headers
             response = self.get_response(request)
-            
+
             # Security headers
             response['X-Content-Type-Options'] = 'nosniff'
             response['X-Frame-Options'] = 'DENY'
             response['X-XSS-Protection'] = '1; mode=block'
             response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-            
+
             return response
-            
+
         except Exception as e:
             logger.error(f"Security middleware error: {str(e)}", exc_info=True)
             return JsonResponse({'error': 'Internal server error'}, status=500)
@@ -507,13 +507,13 @@ app_name = 'v2'
 urlpatterns = [
     # Public APIs (no authentication)
     path('api/public/', include('apps.public.urls')),
-    
+
     # Customer APIs (customer authentication)
     path('api/customer/', include('apps.customer.urls')),
-    
+
     # Dashboard APIs (staff authentication)
     path('api/dashboard/', include('apps.dashboard.urls')),
-    
+
     # Admin
     path('admin/', admin.site.urls),
 ]
@@ -537,7 +537,7 @@ class EmailService:
     """
     Centralized email service for sending emails.
     """
-    
+
     @staticmethod
     def send_template_email(
         to_email,
@@ -553,12 +553,12 @@ class EmailService:
         try:
             # Render email content
             text_content = render_to_string(f'emails/{template_name}.txt', context)
-            
+
             if html_template:
                 html_content = render_to_string(f'emails/{html_template}.html', context)
             else:
                 html_content = render_to_string(f'emails/{template_name}.html', context)
-            
+
             # Send email
             send_mail(
                 subject=subject,
@@ -568,14 +568,14 @@ class EmailService:
                 html_message=html_content,
                 fail_silently=False,
             )
-            
+
             logger.info(f"Email sent to {to_email} with template {template_name}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {str(e)}", exc_info=True)
             return False
-    
+
     @staticmethod
     def send_welcome_email(user, store):
         """
@@ -586,7 +586,7 @@ class EmailService:
             'store': store,
             'login_url': f"{store.get_absolute_url()}/login",
         }
-        
+
         return EmailService.send_template_email(
             to_email=user.email,
             subject=f"Welcome to {store.name}",
@@ -606,7 +606,7 @@ class StatusChoices:
     INACTIVE = 'inactive'
     DRAFT = 'draft'
     ARCHIVED = 'archived'
-    
+
     CHOICES = [
         (ACTIVE, _('Active')),
         (INACTIVE, _('Inactive')),
@@ -623,7 +623,7 @@ class OrderStatusChoices:
     DELIVERED = 'delivered'
     CANCELLED = 'cancelled'
     REFUNDED = 'refunded'
-    
+
     CHOICES = [
         (PENDING, _('Pending')),
         (CONFIRMED, _('Confirmed')),
@@ -641,7 +641,7 @@ class PaymentStatusChoices:
     FAILED = 'failed'
     REFUNDED = 'refunded'
     PARTIALLY_REFUNDED = 'partially_refunded'
-    
+
     CHOICES = [
         (PENDING, _('Pending')),
         (COMPLETED, _('Completed')),

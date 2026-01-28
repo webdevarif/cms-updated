@@ -15,49 +15,49 @@ import re
 
 class TranslationMiddleware:
     """Handles request/response translation"""
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
         self.ignore_paths = [
             r'^/admin/', r'^/static/', r'^/media/', r'^/api/',
             r'\.(js|css|jpg|jpeg|png|gif|ico|svg|woff|ttf|eot|webp|mp4|webm|mp3|wav|ogg|json|xml|csv)$'
         ]
-    
+
     def __call__(self, request):
         # Set language from request
         self.set_language(request)
-        
+
         # Process response
         response = self.get_response(request)
-        
+
         # Skip translation for certain paths/content types
         if self.should_skip_translation(request, response):
             return response
-            
+
         # Parse and translate response
         return self.translate_response(request, response)
-    
+
     def set_language(self, request):
         """Set language from request"""
         language = self.get_language_from_request(request)
         translation.activate(language)
         request.LANGUAGE_CODE = translation.get_language()
-    
+
     def get_language_from_request(self, request):
         """Get language with store fallback"""
         # 1. URL parameter
         if 'lang' in request.GET:
             return request.GET['lang']
-            
+
         # 2. Session
         if hasattr(request, 'session') and 'django_language' in request.session:
             return request.session['django_language']
-            
+
         # 3. Store default
         store = getattr(request, 'store', None)
         if store and hasattr(store, 'default_language') and store.default_language:
             return store.default_language.code
-            
+
         # 4. Accept-Language header
         if 'HTTP_ACCEPT_LANGUAGE' in request.META:
             try:
@@ -66,7 +66,7 @@ class TranslationMiddleware:
                 )
             except LookupError:
                 pass
-                
+
         # 5. Default from settings
         return settings.LANGUAGE_CODE
 ```
@@ -104,11 +104,11 @@ class TranslationTests(TestCase):
     def test_html_sanitization(self):
         # Test XSS protection
         pass
-        
+
     def test_plural_forms(self):
         # Test pluralization
         pass
-        
+
     def test_performance(self):
         # Test with large content
         pass
@@ -149,6 +149,6 @@ def prewarm_translation_cache(store_id, language_code, content_hashes):
 ```
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

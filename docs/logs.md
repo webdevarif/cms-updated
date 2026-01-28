@@ -44,38 +44,38 @@ class LogEntry(TenantModel):
         # System
         ('SYSTEM_STARTUP', 'System Startup'),
         ('SYSTEM_ERROR', 'System Error'),
-        
+
         # User actions
         ('USER_LOGIN', 'User Login'),
         ('USER_LOGOUT', 'User Logout'),
         ('USER_REGISTER', 'User Registration'),
         ('PASSWORD_CHANGE', 'Password Change'),
         ('PASSWORD_RESET', 'Password Reset'),
-        
+
         # Content actions
         ('CONTENT_CREATE', 'Content Created'),
         ('CONTENT_UPDATE', 'Content Updated'),
         ('CONTENT_DELETE', 'Content Deleted'),
         ('CONTENT_PUBLISH', 'Content Published'),
-        
+
         # Visitor analytics
         ('PAGE_VIEW', 'Page View'),
         ('CLICK', 'Click Event'),
         ('FORM_SUBMIT', 'Form Submit'),
         ('FILE_DOWNLOAD', 'File Download'),
         ('BOUNCE', 'Bounce (quick exit)'),
-        
+
         # Security
         ('LOGIN_FAILED', 'Failed Login'),
         ('SUSPICIOUS_ACTIVITY', 'Suspicious Activity'),
         ('RATE_LIMIT', 'Rate Limit Exceeded'),
         ('BLOCKED_IP', 'IP Blocked'),
-        
+
         # API
         ('API_CALL', 'API Call'),
         ('API_ERROR', 'API Error'),
     ]
-    
+
     LOG_LEVELS = [
         ('DEBUG', 'Debug'),
         ('INFO', 'Info'),
@@ -83,38 +83,38 @@ class LogEntry(TenantModel):
         ('ERROR', 'Error'),
         ('CRITICAL', 'Critical'),
     ]
-    
+
     # Core fields
     event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
     level = models.CharField(max_length=20, choices=LOG_LEVELS, default='INFO')
     message = models.TextField(blank=True)
-    
+
     # User tracking
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     session_id = models.CharField(max_length=100, blank=True)  # For anonymous visitors
-    
+
     # Request tracking
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     request_id = models.CharField(max_length=100, blank=True)
-    
+
     # Event details
     entity_type = models.CharField(max_length=100, blank=True)  # 'Product', 'Order', etc.
     entity_id = models.PositiveIntegerField(null=True, blank=True)
     metadata = models.JSONField(default=dict)  # Flexible event data
-    
+
     # Analytics
     page_url = models.URLField(blank=True)
     referrer = models.URLField(blank=True)
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Security
     is_suspicious = models.BooleanField(default=False)
     risk_score = models.PositiveSmallIntegerField(default=0)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta(TenantModel.Meta):
         ordering = ['-created_at']
         indexes = [
@@ -124,7 +124,7 @@ class LogEntry(TenantModel):
             models.Index(fields=['ip_address']),
             models.Index(fields=['is_suspicious']),
         ]
-    
+
     def __str__(self):
         return f"{self.store.name} - {self.event_type} - {self.created_at}"
 ```
@@ -143,21 +143,21 @@ from .tasks import log_event_async
 class LoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         # Skip static files and admin
         if request.path.startswith('/static/') or request.path.startswith('/admin/'):
             return self.get_response(request)
-        
+
         # Generate request ID
         request.request_id = str(uuid.uuid4())
         start_time = time.time()
-        
+
         response = self.get_response(request)
-        
+
         # Calculate duration
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         # Log page view asynchronously
         log_data = {
             'event_type': 'PAGE_VIEW',
@@ -178,12 +178,12 @@ class LoggingMiddleware:
                 'query_params': dict(request.GET),
             }
         }
-        
+
         # Use async for performance
         log_event_async.delay(log_data)
-        
+
         return response
-    
+
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
@@ -204,9 +204,9 @@ def log_model_save(sender, instance, created, **kwargs):
     # Skip logging models and system models
     if sender._meta.app_label in ['logs', 'sessions', 'admin', 'contenttypes']:
         return
-    
+
     event_type = 'CONTENT_CREATE' if created else 'CONTENT_UPDATE'
-    
+
     log_data = {
         'event_type': event_type,
         'level': 'INFO',
@@ -218,18 +218,18 @@ def log_model_save(sender, instance, created, **kwargs):
             'changed_fields': getattr(instance, '_changed_fields', {}),
         }
     }
-    
+
     # Add store if model has it
     if hasattr(instance, 'store'):
         log_data['store'] = instance.store
-    
+
     log_event_async.delay(log_data)
 
 @receiver(post_delete)
 def log_model_delete(sender, instance, **kwargs):
     if sender._meta.app_label in ['logs', 'sessions', 'admin', 'contenttypes']:
         return
-    
+
     log_data = {
         'event_type': 'CONTENT_DELETE',
         'level': 'WARNING',
@@ -238,10 +238,10 @@ def log_model_delete(sender, instance, **kwargs):
         'entity_id': instance.pk,
         'metadata': {}
     }
-    
+
     if hasattr(instance, 'store'):
         log_data['store'] = instance.store
-    
+
     log_event_async.delay(log_data)
 ```
 
@@ -271,10 +271,10 @@ def track_event(request):
             'page_url': request.data.get('page_url', ''),
             'metadata': request.data.get('metadata', {}),
         }
-        
+
         log_event_async.delay(event_data)
         return Response({'status': 'logged'}, status=status.HTTP_201_CREATED)
-    
+
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 ```
@@ -292,20 +292,20 @@ class LogService:
     def get_store_analytics(store, days=30):
         """Get analytics for a store"""
         since = timezone.now() - timedelta(days=days)
-        
+
         # Basic metrics
         total_visits = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).count()
-        
+
         unique_visitors = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).values('session_id').distinct().count()
-        
+
         # Bounce rate (single page view sessions)
         bounce_sessions = LogEntry.objects.filter(
             store=store,
@@ -314,15 +314,15 @@ class LogService:
         ).values('session_id').annotate(
             page_views=Count('id')
         ).filter(page_views=1).count()
-        
+
         total_sessions = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).values('session_id').distinct().count()
-        
+
         bounce_rate = (bounce_sessions / total_sessions * 100) if total_sessions > 0 else 0
-        
+
         # Top pages
         top_pages = LogEntry.objects.filter(
             store=store,
@@ -331,14 +331,14 @@ class LogService:
         ).values('page_url').annotate(
             views=Count('id')
         ).order_by('-views')[:10]
-        
+
         # Security events
         security_events = LogEntry.objects.filter(
             store=store,
             is_suspicious=True,
             created_at__gte=since
         ).count()
-        
+
         return {
             'total_visits': total_visits,
             'unique_visitors': unique_visitors,
@@ -347,14 +347,14 @@ class LogService:
             'security_events': security_events,
             'period_days': days,
         }
-    
+
     @staticmethod
     def detect_suspicious_activity(store, hours=24):
         """Detect suspicious patterns"""
         since = timezone.now() - timedelta(hours=hours)
-        
+
         suspicious = []
-        
+
         # Failed logins from same IP
         failed_logins = LogEntry.objects.filter(
             store=store,
@@ -363,7 +363,7 @@ class LogService:
         ).values('ip_address').annotate(
             count=Count('id')
         ).filter(count__gt=5)
-        
+
         for item in failed_logins:
             suspicious.append({
                 'type': 'brute_force',
@@ -371,7 +371,7 @@ class LogService:
                 'count': item['count'],
                 'risk_score': min(100, item['count'] * 10),
             })
-        
+
         # Unusual page access patterns
         rapid_requests = LogEntry.objects.filter(
             store=store,
@@ -380,7 +380,7 @@ class LogService:
         ).values('ip_address').annotate(
             count=Count('id')
         ).filter(count__gt=1000)
-        
+
         for item in rapid_requests:
             suspicious.append({
                 'type': 'bot_activity',
@@ -388,7 +388,7 @@ class LogService:
                 'count': item['count'],
                 'risk_score': min(100, item['count'] // 10),
             })
-        
+
         return suspicious
 ```
 
@@ -414,7 +414,7 @@ def cleanup_old_logs(days=90):
     """Clean up old logs to prevent table bloat"""
     from datetime import timedelta
     from django.utils import timezone
-    
+
     cutoff = timezone.now() - timedelta(days=days)
     deleted_count = LogEntry.objects.filter(created_at__lt=cutoff).delete()[0]
     return f"Deleted {deleted_count} old log entries"
@@ -444,31 +444,31 @@ from apps.logs.models import LogEntry
 
 class Command(BaseCommand):
     help = 'Migrate old activity_logs to new logs system'
-    
+
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Show what would be migrated')
         parser.add_argument('--batch-size', type=int, default=1000, help='Batch size for migration')
-    
+
     def handle(self, *args, **options):
         from apps.activity_logs.models import ActivityLog  # Old model
-        
+
         queryset = ActivityLog.objects.all().order_by('id')
         batch_size = options['batch_size']
         dry_run = options['dry_run']
-        
+
         if dry_run:
             self.stdout.write(f"Would migrate {queryset.count()} records")
             return
-        
+
         migrated = 0
         for i in range(0, queryset.count(), batch_size):
             batch = queryset[i:i + batch_size]
-            
+
             with transaction.atomic():
                 for old_log in batch:
                     # Map old action to new event_type
                     event_type = self.map_action_to_event_type(old_log.action)
-                    
+
                     LogEntry.objects.create(
                         store=old_log.storeId,
                         user=old_log.userId,
@@ -483,11 +483,11 @@ class Command(BaseCommand):
                         created_at=old_log.createdAt,
                     )
                     migrated += 1
-            
+
             self.stdout.write(f"Migrated {migrated} records...")
-        
+
         self.stdout.write(self.style.SUCCESS(f"Successfully migrated {migrated} log entries"))
-    
+
     def map_action_to_event_type(self, old_action):
         """Map old action choices to new event types"""
         mapping = {
@@ -518,7 +518,7 @@ class TestLogEntry(TestCase):
         )
         self.assertEqual(log.event_type, 'PAGE_VIEW')
         self.assertEqual(log.level, 'INFO')
-    
+
     def test_str_representation(self):
         log = LogEntry.objects.create(
             store=self.store,

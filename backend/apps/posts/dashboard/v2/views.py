@@ -1,15 +1,15 @@
 """Dashboard posts API views."""
 
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.response import Response
-from django.db import transaction
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
-
-from core.permissions import IsStoreAdmin
 from apps.posts.models import Post
-from .serializers import PostSerializer, PostCreateSerializer, BulkActionSerializer
+from core.permissions import IsStoreAdmin
+from django.db import transaction
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
+
+from .serializers import BulkActionSerializer, PostCreateSerializer, PostSerializer
 
 
 @extend_schema(
@@ -400,10 +400,11 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
         # Parse time range parameters
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
-        
-        from django.utils import timezone
+
         from datetime import datetime
-        
+
+        from django.utils import timezone
+
         date_filter = {}
         if start_date:
             try:
@@ -414,7 +415,7 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
                     {'error': 'Invalid start_date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
+
         if end_date:
             try:
                 end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
@@ -428,7 +429,7 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
         try:
             # Base queryset with date filtering
             base_queryset = Post.objects.filter(store=store, **date_filter)
-            
+
             # Get post counts by status
             total_posts = base_queryset.count()
             published_posts = base_queryset.filter(status='published').count()
@@ -448,7 +449,7 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
             author_counts = base_queryset.values('author__email', 'author__first_name', 'author__last_name').annotate(
                 count=Count('id')
             ).order_by('-count')[:10]
-            
+
             authors = []
             for author_data in author_counts:
                 if author_data['author__email']:
@@ -478,7 +479,7 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
                 ).values('date').annotate(
                     count=Count('id')
                 ).order_by('date')
-                
+
                 trends = [{'date': str(item['date']), 'count': item['count']} for item in publishing_trends]
             else:
                 trends = []

@@ -1,8 +1,8 @@
 """
 Public themes serializers.
 """
-from rest_framework import serializers
 from apps.themes.models import Theme
+from rest_framework import serializers
 
 
 class ThemePublicSerializer(serializers.ModelSerializer):
@@ -11,7 +11,13 @@ class ThemePublicSerializer(serializers.ModelSerializer):
     class Meta:
         model = Theme
         fields = [
-            'id', 'name', 'slug', 'description', 'preview_image',
-            'is_default', 'is_active', 'created_at'
+            "id",
+            "name",
+            "slug",
+            "description",
+            "preview_image",
+            "is_default",
+            "is_active",
+            "created_at",
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ["id", "created_at"]

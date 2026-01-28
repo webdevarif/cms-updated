@@ -9,7 +9,7 @@
 # Customer data handling
 class Customer(models.Model):
     # ... fields
-    
+
     def get_personal_data(self):
         """Get all personal data for GDPR export"""
         return {
@@ -47,7 +47,7 @@ class Customer(models.Model):
                 for order in Order.objects.filter(customer=self)
             ]
         }
-    
+
     def anonymize_data(self):
         """Anonymize customer data for GDPR right to be forgotten"""
         # Anonymize user data
@@ -55,7 +55,7 @@ class Customer(models.Model):
         self.user.first_name = "Deleted"
         self.user.last_name = "User"
         self.user.save()
-        
+
         # Anonymize customer data
         self.email = f"deleted_{self.id}@deleted.com"
         self.first_name = "Deleted"
@@ -64,7 +64,7 @@ class Customer(models.Model):
         self.default_billing_address = {}
         self.default_shipping_address = {}
         self.save()
-        
+
         # Log anonymization
         log_event_async(
             user=None,
@@ -83,18 +83,18 @@ from django_cryptography.fields import encrypt
 
 class Payment(models.Model):
     # ... fields
-    
+
     # Encrypt sensitive payment data
     gateway_response = encrypt(models.JSONField(default=dict))
     billing_address = encrypt(models.JSONField(default=dict))
-    
+
     class Meta:
         # Ensure encrypted fields are not logged
         exclude_logs = ['gateway_response', 'billing_address']
 
 class Order(models.Model):
     # ... fields
-    
+
     # Encrypt customer addresses
     billing_address = encrypt(models.JSONField(default=dict))
     shipping_address = encrypt(models.JSONField(default=dict))
@@ -108,30 +108,30 @@ class Order(models.Model):
 # Strict store-scoped permissions
 class StoreScopedPermission(permissions.BasePermission):
     """Ensure users can only access their own store data"""
-    
+
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        
+
         # Superuser can access all stores
         if request.user.is_superuser:
             return True
-        
+
         # Get store from request
         store = getattr(request, 'store', None)
         if not store:
             return False
-        
+
         # Check user has access to store
         return request.user.stores.filter(id=store.id).exists()
-    
+
     def has_object_permission(self, request, view, obj):
         if not hasattr(obj, 'store'):
             return True
-        
+
         if request.user.is_superuser:
             return True
-        
+
         return obj.store == request.store
 
 # Apply to all ecommerce ViewSets
@@ -151,18 +151,18 @@ class StoreMembership(models.Model):
         ('staff', 'Staff'),
         ('viewer', 'Viewer')
     ]
-    
+
     user = models.ForeignKey(GlobalUser, on_delete=models.CASCADE)
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    
+
     class Meta:
         unique_together = ['user', 'store']
 
 # Role-based permissions
 class EcommerceRolePermission:
     """Define permissions for each role"""
-    
+
     PERMISSIONS = {
         'owner': ['*'],  # All permissions
         'admin': [
@@ -189,14 +189,14 @@ class EcommerceRolePermission:
             'product.read', 'order.read', 'customer.read', 'coupon.read'
         ]
     }
-    
+
     @classmethod
     def has_permission(cls, user, store, permission):
         """Check if user has specific permission"""
         try:
             membership = StoreMembership.objects.get(user=user, store=store)
             role_permissions = cls.PERMISSIONS.get(membership.role, [])
-            
+
             return '*' in role_permissions or permission in role_permissions
         except StoreMembership.DoesNotExist:
             return False
@@ -211,40 +211,40 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
-    
+
     def validate_title(self, value):
         """Validate product title"""
         if not value or len(value.strip()) < 3:
             raise serializers.ValidationError("Product title must be at least 3 characters")
-        
+
         # Check for malicious content
         if any(keyword in value.lower() for keyword in ['script', 'javascript', 'alert']):
             raise serializers.ValidationError("Invalid characters in title")
-        
+
         return value.strip()
-    
+
     def validate_price(self, value):
         """Validate price values"""
         if value < 0:
             raise serializers.ValidationError("Price cannot be negative")
-        
+
         if value > 999999.99:
             raise serializers.ValidationError("Price exceeds maximum allowed amount")
-        
+
         return value
-    
+
     def validate_sku(self, value):
         """Validate SKU format"""
         if not value:
             raise serializers.ValidationError("SKU is required")
-        
+
         # Check SKU format (alphanumeric with hyphens/underscores)
         import re
         if not re.match(r'^[A-Za-z0-9_-]+$', value):
             raise serializers.ValidationError("SKU can only contain letters, numbers, hyphens, and underscores")
-        
+
         return value.upper()
-    
+
     def validate(self, data):
         """Cross-field validation"""
         # Validate variant prices
@@ -252,10 +252,10 @@ class ProductSerializer(serializers.ModelSerializer):
             for variant in data['variants']:
                 if variant.get('price', 0) < 0:
                     raise serializers.ValidationError("Variant price cannot be negative")
-                
+
                 if variant.get('compare_at_price') and variant['compare_at_price'] <= variant.get('price', 0):
                     raise serializers.ValidationError("Compare at price must be greater than regular price")
-        
+
         return data
 ```
 
@@ -265,35 +265,35 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
-    
+
     def validate_billing_address(self, value):
         """Validate billing address format"""
         required_fields = ['street', 'city', 'country', 'postal_code']
-        
+
         for field in required_fields:
             if field not in value or not value[field]:
                 raise serializers.ValidationError(f"Billing address missing required field: {field}")
-        
+
         # Validate postal code format based on country
         country = value.get('country', '').upper()
         postal_code = value.get('postal_code', '')
-        
+
         if country == 'US' and not re.match(r'^\d{5}(-\d{4})?$', postal_code):
             raise serializers.ValidationError("Invalid US postal code format")
-        
+
         return value
-    
+
     def validate_shipping_address(self, value):
         """Validate shipping address format"""
         return self.validate_billing_address(value)
-    
+
     def validate(self, data):
         """Validate order consistency"""
         # Check if cart belongs to same store
         if 'cart' in data and 'store' in data:
             if data['cart'].store != data['store']:
                 raise serializers.ValidationError("Cart must belong to the same store")
-        
+
         # Validate customer belongs to store
         if 'customer' in data and 'store' in data:
             customer_orders = Order.objects.filter(
@@ -303,7 +303,7 @@ class OrderSerializer(serializers.ModelSerializer):
             if not customer_orders.exists() and data['customer'].user.stores.filter(id=data['store'].id).exists():
                 # First order for this customer in this store
                 pass
-        
+
         return data
 ```
 
@@ -318,7 +318,7 @@ from rest_framework.views import APIView
 
 class EcommerceRateLimitMixin:
     """Rate limiting mixin for ecommerce APIs"""
-    
+
     RATE_LIMITS = {
         'cart': '100/hour',
         'order': '10/hour',
@@ -326,11 +326,11 @@ class EcommerceRateLimitMixin:
         'product_view': '1000/hour',
         'search': '200/hour'
     }
-    
+
     def get_rate_limit(self, view_name):
         """Get rate limit for specific view"""
         return self.RATE_LIMITS.get(view_name, '100/hour')
-    
+
     def check_rate_limit(self, request, view_name):
         """Check if request exceeds rate limit"""
         if not request.user.is_authenticated:
@@ -339,37 +339,37 @@ class EcommerceRateLimitMixin:
             limit = str(int(limit.split('/')[0]) // 2) + '/' + limit.split('/')[1]
         else:
             limit = self.get_rate_limit(view_name)
-        
+
         # Parse limit
         max_requests, period = limit.split('/')
         period_seconds = {'hour': 3600, 'minute': 60, 'second': 1}[period]
-        
+
         # Generate cache key
         if request.user.is_authenticated:
             key = f"rate_limit:{view_name}:{request.user.id}"
         else:
             key = f"rate_limit:{view_name}:{request.META.get('REMOTE_ADDR', 'unknown')}"
-        
+
         # Check current count
         count = cache.get(key, 0)
-        
+
         if count >= int(max_requests):
             return False
-        
+
         # Increment counter
         cache.set(key, count + 1, period_seconds)
         return True
-    
+
     def dispatch(self, request, *args, **kwargs):
         """Override dispatch to check rate limits"""
         view_name = self.__class__.__name__.lower().replace('viewset', '')
-        
+
         if not self.check_rate_limit(request, view_name):
             return HttpResponseTooManyRequests(
                 '{"error": "Rate limit exceeded"}',
                 content_type='application/json'
             )
-        
+
         return super().dispatch(request, *args, **kwargs)
 
 # Apply to sensitive endpoints
@@ -389,17 +389,17 @@ class OrderViewSet(EcommerceRateLimitMixin, viewsets.ModelViewSet):
 # Payment processing security
 class PaymentService:
     """Secure payment processing service"""
-    
+
     @staticmethod
     def process_payment(order, payment_method, payment_data):
         """Process payment with security measures"""
         # Validate payment method belongs to store
         if payment_method.store != order.store:
             raise ValidationError("Invalid payment method")
-        
+
         # Never store full credit card details
         sensitive_data = ['card_number', 'cvv', 'expiry']
-        
+
         # Log payment attempt without sensitive data
         log_data = {
             'order_id': order.id,
@@ -407,7 +407,7 @@ class PaymentService:
             'amount': str(order.total),
             'timestamp': timezone.now().isoformat()
         }
-        
+
         try:
             # Process payment through secure gateway
             if payment_method.type == 'stripe':
@@ -420,7 +420,7 @@ class PaymentService:
                 )
             else:
                 raise ValidationError("Unsupported payment method")
-            
+
             # Log successful payment (without sensitive data)
             log_data['status'] = 'success'
             log_data['transaction_id'] = result.get('transaction_id', '')
@@ -431,9 +431,9 @@ class PaymentService:
                 object_type='payment',
                 details=log_data
             )
-            
+
             return result
-            
+
         except Exception as e:
             # Log failed payment
             log_data['status'] = 'failed'
@@ -445,16 +445,16 @@ class PaymentService:
                 object_type='payment',
                 details=log_data
             )
-            
+
             raise
-    
+
     @staticmethod
     def _process_stripe_payment(payment_method, payment_data, order):
         """Process Stripe payment securely"""
         import stripe
-        
+
         stripe.api_key = payment_method.config.get('secret_key')
-        
+
         # Create payment intent
         intent = stripe.PaymentIntent.create(
             amount=int(order.total * 100),  # Convert to cents
@@ -463,7 +463,7 @@ class PaymentService:
             confirmation_method='manual',
             confirm=True
         )
-        
+
         return {
             'status': 'completed' if intent.status == 'succeeded' else 'pending',
             'transaction_id': intent.id,
@@ -476,59 +476,59 @@ class PaymentService:
 # Basic fraud detection
 class FraudDetectionService:
     """Fraud detection for ecommerce transactions"""
-    
+
     @staticmethod
     def analyze_order(order):
         """Analyze order for fraud indicators"""
         risk_score = 0
         indicators = []
-        
+
         # Check order value
         if order.total > 1000:
             risk_score += 20
             indicators.append('high_value_order')
-        
+
         # Check shipping vs billing address
         if order.billing_address != order.shipping_address:
             risk_score += 10
             indicators.append('address_mismatch')
-        
+
         # Check customer order history
         if order.customer.order_count == 0:
             risk_score += 15
             indicators.append('first_time_customer')
-        
+
         # Check order frequency
         recent_orders = Order.objects.filter(
             customer=order.customer,
             created_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
-        
+
         if recent_orders > 5:
             risk_score += 25
             indicators.append('high_frequency_orders')
-        
+
         # Check IP address (if available)
         # This would require storing IP addresses with orders
-        
+
         return {
             'risk_score': risk_score,
             'indicators': indicators,
             'is_suspicious': risk_score > 50
         }
-    
+
     @staticmethod
     def flag_suspicious_order(order):
         """Flag suspicious order for review"""
         analysis = FraudDetectionService.analyze_order(order)
-        
+
         if analysis['is_suspicious']:
             order.status = 'flagged'
             order.save()
-            
+
             # Notify admin
             send_fraud_alert_email.delay(order.id, analysis)
-            
+
             # Log fraud detection
             log_event_async(
                 user=None,
@@ -538,7 +538,7 @@ class FraudDetectionService:
                 object_id=order.id,
                 details=analysis
             )
-        
+
         return analysis
 ```
 
@@ -549,7 +549,7 @@ class FraudDetectionService:
 # Marketing consent tracking
 class CustomerConsent(models.Model):
     """Track customer consent for marketing and data processing"""
-    
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     consent_type = models.CharField(max_length=50)  # 'email_marketing', 'sms_marketing', 'data_processing'
     granted = models.BooleanField(default=False)
@@ -557,13 +557,13 @@ class CustomerConsent(models.Model):
     revoked_at = models.DateTimeField(null=True, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    
+
     class Meta:
         unique_together = ['customer', 'consent_type']
 
 class ConsentService:
     """Manage customer consent"""
-    
+
     @staticmethod
     def record_consent(customer, consent_type, granted, request=None):
         """Record customer consent"""
@@ -576,7 +576,7 @@ class ConsentService:
                 'revoked_at': timezone.now() if not granted else None
             }
         )
-        
+
         if not created:
             consent.granted = granted
             if granted:
@@ -585,13 +585,13 @@ class ConsentService:
             else:
                 consent.revoked_at = timezone.now()
             consent.save()
-        
+
         # Record request details if available
         if request:
             consent.ip_address = request.META.get('REMOTE_ADDR')
             consent.user_agent = request.META.get('HTTP_USER_AGENT', '')
             consent.save()
-        
+
         # Log consent change
         log_event_async(
             user=customer.user,
@@ -604,9 +604,9 @@ class ConsentService:
                 'ip_address': consent.ip_address
             }
         )
-        
+
         return consent
-    
+
     @staticmethod
     def has_consent(customer, consent_type):
         """Check if customer has granted consent"""
@@ -627,13 +627,13 @@ class ConsentService:
 # Security middleware for ecommerce APIs
 class EcommerceSecurityMiddleware:
     """Add security headers to ecommerce responses"""
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         response = self.get_response(request)
-        
+
         # Add security headers
         response['X-Content-Type-Options'] = 'nosniff'
         response['X-Frame-Options'] = 'DENY'
@@ -646,10 +646,10 @@ class EcommerceSecurityMiddleware:
             "img-src 'self' data: https:; "
             "connect-src 'self' https://api.stripe.com;"
         )
-        
+
         # Remove server information
         response.pop('Server', None)
-        
+
         return response
 ```
 
@@ -660,7 +660,7 @@ class EcommerceSecurityMiddleware:
 # Enhanced audit logging for ecommerce
 class EcommerceAuditLog(models.Model):
     """Detailed audit log for ecommerce operations"""
-    
+
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     user = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=100)
@@ -671,7 +671,7 @@ class EcommerceAuditLog(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'action']),
@@ -701,13 +701,13 @@ def audit_product_change(sender, instance, created, **kwargs):
         # Track field changes
         old_instance = sender.objects.get(id=instance.id)
         changes = {}
-        
+
         for field in ['title', 'status', 'featured']:
             old_value = getattr(old_instance, field)
             new_value = getattr(instance, field)
             if old_value != new_value:
                 changes[field] = {'old': old_value, 'new': new_value}
-        
+
         if changes:
             EcommerceAuditLog.objects.create(
                 store=instance.store,
@@ -729,7 +729,7 @@ from django.utils.html import strip_tags
 
 class SanitizedCharField(models.CharField):
     """CharField that automatically sanitizes input"""
-    
+
     def pre_save(self, model_instance, add):
         value = getattr(model_instance, self.attname)
         if value:
@@ -740,7 +740,7 @@ class SanitizedCharField(models.CharField):
 
 class SanitizedTextField(models.TextField):
     """TextField that automatically sanitizes input"""
-    
+
     def pre_save(self, model_instance, add):
         value = getattr(model_instance, self.attname)
         if value:
@@ -762,14 +762,14 @@ class Product(models.Model):
 # Use Django ORM properly to prevent SQL injection
 class ProductQuerySet(models.QuerySet):
     """Safe custom queries for products"""
-    
+
     def by_price_range(self, min_price, max_price):
         """Safe price range filtering"""
         return self.filter(
             variants__price__gte=min_price,
             variants__price__lte=max_price
         )
-    
+
     def search_safely(self, query):
         """Safe search implementation"""
         return self.filter(

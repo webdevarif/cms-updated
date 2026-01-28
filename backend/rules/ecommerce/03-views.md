@@ -90,7 +90,7 @@ class PublicProductViewSet(TenantViewSet):
     permission_classes = [AllowAny]
     queryset = Product.objects.filter(status='published')
     serializer_class = PublicProductSerializer
-    
+
     @action(detail=True, methods=['get'])
     def variants(self, request, pk=None):
         """Get product variants"""
@@ -113,13 +113,13 @@ class CustomerOrderViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreUser]
     serializer_class = CustomerOrderSerializer
-    
+
     def get_queryset(self):
         return Order.objects.filter(
             store=self.get_store(),
             customer=self.request.user
         )
-    
+
     def perform_create(self, serializer):
         """Create order with customer assignment"""
         serializer.save(customer=self.request.user)
@@ -138,21 +138,21 @@ class DashboardProductViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreStaff]
     serializer_class = DashboardProductSerializer
-    
+
     def get_queryset(self):
         return Product.objects.filter(store=self.get_store())
-    
+
     @action(detail=True, methods=['get'])
     def analytics(self, request, pk=None):
         """Get product analytics"""
         product = self.get_object()
-        
+
         # Calculate analytics
         total_sales = OrderItem.objects.filter(
             product=product,
             order__status__in=['delivered', 'shipped']
         ).aggregate(total=models.Sum('total'))['total'] or 0
-        
+
         return Response({
             'product_id': product.id,
             'total_sales': float(total_sales),
@@ -190,6 +190,6 @@ class DashboardProductViewSet(TenantViewSet):
 [Value proposition and technical advantages]
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

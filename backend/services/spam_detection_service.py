@@ -2,11 +2,12 @@
 Spam detection service for comments and reviews.
 Provides comprehensive spam detection with link checking, profanity filtering, and repeat content detection.
 """
-import re
 import logging
+import re
+
+from apps.notifications.services import NotificationService
 from django.core.cache import cache
 from django.utils import timezone
-from apps.notifications.services import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -19,17 +20,21 @@ class SpamDetectionService:
 
     # Profanity list (basic - can be expanded)
     PROFANITY_LIST = {
-        'badword1', 'badword2', 'spamword', 'inappropriate', 'offensive',
+        "badword1",
+        "badword2",
+        "spamword",
+        "inappropriate",
+        "offensive",
         # Add more profanity words as needed
     }
 
     # Spam patterns
     SPAM_PATTERNS = [
-        r'http[s]?://[^\s]+',  # URLs
-        r'www\.[^\s]+',        # Web addresses
-        r'\b\d{10,}\b',        # Long phone numbers
-        r'\b[A-Z]{5,}\b',      # ALL CAPS words longer than 5 chars
-        r'\b\w+@\w+\.\w+\b',   # Email addresses
+        r"http[s]?://[^\s]+",  # URLs
+        r"www\.[^\s]+",  # Web addresses
+        r"\b\d{10,}\b",  # Long phone numbers
+        r"\b[A-Z]{5,}\b",  # ALL CAPS words longer than 5 chars
+        r"\b\w+@\w+\.\w+\b",  # Email addresses
     ]
 
     # Auto-reject thresholds
@@ -38,7 +43,7 @@ class SpamDetectionService:
     SIMILARITY_THRESHOLD = 0.8  # 80% similar to existing content
 
     @staticmethod
-    def check_content(content, user, content_type='comment', store=None):
+    def check_content(content, user, content_type="comment", store=None):
         """
         Comprehensive spam check for content.
 
@@ -59,11 +64,11 @@ class SpamDetectionService:
         """
         if not content or not content.strip():
             return {
-                'is_spam': False,
-                'auto_reject': False,
-                'reasons': [],
-                'score': 0.0,
-                'recommendation': 'approve'
+                "is_spam": False,
+                "auto_reject": False,
+                "reasons": [],
+                "score": 0.0,
+                "recommendation": "approve",
             }
 
         reasons = []
@@ -80,12 +85,16 @@ class SpamDetectionService:
         reasons.extend(profanity_reasons)
 
         # Check for repeat/similar content
-        repeat_score, repeat_reasons = SpamDetectionService._check_repeat_content(content, user, content_type, store)
+        repeat_score, repeat_reasons = SpamDetectionService._check_repeat_content(
+            content, user, content_type, store
+        )
         score += repeat_score
         reasons.extend(repeat_reasons)
 
         # Check user patterns (rate limiting, etc.)
-        user_score, user_reasons = SpamDetectionService._check_user_patterns(user, content_type, store)
+        user_score, user_reasons = SpamDetectionService._check_user_patterns(
+            user, content_type, store
+        )
         score += user_score
         reasons.extend(user_reasons)
 
@@ -100,18 +109,18 @@ class SpamDetectionService:
 
         # Recommendation
         if auto_reject:
-            recommendation = 'reject'
+            recommendation = "reject"
         elif is_spam:
-            recommendation = 'flag'
+            recommendation = "flag"
         else:
-            recommendation = 'approve'
+            recommendation = "approve"
 
         return {
-            'is_spam': is_spam,
-            'auto_reject': auto_reject,
-            'reasons': reasons,
-            'score': min(score, 1.0),  # Cap at 1.0
-            'recommendation': recommendation
+            "is_spam": is_spam,
+            "auto_reject": auto_reject,
+            "reasons": reasons,
+            "score": min(score, 1.0),  # Cap at 1.0
+            "recommendation": recommendation,
         }
 
     @staticmethod
@@ -121,7 +130,7 @@ class SpamDetectionService:
         reasons = []
 
         # Count URLs
-        url_pattern = r'http[s]?://[^\s]+|www\.[^\s]+'
+        url_pattern = r"http[s]?://[^\s]+|www\.[^\s]+"
         urls = re.findall(url_pattern, content, re.IGNORECASE)
         url_count = len(urls)
 
@@ -131,8 +140,8 @@ class SpamDetectionService:
 
         # Check for suspicious link patterns
         suspicious_patterns = [
-            r'bit\.ly|tinyurl|t\.co|goo\.gl',  # URL shorteners
-            r'\.ru|\.cn|\.tk|\.ml|\.ga',       # Suspicious TLDs
+            r"bit\.ly|tinyurl|t\.co|goo\.gl",  # URL shorteners
+            r"\.ru|\.cn|\.tk|\.ml|\.ga",  # Suspicious TLDs
         ]
 
         for pattern in suspicious_patterns:
@@ -158,7 +167,9 @@ class SpamDetectionService:
 
         if found_profanity:
             profanity_count = len(found_profanity)
-            reasons.append(f"Contains {profanity_count} profanity word(s): {', '.join(found_profanity[:3])}")
+            reasons.append(
+                f"Contains {profanity_count} profanity word(s): {', '.join(found_profanity[:3])}"
+            )
             score += min(profanity_count * 0.25, 0.7)  # Each profanity adds 0.25, max 0.7
 
         return score, reasons
@@ -177,16 +188,15 @@ class SpamDetectionService:
         normalized_content = SpamDetectionService._normalize_content(content)
 
         for recent_item in recent_content:
-            if normalized_content == recent_item['content']:
+            if normalized_content == recent_item["content"]:
                 reasons.append("Exact duplicate of recent content")
                 score += 0.5
                 break
 
         # Update cache with new content
-        recent_content.append({
-            'content': normalized_content,
-            'timestamp': timezone.now().isoformat()
-        })
+        recent_content.append(
+            {"content": normalized_content, "timestamp": timezone.now().isoformat()}
+        )
 
         # Keep only last 10 items, expire in 24 hours
         cache.set(cache_key, recent_content[-10:], timeout=86400)
@@ -248,7 +258,7 @@ class SpamDetectionService:
             score += 0.15
 
         # Check for repetitive patterns
-        if re.search(r'(.)\1{4,}', content):  # 5+ repeated characters
+        if re.search(r"(.)\1{4,}", content):  # 5+ repeated characters
             reasons.append("Contains repetitive character patterns")
             score += 0.1
 
@@ -268,16 +278,19 @@ class SpamDetectionService:
 
         # Check specific auto-reject conditions
         for reason in reasons:
-            if 'Contains' in reason and 'URL' in reason:
+            if "Contains" in reason and "URL" in reason:
                 # Extract URL count from reason
-                url_match = re.search(r'Contains (\d+) URL', reason)
+                url_match = re.search(r"Contains (\d+) URL", reason)
                 if url_match and int(url_match.group(1)) >= SpamDetectionService.AUTO_REJECT_LINKS:
                     return True
 
-            if 'Contains' in reason and 'profanity' in reason:
+            if "Contains" in reason and "profanity" in reason:
                 # Extract profanity count from reason
-                profanity_match = re.search(r'Contains (\d+) profanity', reason)
-                if profanity_match and int(profanity_match.group(1)) >= SpamDetectionService.AUTO_REJECT_PROFANITY:
+                profanity_match = re.search(r"Contains (\d+) profanity", reason)
+                if (
+                    profanity_match
+                    and int(profanity_match.group(1)) >= SpamDetectionService.AUTO_REJECT_PROFANITY
+                ):
                     return True
 
         return False
@@ -286,9 +299,9 @@ class SpamDetectionService:
     def _normalize_content(content):
         """Normalize content for comparison."""
         # Remove whitespace, punctuation, convert to lowercase
-        normalized = re.sub(r'[^\w\s]', '', content.lower())
+        normalized = re.sub(r"[^\w\s]", "", content.lower())
         # Remove extra whitespace
-        normalized = ' '.join(normalized.split())
+        normalized = " ".join(normalized.split())
         return normalized
 
     @staticmethod
@@ -304,19 +317,19 @@ class SpamDetectionService:
             )
 
             # Send notification to moderators if high spam score
-            if spam_result['score'] >= 0.7:
+            if spam_result["score"] >= 0.7:
                 NotificationService.create_notification(
                     user=None,  # System notification to moderators
-                    notification_type='spam_detected',
-                    title='High spam score detected',
+                    notification_type="spam_detected",
+                    title="High spam score detected",
                     message=f"{content_type.title()} with spam score {spam_result['score']:.2f} submitted by {user.get_display_name()}",
                     data={
-                        'user_id': user.id,
-                        'content_type': content_type,
-                        'spam_score': spam_result['score'],
-                        'reasons': spam_result['reasons']
+                        "user_id": user.id,
+                        "content_type": content_type,
+                        "spam_score": spam_result["score"],
+                        "reasons": spam_result["reasons"],
                     },
-                    store=store
+                    store=store,
                 )
 
         except Exception as e:
@@ -328,9 +341,9 @@ class SpamDetectionService:
         # This would query logs/database for spam statistics
         # For now, return placeholder
         return {
-            'total_checked': 0,
-            'spam_detected': 0,
-            'auto_rejected': 0,
-            'manual_reviewed': 0,
-            'top_reasons': []
+            "total_checked": 0,
+            "spam_detected": 0,
+            "auto_rejected": 0,
+            "manual_reviewed": 0,
+            "top_reasons": [],
         }

@@ -1,8 +1,8 @@
 """
 Customer models for ecommerce app.
 """
-from django.db import models
 from django.contrib.auth import get_user_model
+from django.db import models
 
 User = get_user_model()
 
@@ -11,15 +11,10 @@ class CustomerProfile(models.Model):
     """
     Extended customer profile for ecommerce.
     """
-    user = models.OneToOneField(
-        User,
-        on_delete=models.CASCADE,
-        related_name='ecommerce_profile'
-    )
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="ecommerce_profile")
     store = models.ForeignKey(
-        'stores.Store',
-        on_delete=models.CASCADE,
-        related_name='customer_profiles'
+        "stores.Store", on_delete=models.CASCADE, related_name="customer_profiles"
     )
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
@@ -28,12 +23,12 @@ class CustomerProfile(models.Model):
     gender = models.CharField(
         max_length=20,
         choices=[
-            ('male', 'Male'),
-            ('female', 'Female'),
-            ('other', 'Other'),
-            ('prefer_not_to_say', 'Prefer not to say')
+            ("male", "Male"),
+            ("female", "Female"),
+            ("other", "Other"),
+            ("prefer_not_to_say", "Prefer not to say"),
         ],
-        blank=True
+        blank=True,
     )
     marketing_consent = models.BooleanField(default=False)
     email_marketing_consent = models.BooleanField(default=False)
@@ -47,9 +42,9 @@ class CustomerProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ecommerce_customer_profiles'
-        unique_together = ['user', 'store']
-        app_label = 'ecommerce'
+        db_table = "ecommerce_customer_profiles"
+        unique_together = ["user", "store"]
+        app_label = "ecommerce"
 
     def __str__(self):
         return f"{self.user.email} - {self.store.name}"

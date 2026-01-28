@@ -34,16 +34,16 @@ class SmtpConfiguration(models.Model):
         ('amazon_ses', 'Amazon SES'),
         ('custom', 'Custom SMTP'),
     ]
-    
+
     # ... (keep existing fields)
-    
+
     def save(self, *args, **kwargs):
         # Log configuration changes
         from apps.logs.services import log_event_async
-        
+
         is_new = self._state.adding
         super().save(*args, **kwargs)
-        
+
         log_event_async.delay(
             event_type='SMTP_CONFIG_SAVED' if not is_new else 'SMTP_CONFIG_CREATED',
             message=f"SMTP Config {'created' if is_new else 'updated'}: {self.name}",
@@ -95,11 +95,11 @@ class EmailService:
             'store_id': str(store.id) if store else None,
             'user_id': str(user.id) if user else None
         }
-        
+
         try:
             # Get SMTP config (implementation omitted for brevity)
             smtp_config = cls._get_smtp_config(smtp_config_id, store)
-            
+
             # Log email sending attempt
             log_event_async.delay(
                 event_type='EMAIL_SEND_ATTEMPT',
@@ -108,7 +108,7 @@ class EmailService:
                 user=user,
                 metadata=log_data
             )
-            
+
             # Send email (implementation details)
             result = django_send_mail(
                 subject=subject,
@@ -121,7 +121,7 @@ class EmailService:
                 auth_password=smtp_config.get_decrypted_password(),
                 connection=smtp_config.get_connection()
             )
-            
+
             # Log success
             log_event_async.delay(
                 event_type='EMAIL_SEND_SUCCESS',
@@ -133,9 +133,9 @@ class EmailService:
                     'message_id': result.message_id if hasattr(result, 'message_id') else None
                 }
             )
-            
+
             return {'success': True, 'message_id': getattr(result, 'message_id', None)}
-            
+
         except Exception as e:
             # Log failure
             log_event_async.delay(
@@ -191,7 +191,7 @@ class SmtpConfigurationAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-    
+
     def save_model(self, request, obj, form, change):
         # Encrypt password before saving
         if 'password' in form.changed_data:
@@ -204,7 +204,7 @@ class EmailTemplateAdmin(admin.ModelAdmin):
     list_filter = ('template_type', 'is_active', 'store')
     search_fields = ('name', 'subject', 'html_content')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     def save_model(self, request, obj, form, change):
         # Log template changes
         from apps.logs.services import log_event_async
@@ -244,13 +244,13 @@ from ...services import SmtpService
 class SmtpConfigViewSet(viewsets.ModelViewSet):
     serializer_class = SmtpConfigSerializer
     permission_classes = [IsAuthenticated, IsStoreAdmin]
-    
+
     def get_queryset(self):
         return SmtpConfiguration.objects.filter(store=self.request.store)
-    
+
     def perform_create(self, serializer):
         serializer.save(store=self.request.store)
-    
+
     @action(detail=True, methods=['post'])
     def test_connection(self, request, pk=None):
         """Test SMTP connection"""
@@ -280,10 +280,10 @@ from ...models import SmtpConfiguration
 
 class Command(BaseCommand):
     help = 'Migrate SMTP configurations from legacy system'
-    
+
     def handle(self, *args, **options):
         count = 0
-        
+
         for legacy in LegacySmtpConfig.objects.all():
             try:
                 with transaction.atomic():
@@ -302,12 +302,12 @@ class Command(BaseCommand):
                     )
                     count += 1
                     self.stdout.write(f"Migrated SMTP config: {config.name}")
-                    
+
             except Exception as e:
                 self.stderr.write(f"Error migrating {legacy.config_name}: {str(e)}")
-        
+
         self.stdout.write(self.style.SUCCESS(f'Successfully migrated {count} SMTP configurations'))
-    
+
     def _map_provider(self, legacy_provider):
         """Map legacy provider names to new ones"""
         provider_map = {
@@ -329,7 +329,7 @@ from fernet_fields import EncryptedCharField
 class SmtpConfiguration(models.Model):
     # ... other fields ...
     password = EncryptedCharField(max_length=255)
-    
+
     def get_decrypted_password(self):
         """Get decrypted password for SMTP auth"""
         return self.password
@@ -350,7 +350,7 @@ from rest_framework.throttling import UserRateThrottle
 
 class EmailRateThrottle(UserRateThrottle):
     scope = 'emails'
-    
+
     def get_cache_key(self, request, view):
         # Rate limit by store
         store_id = request.store.id if hasattr(request, 'store') else 'anon'
@@ -372,7 +372,7 @@ class TestEmailService(TestCase):
     def test_send_email_success(self, mock_send):
         # Setup
         mock_send.return_value = 1
-        
+
         # Test
         result = EmailService.send_email(
             to_email='test@example.com',
@@ -380,16 +380,16 @@ class TestEmailService(TestCase):
             html_content='<p>Test</p>',
             text_content='Test'
         )
-        
+
         # Assert
         self.assertTrue(result['success'])
         mock_send.assert_called_once()
-    
+
     @patch('django.core.mail.send_mail')
     def test_send_email_failure(self, mock_send):
         # Setup
         mock_send.side_effect = Exception('SMTP Error')
-        
+
         # Test & Assert
         with self.assertRaises(Exception):
             EmailService.send_email(
@@ -415,10 +415,10 @@ class TestSmtpConfiguration(TestCase):
             password='secret',
             use_tls=True
         )
-        
+
         # Test
         saved_config = SmtpConfiguration.objects.get(pk=config.pk)
-        
+
         # Assert
         self.assertNotEqual(saved_config.password, 'secret')  # Should be encrypted
         self.assertEqual(saved_config.get_decrypted_password(), 'secret')
@@ -438,19 +438,19 @@ from apps.logs.services import log_event_async
 def process_email_queue(self):
     """Process queued emails"""
     batch_size = getattr(settings, 'EMAIL_BATCH_SIZE', 50)
-    
+
     # Get pending emails, ordered by priority and creation time
     queued_emails = EmailQueue.objects.filter(
         is_processed=False,
         scheduled_at__lte=timezone.now()
     ).order_by('priority', 'created_at')[:batch_size]
-    
+
     for email in queued_emails:
         try:
             # Add tracking if enabled
             if email.is_tracked and email.html_content:
                 email.html_content = EmailService.add_tracking(email, email.html_content)
-            
+
             # Send email
             result = EmailService.send_email_async.delay({
                 'to_email': email.to_email,
@@ -464,19 +464,19 @@ def process_email_queue(self):
                 'track_clicks': email.is_tracked,
                 'tracking_id': str(email.tracking_id) if email.is_tracked else None
             })
-            
+
             # Mark as processed
             email.is_processed = True
             email.processed_at = timezone.now()
             email.status = 'processing'
             email.save()
-            
+
             # Log sent event
             email.add_tracking_event('sent', {
                 'queue_id': str(email.id),
                 'scheduled_at': str(email.scheduled_at)
             })
-            
+
         except Exception as e:
             # Handle retries
             email.retry_count += 1
@@ -484,16 +484,16 @@ def process_email_queue(self):
                 email.is_processed = True
                 email.status = 'failed'
                 email.error_message = str(e)
-                
+
                 # Log failure
                 email.add_tracking_event('failed', {
                     'error': str(e),
                     'retry_count': email.retry_count,
                     'max_retries': email.max_retries
                 })
-            
+
             email.save()
-            
+
             # Log error
             log_event_async.delay(
                 event_type='EMAIL_QUEUE_ERROR',
@@ -507,7 +507,7 @@ def process_email_queue(self):
                 },
                 level='ERROR'
             )
-            
+
             # Retry with exponential backoff
             raise self.retry(exc=e, countdown=60 * (2 ** email.retry_count))
 ```
@@ -532,7 +532,7 @@ def track_email_open(request, tracking_id):
     """
     try:
         email_log = EmailLog.objects.get(tracking_id=tracking_id)
-        
+
         # Add tracking event
         email_log.add_tracking_event(
             event_type='opened',
@@ -543,18 +543,18 @@ def track_email_open(request, tracking_id):
             },
             request=request
         )
-        
+
         # Return transparent 1x1 GIF
         pixel = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')
         response = HttpResponse(pixel, content_type='image/gif')
-        
+
         # Cache control headers
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
-        
+
         return response
-        
+
     except EmailLog.DoesNotExist:
         return HttpResponseNotFound()
 ```
@@ -568,11 +568,11 @@ from bs4 import BeautifulSoup
 
 class EmailService:
     # ... existing methods ...
-    
+
     URL_PATTERN = re.compile(
         r'https?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     )
-    
+
     @classmethod
     def add_click_tracking(cls, email_log, content, is_html=True):
         """
@@ -581,39 +581,39 @@ class EmailService:
         """
         if not email_log.is_tracked or not content:
             return content
-        
+
         if is_html:
             return cls._track_html_links(email_log, content)
         return cls._track_text_links(email_log, content)
-    
+
     @classmethod
     def _track_html_links(cls, email_log, html_content):
         """Track links in HTML emails"""
         soup = BeautifulSoup(html_content, 'html.parser')
-        
+
         for link in soup.find_all('a', href=True):
             original_url = link['href']
             if not original_url or not original_url.startswith(('http://', 'https://')):
                 continue
-                
+
             # Create tracking URL
             tracking_url = cls._create_tracking_url(email_log, original_url)
-            
+
             # Update link
             link['href'] = tracking_url
-            
+
             # Add tracking class and style (if not already present)
             if 'tracked-link' not in link.get('class', []):
                 link['class'] = link.get('class', []) + ['tracked-link']
-                
+
             # Ensure link is visible in email clients
             link_style = link.get('style', '')
             if 'color:' not in link_style:
                 link_style = (link_style + ';color: #2563eb;').strip(';')
                 link['style'] = link_style
-        
+
         return str(soup)
-    
+
     @classmethod
     def _track_text_links(cls, email_log, text_content):
         """Track links in plain text emails"""
@@ -621,24 +621,24 @@ class EmailService:
             original_url = match.group(0)
             tracking_url = cls._create_tracking_url(email_log, original_url)
             return f"{original_url} [Tracked: {tracking_url}]"
-            
+
         return cls.URL_PATTERN.sub(replace_match, text_content)
-    
+
     @classmethod
     def _create_tracking_url(cls, email_log, original_url):
         """Create a tracking URL for click tracking"""
         from django.urls import reverse
         import hashlib
-        
+
         # Generate URL-safe hash of the original URL
         url_hash = hashlib.md5(original_url.encode()).hexdigest()[:8]
-        
+
         # Create tracking URL
         tracking_path = reverse('smtp:track-click', kwargs={
             'tracking_id': str(email_log.tracking_id),
             'url_hash': url_hash
         })
-        
+
         # Encode original URL as query parameter
         encoded_url = urllib.parse.quote(original_url)
         return f"{settings.SITE_URL}{tracking_path}?url={encoded_url}"
@@ -690,20 +690,20 @@ WEBHOOK_CONFIG = {
 @method_decorator(csrf_exempt, name='dispatch')
 class EmailWebhookView(APIView):
     permission_classes = [AllowAny]
-    
+
     def verify_webhook_signature(self, request, provider):
         """Verify webhook signature using provider's signing key"""
         config = WEBHOOK_CONFIG.get(provider, {})
-        
+
         if provider == 'sendgrid':
             # Verify SendGrid signature
             signature = request.headers.get(config['signature_header'])
             timestamp = request.headers.get(config['timestamp_header'])
-            
+
             if not all([signature, timestamp, config['signing_key']]):
                 logger.warning('Missing required signature headers or signing key')
                 return False
-                
+
             # Verify timestamp (prevent replay attacks)
             try:
                 event_time = datetime.fromtimestamp(int(timestamp))
@@ -713,7 +713,7 @@ class EmailWebhookView(APIView):
             except (ValueError, TypeError):
                 logger.warning('Invalid timestamp in webhook')
                 return False
-                
+
             # Verify signature
             payload = f"{timestamp}{request.body.decode('utf-8')}"
             expected_signature = hmac.new(
@@ -721,26 +721,26 @@ class EmailWebhookView(APIView):
                 msg=payload.encode('utf-8'),
                 digestmod=hashlib.sha256
             ).hexdigest()
-            
+
             return hmac.compare_digest(signature, expected_signature)
-            
+
         elif provider == 'mailgun':
             # Similar verification for Mailgun
             data = request.data
             signature = data.get(config['signature_param'])
             timestamp = data.get(config['timestamp_param'])
             token = data.get(config['token_param'])
-            
+
             if not all([signature, timestamp, token, config['signing_key']]):
                 return False
-                
+
             # Verify timestamp (Mailgun uses seconds since epoch)
             try:
                 if (time.time() - int(timestamp)) > config.get('max_age_seconds', 300):
                     return False
             except (ValueError, TypeError):
                 return False
-                
+
             # Verify signature
             signing_data = f"{timestamp}{token}"
             expected_signature = hmac.new(
@@ -748,11 +748,11 @@ class EmailWebhookView(APIView):
                 msg=signing_data.encode('utf-8'),
                 digestmod=hashlib.sha256
             ).hexdigest()
-            
+
             return hmac.compare_digest(signature, expected_signature)
-            
+
         return False  # Default to deny for unknown providers
-    
+
     def post(self, request, provider=None, *args, **kwargs):
         """
         Handle email webhooks from various providers with signature verification
@@ -760,7 +760,7 @@ class EmailWebhookView(APIView):
         try:
             # Get provider handler
             provider = provider or request.GET.get('provider', 'sendgrid')
-            
+
             # Verify webhook signature
             if not self.verify_webhook_signature(request, provider):
                 logger.warning(f'Invalid webhook signature from {provider}')
@@ -768,7 +768,7 @@ class EmailWebhookView(APIView):
                     {'error': 'Invalid signature'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
-            
+
             # Get handler for this provider
             handler = getattr(self, f'handle_{provider}', None)
             if not handler:
@@ -776,36 +776,36 @@ class EmailWebhookView(APIView):
                     {'error': 'Unsupported email provider'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
+
             # Process events
             events = handler(request.data)
             return Response({
                 'status': 'success',
                 'events_processed': len(events)
             })
-            
+
         except Exception as e:
             logger.error(f"Webhook processing error: {str(e)}", exc_info=True)
             return Response(
                 {'error': 'Internal server error'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
     def handle_sendgrid(self, data):
         """Process SendGrid webhook events"""
         events = []
-        
+
         # Handle both array and single event
         event_list = data if isinstance(data, list) else [data]
-        
+
         for event in event_list:
             try:
                 event_type = event.get('event')
                 tracking_id = event.get('tracking_id') or event.get('email_id')
-                
+
                 if not tracking_id:
                     continue
-                
+
                 # Map SendGrid event types to our system
                 event_map = {
                     'processed': 'sent',
@@ -817,30 +817,30 @@ class EmailWebhookView(APIView):
                     'spamreport': 'spam',
                     'unsubscribe': 'unsubscribed'
                 }
-                
+
                 mapped_type = event_map.get(event_type)
                 if not mapped_type:
                     continue
-                
+
                 # Find and update email log
                 email_log = EmailLog.objects.get(tracking_id=tracking_id)
                 email_log.add_tracking_event(
                     event_type=mapped_type,
                     event_data=event
                 )
-                
+
                 # Update email status if needed
                 if mapped_type in ['delivered', 'bounced', 'dropped']:
                     email_log.status = mapped_type
                     email_log.save(update_fields=['status', 'updated_at'])
-                
+
                 events.append(mapped_type)
-                
+
             except EmailLog.DoesNotExist:
                 logger.warning(f"Email log not found for tracking_id: {tracking_id}")
             except Exception as e:
                 logger.error(f"Error processing {event_type} event: {str(e)}")
-        
+
         return events
 ```
 
@@ -854,17 +854,17 @@ class EmailWebhookView(APIView):
        """Anonymize IP address by zeroing the last octet"""
        if not ip_address or ip_address == '127.0.0.1':
            return ip_address
-       
+
        # Handle IPv4
        if '.' in ip_address:
            parts = ip_address.split('.')
            if len(parts) == 4:
                return f"{'.'.join(parts[:3])}.0"
-       
+
        # Handle IPv6 (simplified)
        if ':' in ip_address:
            return ':'.join(ip_address.split(':')[:4] + ['0000'] * 4)
-       
+
        return ip_address
    ```
 
@@ -893,7 +893,7 @@ class EmailWebhookView(APIView):
    <div class="chart-container">
      <canvas id="emailMetricsChart"></canvas>
    </div>
-   
+
    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
    <script>
    // Fetch data from backend API
@@ -952,7 +952,7 @@ def check_email_health():
     from datetime import timedelta
     from django.utils import timezone
     from ...models import EmailLog
-    
+
     # Check for emails stuck in sending state
     threshold = timezone.now() - timedelta(hours=1)
     stuck_emails = EmailLog.objects.filter(
@@ -960,24 +960,24 @@ def check_email_health():
         created_at__lt=threshold,
         is_processed=False
     )
-    
+
     if stuck_emails.exists():
         send_alert(
             'high',
             f'{stuck_emails.count()} emails stuck in sending state',
             'Check Celery workers and SMTP configuration'
         )
-    
+
     # Check for high bounce rate
     bounce_threshold = 5  # 5% bounce rate
     last_hour = timezone.now() - timedelta(hours=1)
-    
+
     sent_count = EmailLog.objects.filter(created_at__gte=last_hour).count()
     bounced_count = EmailLog.objects.filter(
         created_at__gte=last_hour,
         status='bounced'
     ).count()
-    
+
     if sent_count > 0:
         bounce_rate = (bounced_count / sent_count) * 100
         if bounce_rate > bounce_threshold:
@@ -993,23 +993,23 @@ def check_email_health():
 # v1/views/analytics.py
 class EmailAnalyticsView(APIView):
     """API for email analytics and reporting"""
-    
+
     def get(self, request, *args, **kwargs):
         store = getattr(request, 'store', None)
         days = int(request.query_params.get('days', 30))
-        
+
         # Date range
         end_date = timezone.now()
         start_date = end_date - timedelta(days=days)
-        
+
         # Base queryset
         logs = EmailLog.objects.filter(
             created_at__range=(start_date, end_date)
         )
-        
+
         if store:
             logs = logs.filter(store=store)
-        
+
         # Calculate metrics
         metrics = {
             'sent': logs.count(),
@@ -1022,7 +1022,7 @@ class EmailAnalyticsView(APIView):
             'unsubscribed': logs.filter(tracking_events__event_type='unsubscribed')
                              .distinct().count(),
         }
-        
+
         # Calculate rates
         metrics.update({
             'delivery_rate': self._safe_divide(metrics['delivered'], metrics['sent']) * 100,
@@ -1031,10 +1031,10 @@ class EmailAnalyticsView(APIView):
             'bounce_rate': self._safe_divide(metrics['bounced'], metrics['sent']) * 100,
             'unsubscribe_rate': self._safe_divide(metrics['unsubscribed'], metrics['delivered']) * 100,
         })
-        
+
         # Time series data
         time_series = self._get_time_series_data(logs, start_date, end_date)
-        
+
         return Response({
             'metrics': metrics,
             'time_series': time_series,
@@ -1043,23 +1043,23 @@ class EmailAnalyticsView(APIView):
                 'end': end_date
             }
         })
-    
+
     def _safe_divide(self, numerator, denominator):
         """Safely divide two numbers, return 0 if denominator is 0"""
         return numerator / denominator if denominator else 0
-    
+
     def _get_time_series_data(self, queryset, start_date, end_date):
         """Generate time series data for the given date range"""
         from django.db.models import Count, Q
         from django.db.models.functions import TruncDate
-        
+
         # Group by date
         date_series = queryset.annotate(
             date=TruncDate('created_at')
         ).values('date').annotate(
             sent=Count('id'),
             delivered=Count('id', filter=Q(status='delivered')),
-            opened=Count('tracking_events', 
+            opened=Count('tracking_events',
                        filter=Q(tracking_events__event_type='opened'),
                        distinct=True),
             clicked=Count('tracking_events',
@@ -1070,15 +1070,15 @@ class EmailAnalyticsView(APIView):
                              filter=Q(tracking_events__event_type='unsubscribed'),
                              distinct=True)
         ).order_by('date')
-        
+
         # Convert to dict for easier lookup
         date_map = {item['date']: item for item in date_series}
-        
+
         # Generate full date range
         result = []
         current_date = start_date.date()
         end_date = end_date.date()
-        
+
         while current_date <= end_date:
             data = date_map.get(current_date, {
                 'date': current_date,
@@ -1089,7 +1089,7 @@ class EmailAnalyticsView(APIView):
                 'bounced': 0,
                 'unsubscribed': 0
             })
-            
+
             # Calculate rates
             data.update({
                 'delivery_rate': self._safe_divide(data['delivered'], data['sent']) * 100,
@@ -1098,10 +1098,10 @@ class EmailAnalyticsView(APIView):
                 'bounce_rate': self._safe_divide(data['bounced'], data['sent']) * 100,
                 'unsubscribe_rate': self._safe_divide(data['unsubscribed'], data['delivered']) * 100,
             })
-            
+
             result.append(data)
             current_date += timedelta(days=1)
-        
+
         return result
 
 ### 9.1 Important Metrics
@@ -1118,14 +1118,14 @@ def check_email_queues():
     from datetime import timedelta
     from django.utils import timezone
     from ..models import EmailQueue
-    
+
     # Check for emails stuck in queue for too long
     threshold = timezone.now() - timedelta(hours=1)
     stuck_emails = EmailQueue.objects.filter(
         is_processed=False,
         created_at__lt=threshold
     ).count()
-    
+
     if stuck_emails > 10:
         send_alert(
             'high',

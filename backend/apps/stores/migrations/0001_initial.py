@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -36,9 +35,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "verification_token",
-                    models.CharField(
-                        blank=True, max_length=255, null=True, unique=True
-                    ),
+                    models.CharField(blank=True, max_length=255, null=True, unique=True),
                 ),
                 (
                     "status",
@@ -74,9 +71,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "favicon",
-                    models.ImageField(
-                        blank=True, null=True, upload_to="stores/favicons/"
-                    ),
+                    models.ImageField(blank=True, null=True, upload_to="stores/favicons/"),
                 ),
                 ("settings", models.JSONField(blank=True, default=dict)),
                 ("meta_title", models.CharField(blank=True, max_length=255)),
@@ -212,8 +207,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="store",
-            index=models.Index(
-                fields=["created_at"], name="stores_stor_created_f1ef67_idx"
-            ),
+            index=models.Index(fields=["created_at"], name="stores_stor_created_f1ef67_idx"),
         ),
     ]

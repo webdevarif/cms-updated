@@ -23,7 +23,7 @@ class Product(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['store', 'slug']
         indexes = [
@@ -44,20 +44,20 @@ class Product(models.Model):
 def calculate_order_totals(order):
     """
     Calculate order totals including subtotal, tax, shipping, and final total.
-    
+
     Args:
         order (Order): The order instance to calculate totals for
-        
+
     Returns:
         dict: Dictionary containing calculated totals:
             - subtotal (Decimal): Sum of all order items
             - tax (Decimal): Calculated tax amount
             - shipping (Decimal): Shipping cost
             - total (Decimal): Final total including all charges
-            
+
     Raises:
         ValidationError: If order items are invalid or missing
-        
+
     Example:
         >>> order = Order.objects.get(id=1)
         >>> totals = calculate_order_totals(order)
@@ -80,7 +80,7 @@ class ProductModelTest(TestCase):
     def setUp(self):
         self.store = Store.objects.create(name="Test Store")
         self.user = User.objects.create_user(email="test@example.com")
-    
+
     def test_product_creation_with_valid_data(self):
         """Test creating product with all required fields"""
         product = Product.objects.create(
@@ -90,11 +90,11 @@ class ProductModelTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         assert product.title == "Test Product"
         assert product.status == "draft"
         assert product.store == self.store
-    
+
     def test_product_slug_uniqueness_per_store(self):
         """Test that product slugs are unique within each store"""
         # Test implementation
@@ -116,7 +116,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ['status', 'store', 'created_at']
     search_fields = ['title', 'sku', 'description']
     readonly_fields = ['created_at', 'updated_at']
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('title', 'slug', 'sku', 'status')
@@ -176,7 +176,7 @@ def calculate_tax(order):
 def calculate_tax(order):
     """
     Calculate tax based on order shipping address and items.
-    
+
     TODO: Implement specific tax calculation logic based on:
     - Shipping address jurisdiction
     - Product taxability
@@ -206,7 +206,7 @@ def process_payment(order, payment_data):
 def process_payment(order, payment_data):
     """
     Process payment using secure payment gateway.
-    
+
     SECURITY NOTES:
     - Never store raw card data
     - Use tokenization for payment methods
@@ -265,7 +265,7 @@ def sync_with_shipping_carrier(order):
 def sync_with_shipping_carrier(order):
     """
     Sync order with shipping carrier API.
-    
+
     TODO: Implement specific carrier integration:
     - Add API endpoint configuration
     - Implement authentication
@@ -320,14 +320,14 @@ class Inventory(models.Model):
 class ProductSerializer(serializers.ModelSerializer):
     variants = ProductVariantSerializer(many=True, read_only=True)
     inventory_count = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Product
         fields = [
             'id', 'title', 'slug', 'sku', 'description', 'status',
             'variants', 'inventory_count', 'created_at'
         ]
-    
+
     def get_inventory_count(self, obj):
         return sum(variant.inventory_quantity for variant in obj.variants.all())
 
@@ -346,14 +346,14 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     variants = ProductVariantSerializer(many=True, read_only=True)
     inventory_count = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Product
         fields = [
             'id', 'title', 'slug', 'sku', 'description', 'status',
             'variants', 'inventory_count', 'created_at'
         ]
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Optimize query with prefetch_related
@@ -361,7 +361,7 @@ class ProductSerializer(serializers.ModelSerializer):
             self.instance = Product.objects.prefetch_related('variants').get(
                 id=self.instance.id
             )
-    
+
     def get_inventory_count(self, obj):
         # Use annotated field for better performance
         return getattr(obj, '_inventory_count', 0)
@@ -408,17 +408,17 @@ def process_order(order):
 def reserve_inventory(variant, quantity):
     """
     Reserve inventory for a product variant.
-    
+
     Args:
         variant (ProductVariant): The product variant to reserve inventory for
         quantity (int): The quantity to reserve
-        
+
     Returns:
         bool: True if reservation successful, False otherwise
-        
+
     Raises:
         ValidationError: If quantity is invalid or insufficient inventory
-        
+
     Example:
         >>> variant = ProductVariant.objects.get(sku="SHIRT-RED-M")
         >>> success = reserve_inventory(variant, 2)
@@ -427,11 +427,11 @@ def reserve_inventory(variant, quantity):
     """
     if quantity <= 0:
         raise ValidationError("Quantity must be positive")
-    
+
     inventory = Inventory.objects.filter(variant=variant).first()
     if not inventory or inventory.available < quantity:
         return False
-    
+
     inventory.reserved += quantity
     inventory.save()
     return True
@@ -448,11 +448,11 @@ def create_product_from_api(request_data):
     for field in required_fields:
         if field not in request_data:
             raise ValidationError(f"Missing required field: {field}")
-    
+
     # Sanitize input
     title = bleach.clean(request_data['title'], tags=[], strip=True)
     sku = re.sub(r'[^A-Za-z0-9_-]', '', request_data['sku'])
-    
+
     # Validate data types
     try:
         price = Decimal(str(request_data['price']))
@@ -470,7 +470,7 @@ Product.objects.filter(title__icontains=user_input)
 def log_payment_attempt(payment_data):
     # ❌ BAD: Logs sensitive card data
     logger.info(f"Payment attempt: {payment_data}")
-    
+
     # ✅ GOOD: Only logs non-sensitive data
     logger.info(f"Payment attempt: {payment_data['order_id']}, amount: {payment_data['amount']}")
 ```
@@ -485,7 +485,7 @@ def get_orders_with_customers():
     orders = Order.objects.all()
     for order in orders:
         print(order.customer.email)  # Separate query for each order
-    
+
     # ✅ GOOD: Single query with related data
     orders = Order.objects.select_related('customer').all()
     for order in orders:
@@ -496,7 +496,7 @@ class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     status = models.CharField(max_length=20)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['customer', 'status']),  # For customer order queries
@@ -510,7 +510,7 @@ def update_product_prices(price_updates):
         product = Product.objects.get(id=product_id)
         product.price = new_price
         product.save()
-    
+
     # ✅ GOOD: Bulk update
     Product.objects.filter(id__in=price_updates.keys()).update(
         price=Case(*[When(id=pk, then=Value(price)) for pk, price in price_updates.items()])
@@ -552,27 +552,27 @@ def update_product_prices(price_updates):
 def review_ai_generated_code(code):
     """
     Review AI-generated code before committing.
-    
+
     Args:
         code (str): The AI-generated code to review
-        
+
     Returns:
         dict: Review results with issues and recommendations
     """
     issues = []
-    
+
     # Check for security issues
     if 'eval(' in code or 'exec(' in code:
         issues.append("Potentially unsafe code execution detected")
-    
+
     # Check for missing input validation
     if 'request.data' in code and 'validate' not in code:
         issues.append("Missing input validation")
-    
+
     # Check for N+1 queries
     if '.objects.all()' in code and 'select_related' not in code:
         issues.append("Potential N+1 query problem")
-    
+
     return {
         'issues': issues,
         'approved': len(issues) == 0
@@ -594,7 +594,7 @@ def calculate_tax_v1(order):
 def calculate_tax_v2(order):
     """
     Calculate tax based on shipping address and product taxability.
-    
+
     The AI initially suggested a hardcoded tax rate, but business requirements
     showed that tax rates vary by jurisdiction and product type.
     """
@@ -610,10 +610,10 @@ def calculate_tax_v2(order):
 
 class AICodeFeedback:
     """Track and learn from AI code generation feedback"""
-    
+
     def __init__(self):
         self.feedback_log = []
-    
+
     def log_feedback(self, prompt, generated_code, issues, corrections):
         """Log feedback for AI improvement"""
         feedback_entry = {
@@ -624,13 +624,13 @@ class AICodeFeedback:
             'corrections': corrections,
             'lesson_learned': self.extract_lesson(issues, corrections)
         }
-        
+
         self.feedback_log.append(feedback_entry)
-    
+
     def extract_lesson(self, issues, corrections):
         """Extract learning points from feedback"""
         lessons = []
-        
+
         for issue in issues:
             if 'security' in issue.lower():
                 lessons.append("Always prioritize security in generated code")
@@ -638,9 +638,9 @@ class AICodeFeedback:
                 lessons.append("Consider database optimization in generated code")
             elif 'validation' in issue.lower():
                 lessons.append("Include proper input validation")
-        
+
         return lessons
-    
+
     def generate_improvement_summary(self):
         """Generate summary of improvements needed"""
         issue_counts = {}
@@ -648,7 +648,7 @@ class AICodeFeedback:
             for issue in entry['issues']:
                 issue_type = issue.split(':')[0]
                 issue_counts[issue_type] = issue_counts.get(issue_type, 0) + 1
-        
+
         return {
             'total_feedback': len(self.feedback_log),
             'common_issues': issue_counts,
@@ -675,7 +675,7 @@ class AICodeFeedback:
 def responsible_ai_usage_example():
     """
     Example of using AI responsibly for ecommerce development.
-    
+
     Process:
     1. Use AI to generate boilerplate code and templates
     2. Review and understand all generated code

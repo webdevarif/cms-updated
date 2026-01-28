@@ -1,8 +1,8 @@
 """
 Public cache serializers - read-only cache statistics.
 """
-from rest_framework import serializers
 from apps.cache.models import CacheStats
+from rest_framework import serializers
 
 
 class CacheStatsSerializer(serializers.ModelSerializer):
@@ -14,9 +14,16 @@ class CacheStatsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CacheStats
         fields = [
-            'store', 'interval', 'period_start', 'total_keys',
-            'total_hits', 'total_misses', 'hit_ratio', 'memory_usage',
-            'avg_response_time_ms', 'created_at'
+            "store",
+            "interval",
+            "period_start",
+            "total_keys",
+            "total_hits",
+            "total_misses",
+            "hit_ratio",
+            "memory_usage",
+            "avg_response_time_ms",
+            "created_at",
         ]
 
     def get_hit_ratio(self, obj):

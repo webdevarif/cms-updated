@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 class QueueService:
     """Shared queue management service"""
-    
+
     @staticmethod
     def enqueue_task(task_name, args=None, kwargs=None, countdown=0, eta=None):
         """
@@ -73,17 +73,17 @@ class QueueService:
             countdown=countdown,
             eta=eta
         )
-        
+
         logger.info(f"Enqueued task: {task_name} (ID: {task.id})")
         return task
-    
+
     @staticmethod
     def get_task_status(task_id):
         """
         Get task status
         """
         result = AsyncResult(task_id)
-        
+
         status_map = {
             'PENDING': 'pending',
             'STARTED': 'started',
@@ -92,14 +92,14 @@ class QueueService:
             'RETRY': 'retrying',
             'REVOKED': 'revoked'
         }
-        
+
         return {
             'task_id': task_id,
             'status': status_map.get(result.status, result.status),
             'result': result.result if result.ready() else None,
             'traceback': result.traceback if result.failed() else None
         }
-    
+
     @staticmethod
     def revoke_task(task_id, terminate=False):
         """
@@ -108,7 +108,7 @@ class QueueService:
         current_app.control.revoke(task_id, terminate=terminate)
         logger.info(f"Revoked task: {task_id}")
         return True
-    
+
     @staticmethod
     def retry_task(task_id, countdown=60):
         """
@@ -116,16 +116,16 @@ class QueueService:
         """
         current_app.control.revoke(task_id, terminate=False)
         result = AsyncResult(task_id)
-        
+
         if result.failed():
             # Re-enqueue the task
             task_name = result.args[0] if result.args else None
             if task_name:
                 QueueService.enqueue_task(task_name, args=result.args, kwargs=result.kwargs, countdown=countdown)
-        
+
         logger.info(f"Retrying task: {task_id}")
         return True
-    
+
     @staticmethod
     def get_active_tasks():
         """
@@ -133,7 +133,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         active = inspect.active()
-        
+
         tasks = []
         for worker, task_list in (active or {}).items():
             for task in task_list:
@@ -144,9 +144,9 @@ class QueueService:
                     'kwargs': task['kwargs'],
                     'worker': worker
                 })
-        
+
         return tasks
-    
+
     @staticmethod
     def get_scheduled_tasks():
         """
@@ -154,7 +154,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         scheduled = inspect.scheduled()
-        
+
         tasks = []
         for worker, task_list in (scheduled or {}).items():
             for task in task_list:
@@ -164,9 +164,9 @@ class QueueService:
                     'eta': task['request']['eta'],
                     'worker': worker
                 })
-        
+
         return tasks
-    
+
     @staticmethod
     def get_worker_stats():
         """
@@ -174,7 +174,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         stats = inspect.stats()
-        
+
         worker_stats = []
         for worker, stat in (stats or {}).items():
             worker_stats.append({
@@ -182,7 +182,7 @@ class QueueService:
                 'total_tasks': stat.get('total', {}),
                 'pool': stat.get('pool', {})
             })
-        
+
         return worker_stats
 ```
 
@@ -206,13 +206,13 @@ def example_task(self, *args, **kwargs):
     try:
         # Task logic here
         result = perform_operation(*args, **kwargs)
-        
+
         logger.info(f"Task completed successfully: {self.request.id}")
         return result
-        
+
     except Exception as exc:
         logger.error(f"Task failed: {exc}")
-        
+
         # Retry with exponential backoff
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 ```
@@ -240,7 +240,7 @@ def example_task(self, *args, **kwargs):
 
 class TaskMonitoringService:
     """Task monitoring service"""
-    
+
     @staticmethod
     def get_task_stats(hours=24):
         """
@@ -249,11 +249,11 @@ class TaskMonitoringService:
         from django.utils import timezone
         from datetime import timedelta
         from .models import TaskLog
-        
+
         since = timezone.now() - timedelta(hours=hours)
-        
+
         logs = TaskLog.objects.filter(created_at__gte=since)
-        
+
         stats = {
             'total': logs.count(),
             'success': logs.filter(status='success').count(),
@@ -264,20 +264,20 @@ class TaskMonitoringService:
                 avg=models.Avg('duration_ms')
             )['avg__duration'] or 0
         }
-        
+
         return stats
-    
+
     @staticmethod
     def get_slow_tasks(threshold_ms=5000):
         """
         Get slow tasks
         """
         from .models import TaskLog
-        
+
         return TaskLog.objects.filter(
             duration_ms__gt=threshold_ms
         ).order_by('-duration_ms')
-    
+
     @staticmethod
     def get_failing_tasks(limit=50):
         """
@@ -285,20 +285,20 @@ class TaskMonitoringService:
         """
         from .models import TaskLog
         from django.db.models import Count
-        
+
         return TaskLog.objects.filter(
             status='failed'
         ).values('task_name').annotate(
             count=Count('id')
         ).order_by('-count')[:limit]
-    
+
     @staticmethod
     def log_task(task_id, task_name, status, result=None, duration_ms=None, error=None):
         """
         Log task execution
         """
         from .models import TaskLog
-        
+
         TaskLog.objects.create(
             task_id=task_id,
             task_name=task_name,
@@ -368,31 +368,31 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.email.tasks.process_email_queue',
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
     },
-    
+
     # Webhook deliveries
     'deliver-webhooks': {
         'task': 'apps.webhooks.tasks.deliver_webhook',
         'schedule': crontab(minute='*/1'),  # Every minute
     },
-    
+
     # Cache cleanup
     'cleanup-cache': {
         'task': 'apps.cache.tasks.clear_cache',
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
     },
-    
+
     # Search index rebuild
     'rebuild-search-index': {
         'task': 'apps.search.tasks.rebuild_index',
         'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
     },
-    
+
     # Notification cleanup
     'cleanup-notifications': {
         'task': 'apps.notifications.tasks.cleanup_old_notifications',
         'schedule': crontab(hour=4, minute=0),  # Daily at 4 AM
     },
-    
+
     # Log cleanup
     'cleanup-logs': {
         'task': 'apps.logs.tasks.cleanup_old_logs',
@@ -453,22 +453,22 @@ class QueueServiceTest(TestCase):
     def test_enqueue_task(self):
         """Test task enqueueing"""
         task = QueueService.enqueue_task('test_task', args=['arg1'], kwargs={'key': 'value'})
-        
+
         self.assertIsNotNone(task.id)
-    
+
     def test_get_task_status(self):
         """Test getting task status"""
         task = QueueService.enqueue_task('test_task', args=['arg1'])
         status = QueueService.get_task_status(task.id)
-        
+
         self.assertIn('status', status)
         self.assertIn('task_id', status)
-    
+
     def test_revoke_task(self):
         """Test task revocation"""
         task = QueueService.enqueue_task('test_task', args=['arg1'], countdown=60)
         result = QueueService.revoke_task(task.id)
-        
+
         self.assertTrue(result)
 ```
 
@@ -491,11 +491,11 @@ def deliver_webhook(self, delivery_id):
     """
     from .models import WebhookDelivery
     from .services import WebhookService
-    
+
     try:
         delivery = WebhookDelivery.objects.select_related('webhook').get(id=delivery_id)
         result = WebhookService.deliver_webhook_sync(delivery)
-        
+
         # Log task completion
         from apps.queue.services import TaskMonitoringService
         TaskMonitoringService.log_task(
@@ -504,15 +504,15 @@ def deliver_webhook(self, delivery_id):
             status='success',
             result={'delivery_id': delivery_id}
         )
-        
+
         return {
             'delivery_id': delivery_id,
             'status': result.status
         }
-        
+
     except Exception as exc:
         logger.error(f"Webhook delivery failed: {exc}")
-        
+
         # Log task failure
         from apps.queue.services import TaskMonitoringService
         TaskMonitoringService.log_task(
@@ -521,7 +521,7 @@ def deliver_webhook(self, delivery_id):
             status='failed',
             error=str(exc)
         )
-        
+
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 ```
 
@@ -540,11 +540,11 @@ def send_notification(self, notification_id):
     """
     from .models import Notification
     from .services import NotificationService
-    
+
     try:
         notification = Notification.objects.get(id=notification_id)
         result = NotificationService.send_notification(notification)
-        
+
         # Log task completion
         from apps.queue.services import TaskMonitoringService
         TaskMonitoringService.log_task(
@@ -553,15 +553,15 @@ def send_notification(self, notification_id):
             status='success',
             result={'notification_id': notification_id}
         )
-        
+
         return {
             'notification_id': notification_id,
             'status': result.status
         }
-        
+
     except Exception as exc:
         logger.error(f"Notification sending failed: {exc}")
-        
+
         # Log task failure
         from apps.queue.services import TaskMonitoringService
         TaskMonitoringService.log_task(
@@ -570,7 +570,7 @@ def send_notification(self, notification_id):
             status='failed',
             error=str(exc)
         )
-        
+
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 ```
 
@@ -588,11 +588,11 @@ class TaskLog(TenantModel):
     """
     Task execution log for monitoring
     """
-    
+
     # Core fields
     task_id = models.CharField(max_length=255, db_index=True)
     task_name = models.CharField(max_length=255, db_index=True)
-    
+
     # Status
     status = models.CharField(
         max_length=20,
@@ -606,17 +606,17 @@ class TaskLog(TenantModel):
         ],
         db_index=True
     )
-    
+
     # Results
     result = models.JSONField(default=dict, blank=True)
     error_message = models.TextField(blank=True)
-    
+
     # Timing
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'queue_task_log'
         indexes = [
@@ -624,7 +624,7 @@ class TaskLog(TenantModel):
             models.Index(fields=['task_name', 'created_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.task_name} - {self.status}"
 ```

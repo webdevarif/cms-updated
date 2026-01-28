@@ -1,14 +1,14 @@
 """
 Public search API views - read-only search for content consumption.
 """
-from rest_framework import viewsets, status
+from apps.search.services import SearchService
+from core.permissions import AllowAnyPublicRead
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
-from core.permissions import AllowAnyPublicRead
-from apps.search.services import SearchService
 from .serializers import SearchResultSerializer, SearchSuggestionSerializer
 
 

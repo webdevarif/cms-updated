@@ -51,12 +51,12 @@ from core.models import TenantModel
 
 class MetafieldDefinition(TenantModel):
     """Defines the structure and validation for metafields"""
-    
+
     # Core Identification
     name = models.CharField(max_length=100)
     namespace = models.CharField(max_length=50, help_text="Category for grouping fields")
     key = models.CharField(max_length=50, help_text="Unique identifier within namespace")
-    
+
     # Type and Validation
     TYPE_CHOICES = [
         ('text', 'Text'),
@@ -71,37 +71,37 @@ class MetafieldDefinition(TenantModel):
         ('file', 'File'),
     ]
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    
+
     # Configuration
     is_required = models.BooleanField(default=False)
     is_visible = models.BooleanField(default=True)
     is_filterable = models.BooleanField(default=False)
     is_sortable = models.BooleanField(default=False)
-    
+
     # Options for select fields
     options = models.JSONField(
         default=list,
         help_text="Options for select/multiselect fields"
     )
-    
+
     # Validation rules
     validations = models.JSONField(
         default=dict,
         help_text="Validation rules (min_length, max_length, etc.)"
     )
-    
+
     # Content types this field applies to
     content_types = models.JSONField(
         default=list,
         help_text="Which models this field applies to"
     )
-    
+
     # UI Configuration
     ui = models.JSONField(
         default=dict,
         help_text="UI configuration (placeholder, help text, etc.)"
     )
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'metafields_definition'
         unique_together = [['store', 'namespace', 'key']]
@@ -111,21 +111,21 @@ class MetafieldDefinition(TenantModel):
             models.Index(fields=['content_types']),
         ]
         ordering = ['namespace', 'key']
-    
+
     def __str__(self):
         return f"{self.namespace}.{self.key}"
-    
+
     def clean(self):
         """Validate the definition"""
         from django.core.exceptions import ValidationError
-        
+
         # Validate namespace/key format
         if not self.namespace.islower():
             raise ValidationError("Namespace must be lowercase")
-            
+
         if not self.key.islower():
             raise ValidationError("Key must be lowercase")
-            
+
         # Validate options for select fields
         if self.type in ['select', 'multiselect'] and not self.options:
             raise ValidationError("Select fields must have options defined")
@@ -141,14 +141,14 @@ from core.models import TenantModel
 
 class Metafield(TenantModel):
     """Stores actual metafield values with generic relations"""
-    
+
     # Link to definition
     definition = models.ForeignKey(
         'metafields.MetafieldDefinition',
         on_delete=models.CASCADE,
         related_name='values'
     )
-    
+
     # Generic relation to any model
     content_type = models.ForeignKey(
         'contenttypes.ContentType',
@@ -156,14 +156,14 @@ class Metafield(TenantModel):
     )
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-    
+
     # Value storage (type-specific)
     value_text = models.TextField(blank=True, null=True)
     value_number = models.FloatField(blank=True, null=True)
     value_boolean = models.BooleanField(blank=True, null=True)
     value_date = models.DateTimeField(blank=True, null=True)
     value_json = models.JSONField(blank=True, null=True)
-    
+
     # Media fields (for image/file types)
     value_media = models.ForeignKey(
         'media.MediaFile',
@@ -171,11 +171,11 @@ class Metafield(TenantModel):
         null=True,
         blank=True
     )
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'metafields_value'
         unique_together = [
@@ -188,16 +188,16 @@ class Metafield(TenantModel):
             models.Index(fields=['definition', 'value_boolean']),
         ]
         ordering = ['definition', 'created_at']
-    
+
     def __str__(self):
         return f"{self.definition} = {self.get_value()}"
-    
+
     def get_value(self):
         """Get the value in the correct type"""
         if self.definition.type in ['image', 'file']:
             return self.value_media
         return getattr(self, f'value_{self.definition.type}', None)
-    
+
     def set_value(self, value):
         """Set the value with type conversion"""
         if self.definition.type in ['image', 'file']:
@@ -205,7 +205,7 @@ class Metafield(TenantModel):
         else:
             field_name = f'value_{self.definition.type}'
             setattr(self, field_name, value)
-            
+
             # Clear other value fields
             for t in ['text', 'number', 'boolean', 'date', 'json']:
                 if t != self.definition.type:
@@ -246,7 +246,7 @@ class MetafieldTests(TestCase):
             name="Test Product",
             sku="TEST-001"
         )
-        
+
         # Create a test metafield definition
         self.defn = MetafieldDefinition.objects.create(
             store=self.store,
@@ -255,7 +255,7 @@ class MetafieldTests(TestCase):
             key="stock_warning_level",
             type="number"
         )
-    
+
     def test_metafield_creation(self):
         """Test creating a metafield"""
         metafield = Metafield.objects.create(
@@ -264,7 +264,7 @@ class MetafieldTests(TestCase):
             content_object=self.product,
             value_number=10
         )
-        
+
         self.assertEqual(metafield.value_number, 10)
         self.assertEqual(metafield.content_object, self.product)
 ```
@@ -281,7 +281,7 @@ from django.contrib.contenttypes.models import ContentType
 
 class MetafieldService:
     """Core service for metafield operations"""
-    
+
     @staticmethod
     def get_metafield_definition(store, namespace, key):
         """Get a metafield definition by namespace and key"""
@@ -291,12 +291,12 @@ class MetafieldService:
             namespace=namespace,
             key=key
         )
-    
+
     @staticmethod
     def get_metafield(instance, definition):
         """Get a metafield value for an instance"""
         from .models import Metafield
-        
+
         content_type = ContentType.objects.get_for_model(instance)
         return Metafield.objects.filter(
             definition=definition,
@@ -304,12 +304,12 @@ class MetafieldService:
             object_id=instance.id,
             store=instance.store
         ).first()
-    
+
     @staticmethod
     def set_metafield(instance, namespace, key, value):
         """Set a metafield value for an instance"""
         from .models import Metafield, MetafieldDefinition
-        
+
         # Get or create definition
         definition, created = MetafieldDefinition.objects.get_or_create(
             store=instance.store,
@@ -321,7 +321,7 @@ class MetafieldService:
                 'content_types': [ContentType.objects.get_for_model(instance).model]
             }
         )
-        
+
         # Get or create metafield
         content_type = ContentType.objects.get_for_model(instance)
         metafield, created = Metafield.objects.get_or_create(
@@ -330,13 +330,13 @@ class MetafieldService:
             object_id=instance.id,
             store=instance.store
         )
-        
+
         # Set and save value
         metafield.set_value(value)
         metafield.save()
-        
+
         return metafield
-    
+
     @staticmethod
     def _infer_type(value):
         """Infer metafield type from Python type"""
@@ -347,22 +347,22 @@ class MetafieldService:
         elif isinstance(value, dict):
             return 'json'
         return 'text'
-    
+
     @staticmethod
     def get_metafields_for_object(instance, namespace=None):
         """Get all metafields for an object, optionally filtered by namespace"""
         from .models import Metafield, MetafieldDefinition
-        
+
         content_type = ContentType.objects.get_for_model(instance)
         queryset = Metafield.objects.filter(
             store=instance.store,
             content_type=content_type,
             object_id=instance.id
         ).select_related('definition')
-        
+
         if namespace:
             queryset = queryset.filter(definition__namespace=namespace)
-        
+
         return queryset
 ```
 
@@ -388,11 +388,11 @@ from django.db import transaction
 
 class Command(BaseCommand):
     help = 'Migrate legacy custom fields to metafields system'
-    
+
     def handle(self, *args, **options):
         from apps.legacy.models import CustomField, CustomFieldValue
         from .models import MetafieldDefinition, Metafield
-        
+
         with transaction.atomic():
             # Migrate definitions
             for legacy_field in CustomField.objects.all():
@@ -405,7 +405,7 @@ class Command(BaseCommand):
                     is_required=legacy_field.required,
                     options=legacy_field.options or []
                 )
-                
+
                 # Migrate values
                 for legacy_value in CustomFieldValue.objects.filter(
                     field=legacy_field
@@ -417,7 +417,7 @@ class Command(BaseCommand):
                         object_id=legacy_value.object_id,
                         **{f'value_{legacy_field.field_type}': legacy_value.value}
                     )
-        
+
         self.stdout.write(self.style.SUCCESS('Migration completed'))
 ```
 
@@ -433,7 +433,7 @@ class Command(BaseCommand):
 
 ---
 
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25
 
@@ -561,6 +561,6 @@ class MetafieldTests(TestCase):
    - Use the provided validation methods in `MetafieldService`
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

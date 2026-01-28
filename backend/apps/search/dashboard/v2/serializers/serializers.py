@@ -1,8 +1,8 @@
 """
 Dashboard search serializers - full admin CRUD with analytics.
 """
-from rest_framework import serializers
 from apps.search.models.infrastructure import SearchIndex, SearchQuery
+from rest_framework import serializers
 
 
 class SearchResultSerializer(serializers.Serializer):
@@ -40,21 +40,37 @@ class SearchIndexSerializer(serializers.ModelSerializer):
     class Meta:
         model = SearchIndex
         fields = [
-            'id', 'store', 'name', 'is_active', 'content_types',
-            'facets', 'settings', 'last_reindexed_at', 'created_at', 'updated_at'
+            "id",
+            "store",
+            "name",
+            "is_active",
+            "content_types",
+            "facets",
+            "settings",
+            "last_reindexed_at",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class SearchQuerySerializer(serializers.ModelSerializer):
     """Search query log serializer"""
 
-    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_email = serializers.CharField(source="user.email", read_only=True)
 
     class Meta:
         model = SearchQuery
         fields = [
-            'id', 'store', 'user', 'user_email', 'query', 'search_type',
-            'results_count', 'filters', 'duration_ms', 'created_at'
+            "id",
+            "store",
+            "user",
+            "user_email",
+            "query",
+            "search_type",
+            "results_count",
+            "filters",
+            "duration_ms",
+            "created_at",
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ["id", "created_at"]

@@ -15,11 +15,11 @@ class EcommerceViewSet(TenantViewSet):
     Base ViewSet for all ecommerce endpoints with store scoping
     Follows main backend rules pattern
     """
-    
+
     def get_queryset(self):
         """Filter queryset by store (inherited from TenantViewSet)"""
         return super().get_queryset()
-    
+
     def perform_create(self, serializer):
         """Set store on create (inherited from TenantViewSet)"""
         return super().perform_create(serializer)
@@ -41,7 +41,7 @@ class ProductViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Product.objects.select_related('store').prefetch_related(
         'variants', 'categories', 'images'
     ).all()
@@ -50,7 +50,7 @@ class ProductViewSet(TenantViewSet):
     search_fields = ['title', 'description', 'sku']
     ordering_fields = ['title', 'created_at', 'updated_at']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Duplicate Product",
         description="Create a duplicate of existing product",
@@ -59,19 +59,19 @@ class ProductViewSet(TenantViewSet):
     def duplicate(self, request, pk=None):
         """Duplicate a product using service layer"""
         product = self.get_object()
-        
+
         from services.product import ProductService
         new_product = ProductService.duplicate_product(product, request.user)
-        
+
         serializer = self.get_serializer(new_product)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
     @action(detail=True, methods=['post'])
     def bulk_update_variants(self, request, pk=None):
         """Bulk update product variants"""
         product = self.get_object()
         variants_data = request.data.get('variants', [])
-        
+
         for variant_data in variants_data:
             variant_id = variant_data.get('id')
             if variant_id:
@@ -80,21 +80,21 @@ class ProductViewSet(TenantViewSet):
                     if attr != 'id':
                         setattr(variant, attr, value)
                 variant.save()
-        
+
         return Response({'status': 'updated'})
-    
+
     @action(detail=False, methods=['get'])
     def export(self, request):
         """Export products to CSV"""
         store = self.get_store()
         products = self.get_queryset()
-        
+
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="products.csv"'
-        
+
         writer = csv.writer(response)
         writer.writerow(['Title', 'SKU', 'Price', 'Status', 'Created At'])
-        
+
         for product in products:
             writer.writerow([
                 product.title,
@@ -103,7 +103,7 @@ class ProductViewSet(TenantViewSet):
                 product.status,
                 product.created_at
             ])
-        
+
         return response
 ```
 
@@ -119,11 +119,11 @@ class ProductVariantViewSet(StoreScopedViewSet):
     search_fields = ['title', 'sku', 'barcode']
     ordering_fields = ['position', 'price', 'created_at']
     ordering = ['position']
-    
+
     def get_queryset(self):
         store = self.get_store()
         return super().get_queryset().filter(product__store=store)
-    
+
     @action(detail=True, methods=['post'])
     def adjust_inventory(self, request, pk=None):
         """Adjust variant inventory"""
@@ -131,23 +131,23 @@ class ProductVariantViewSet(StoreScopedViewSet):
         quantity = request.data.get('quantity', 0)
         transaction_type = request.data.get('type', 'adjustment')
         notes = request.data.get('notes', '')
-        
+
         inventory, created = Inventory.objects.get_or_create(
             store=variant.product.store,
             product=variant.product,
             variant=variant,
             defaults={'quantity': 0}
         )
-        
+
         if transaction_type == 'add':
             inventory.quantity += quantity
         elif transaction_type == 'subtract':
             inventory.quantity -= quantity
         else:
             inventory.quantity = quantity
-        
+
         inventory.save()
-        
+
         # Create transaction record
         InventoryTransaction.objects.create(
             inventory=inventory,
@@ -156,7 +156,7 @@ class ProductVariantViewSet(StoreScopedViewSet):
             notes=notes,
             created_by=request.user
         )
-        
+
         return Response({'quantity': inventory.quantity})
 ```
 
@@ -172,13 +172,13 @@ class ProductCategoryViewSet(StoreScopedViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'position', 'created_at']
     ordering = ['position']
-    
+
     @action(detail=False, methods=['get'])
     def tree(self, request):
         """Get category tree structure"""
         store = self.get_store()
         categories = self.get_queryset().filter(store=store, is_active=True)
-        
+
         def build_tree(parent=None):
             children = categories.filter(parent=parent)
             return [
@@ -190,7 +190,7 @@ class ProductCategoryViewSet(StoreScopedViewSet):
                 }
                 for cat in children
             ]
-        
+
         tree = build_tree()
         return Response(tree)
 ```
@@ -210,7 +210,7 @@ class PublicProductViewSet(TenantViewSet):
     """
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Product.objects.filter(status='published').select_related('store').prefetch_related(
         'variants', 'categories', 'images'
     )
@@ -219,7 +219,7 @@ class PublicProductViewSet(TenantViewSet):
     search_fields = ['title', 'description', 'sku']
     ordering_fields = ['title', 'created_at']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="List Public Products",
         description="Get paginated list of published products",
@@ -243,12 +243,12 @@ class CustomerCartViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreUser]
     serializer_class = CartSerializer
-    
+
     def get_queryset(self):
         """Get cart for authenticated customer"""
         from services.cart import CartService
         return CartService.get_cart_for_customer(self.request.user, self.request.store)
-    
+
     @extend_schema(
         summary="Get Customer Cart",
         description="Get current customer's shopping cart",
@@ -260,16 +260,16 @@ class CustomerCartViewSet(TenantViewSet):
         if not cart:
             from services.cart import CartService
             cart = CartService.create_cart_for_customer(self.request.user, self.request.store)
-        
+
         serializer = self.get_serializer(cart)
         return Response(serializer.data)
-    
+
     def get_store(self):
         """Get store from request"""
         if hasattr(self.request, 'store'):
             return self.request.store
         raise ValidationError("Store not found")
-    
+
     ### 3.5 URL Structure
 
 #### Main Ecommerce URLs
@@ -322,7 +322,7 @@ class OrderViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Order.objects.select_related(
         'customer', 'store'
     ).prefetch_related('items', 'payments').all()
@@ -331,7 +331,7 @@ class OrderViewSet(TenantViewSet):
     search_fields = ['order_number', 'customer__email']
     ordering_fields = ['created_at', 'total', 'order_number']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Create Order from Cart",
         description="Convert shopping cart to order",
@@ -342,23 +342,23 @@ class OrderViewSet(TenantViewSet):
     def create_from_cart(self, request):
         """Create order from cart using service layer"""
         from services.order import OrderService
-        
+
         try:
             order = OrderService.create_order_from_cart(
-                request.user, 
-                request.store, 
+                request.user,
+                request.store,
                 request.data
             )
-            
+
             serializer = self.get_serializer(order)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Update Order Status",
         description="Update order status with validation",
@@ -370,22 +370,22 @@ class OrderViewSet(TenantViewSet):
         """Update order status using service layer"""
         order = self.get_object()
         new_status = request.data.get('status')
-        
+
         from services.order import OrderService
         try:
             updated_order = OrderService.update_order_status(
                 order, new_status, request.user
             )
-            
+
             serializer = self.get_serializer(updated_order)
             return Response(serializer.data)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Create Payment",
         description="Process payment for order",
@@ -396,22 +396,22 @@ class OrderViewSet(TenantViewSet):
     def create_payment(self, request, pk=None):
         """Create payment for order using service layer"""
         order = self.get_object()
-        
+
         from services.payment import PaymentService
         try:
             payment = PaymentService.process_payment(
                 order, request.data, request.user
             )
-            
+
             serializer = PaymentSerializer(payment)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Generate Invoice",
         description="Generate PDF invoice for order",
@@ -421,13 +421,13 @@ class OrderViewSet(TenantViewSet):
     def invoice(self, request, pk=None):
         """Generate order invoice PDF"""
         order = self.get_object()
-        
+
         from services.order import OrderService
         pdf_buffer = OrderService.generate_invoice_pdf(order)
-        
+
         response = HttpResponse(pdf_buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="invoice_{order.order_number}.pdf"'
-        
+
         return response
 ```
 
@@ -447,14 +447,14 @@ class CustomerViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Customer.objects.select_related('user').all()
     serializer_class = CustomerSerializer
     filterset_fields = ['email_marketing', 'sms_marketing']
     search_fields = ['first_name', 'last_name', 'email']
     ordering_fields = ['created_at', 'total_spent', 'order_count']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="List Customers",
         description="Get paginated list of store customers",
@@ -463,7 +463,7 @@ class CustomerViewSet(TenantViewSet):
     def list(self, request, *args, **kwargs):
         """List customers with filtering and search"""
         return super().list(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Get Customer Orders",
         description="Get orders for specific customer",
@@ -473,10 +473,10 @@ class CustomerViewSet(TenantViewSet):
     def orders(self, request, pk=None):
         """Get orders for specific customer"""
         customer = self.get_object()
-        
+
         from services.customer import CustomerService
         orders = CustomerService.get_customer_orders(customer, request.store)
-        
+
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
 ```
@@ -497,14 +497,14 @@ class CollectionViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Collection.objects.select_related('image').prefetch_related('conditions').all()
     serializer_class = CollectionSerializer
     filterset_fields = ['is_smart', 'is_active']
     search_fields = ['title', 'description']
     ordering_fields = ['title', 'created_at']
     ordering = ['title']
-    
+
     @extend_schema(
         summary="List Collections",
         description="Get paginated list of store collections",
@@ -513,7 +513,7 @@ class CollectionViewSet(TenantViewSet):
     def list(self, request, *args, **kwargs):
         """List collections with filtering and search"""
         return super().list(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Get Collection Products",
         description="Get products in collection",
@@ -523,13 +523,13 @@ class CollectionViewSet(TenantViewSet):
     def products(self, request, pk=None):
         """Get products in collection using service layer"""
         collection = self.get_object()
-        
+
         from services.collection import CollectionService
         products = CollectionService.get_products_for_collection(collection)
-        
+
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Add Products to Collection",
         description="Add products to manual collection",
@@ -540,21 +540,21 @@ class CollectionViewSet(TenantViewSet):
     def add_products(self, request, pk=None):
         """Add products to manual collection using service layer"""
         collection = self.get_object()
-        
+
         from services.collection import CollectionService
         try:
             CollectionService.add_products_to_collection(
                 collection, request.data.get('product_ids', [])
             )
-            
+
             return Response({'status': 'products_added'})
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Remove Products from Collection",
         description="Remove products from manual collection",
@@ -565,15 +565,15 @@ class CollectionViewSet(TenantViewSet):
     def remove_products(self, request, pk=None):
         """Remove products from manual collection using service layer"""
         collection = self.get_object()
-        
+
         from services.collection import CollectionService
         try:
             CollectionService.remove_products_from_collection(
                 collection, request.data.get('product_ids', [])
             )
-            
+
             return Response({'status': 'products_removed'})
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -596,14 +596,14 @@ class CouponViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Coupon.objects.select_related('campaign').all()
     serializer_class = CouponSerializer
     filterset_fields = ['type', 'is_active', 'campaign']
     search_fields = ['code', 'name']
     ordering_fields = ['created_at', 'used_count']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Validate Coupon",
         description="Validate coupon code for cart",
@@ -614,7 +614,7 @@ class CouponViewSet(TenantViewSet):
     def validate(self, request):
         """Validate coupon code using service layer"""
         from services.coupon import CouponService
-        
+
         try:
             result = CouponService.validate_coupon(
                 request.data.get('code'),
@@ -622,15 +622,15 @@ class CouponViewSet(TenantViewSet):
                 request.user,
                 request.store
             )
-            
+
             return Response(result)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Generate Coupon Codes",
         description="Generate multiple coupon codes",
@@ -641,7 +641,7 @@ class CouponViewSet(TenantViewSet):
     def generate_codes(self, request, pk=None):
         """Generate multiple coupon codes using service layer"""
         coupon = self.get_object()
-        
+
         from services.coupon import CouponService
         try:
             codes = CouponService.generate_bulk_coupons(
@@ -650,9 +650,9 @@ class CouponViewSet(TenantViewSet):
                 request.data.get('prefix', ''),
                 request.user
             )
-            
+
             return Response({'codes': codes})
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -675,7 +675,7 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['title', 'description']
     ordering_fields = ['title', 'created_at', 'price']
     ordering = ['-created_at']
-    
+
     def get_queryset(self):
         store = self.get_store()
         return Product.objects.filter(
@@ -684,21 +684,21 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
         ).select_related('store').prefetch_related(
             'variants', 'categories', 'images'
         )
-    
+
     def get_store(self):
         """Get store from subdomain or header"""
         host = self.request.get_host()
         subdomain = host.split('.')[0] if '.' in host else None
-        
+
         if subdomain:
             try:
                 return Store.objects.get(subdomain=subdomain, is_active=True)
             except Store.DoesNotExist:
                 return Store.objects.filter(is_default=True, is_active=True).first()
-        
+
         # Fallback to default store
         return Store.objects.filter(is_default=True, is_active=True).first()
-    
+
     @action(detail=True, methods=['get'])
     def variants(self, request, pk=None):
         """Get product variants"""
@@ -706,12 +706,12 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
         variants = product.variants.all()
         serializer = PublicProductVariantSerializer(variants, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=True, methods=['get'])
     def related(self, request, pk=None):
         """Get related products"""
         product = self.get_object()
-        
+
         # Get products from same categories
         category_ids = product.categories.values_list('id', flat=True)
         related = Product.objects.filter(
@@ -719,7 +719,7 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
             status='published',
             categories__in=category_ids
         ).exclude(id=product.id).distinct()[:8]
-        
+
         serializer = self.get_serializer(related, many=True)
         return Response(serializer.data)
 ```

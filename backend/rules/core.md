@@ -78,7 +78,7 @@ class EmailService:
     GLOBAL centralized email service for sending emails.
     ALL email operations MUST use this service.
     """
-    
+
     @staticmethod
     def send_template_email(
         to_email,
@@ -95,12 +95,12 @@ class EmailService:
         try:
             # Render email content
             text_content = render_to_string(f'emails/{template_name}.txt', context)
-            
+
             if html_template:
                 html_content = render_to_string(f'emails/{html_template}.html', context)
             else:
                 html_content = render_to_string(f'emails/{template_name}.html', context)
-            
+
             # Send email
             send_mail(
                 subject=subject,
@@ -110,14 +110,14 @@ class EmailService:
                 html_message=html_content,
                 fail_silently=False,
             )
-            
+
             logger.info(f"Email sent to {to_email} with template {template_name}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {str(e)}", exc_info=True)
             return False
-    
+
     @staticmethod
     def send_welcome_email(user, store):
         """
@@ -129,7 +129,7 @@ class EmailService:
             'store': store,
             'login_url': f"{store.get_absolute_url()}/login",
         }
-        
+
         return EmailService.send_template_email(
             to_email=user.email,
             subject=f"Welcome to {store.name}",
@@ -149,7 +149,7 @@ class StatusChoices:
     INACTIVE = 'inactive'
     DRAFT = 'draft'
     ARCHIVED = 'archived'
-    
+
     CHOICES = [
         (ACTIVE, _('Active')),
         (INACTIVE, _('Inactive')),
@@ -166,7 +166,7 @@ class OrderStatusChoices:
     DELIVERED = 'delivered'
     CANCELLED = 'cancelled'
     REFUNDED = 'refunded'
-    
+
     CHOICES = [
         (PENDING, _('Pending')),
         (CONFIRMED, _('Confirmed')),
@@ -184,7 +184,7 @@ class PaymentStatusChoices:
     FAILED = 'failed'
     REFUNDED = 'refunded'
     PARTIALLY_REFUNDED = 'partially_refunded'
-    
+
     CHOICES = [
         (PENDING, _('Pending')),
         (COMPLETED, _('Completed')),
@@ -351,20 +351,20 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    
+
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
     'drf_spectacular',
-    
+
     # Core apps - GLOBAL
     'apps.accounts',
     'apps.stores',
     'apps.media',
     'apps.logs',
-    
+
     # Feature apps
     'apps.ecommerce',
     'apps.themes',
@@ -466,6 +466,6 @@ LOGGING = {
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2026-01-26  
+**Version**: 1.0
+**Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

@@ -44,14 +44,14 @@ class GiftCard(TenantModel):
         ('refund', 'Refund'),
         ('loyalty', 'Loyalty'),
     )
-    
+
     STATUS_CHOICES = (
         ('active', 'Active'),
         ('redeemed', 'Redeemed'),
         ('expired', 'Expired'),
         ('voided', 'Voided'),
     )
-    
+
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
     code = models.CharField(max_length=20, unique=True, db_index=True)
     initial_balance = models.DecimalField(max_digits=10, decimal_places=2)
@@ -69,7 +69,7 @@ class GiftCard(TenantModel):
     created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['code']),
@@ -77,17 +77,17 @@ class GiftCard(TenantModel):
             models.Index(fields=['expires_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.code} - {self.current_balance}/{self.initial_balance} {self.currency}"
-    
+
     def is_expired(self):
         return self.expires_at and timezone.now() > self.expires_at
-    
+
     def is_redeemable(self):
         return (
-            self.status == 'active' and 
-            self.current_balance > 0 and 
+            self.status == 'active' and
+            self.current_balance > 0 and
             not self.is_expired()
         )
 ```
@@ -103,7 +103,7 @@ class GiftCardHistory(TenantModel):
         ('expired', 'Expired'),
         ('voided', 'Voided'),
     )
-    
+
     gift_card = models.ForeignKey(GiftCard, on_delete=models.CASCADE, related_name='history')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -112,11 +112,11 @@ class GiftCardHistory(TenantModel):
     metadata = JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name_plural = 'Gift Card History'
-    
+
     def __str__(self):
         return f"{self.gift_card.code} - {self.get_action_display()} - {self.amount if self.amount else ''}"
 ```
@@ -134,7 +134,7 @@ class GiftCardService:
         """
         # Generate unique code
         code = kwargs.get('code') or GiftCardService._generate_code()
-        
+
         # Create gift card
         gift_card = GiftCardService.create_gift_card(
             store=store,
@@ -142,12 +142,12 @@ class GiftCardService:
             code=code,
             **{k: v for k, v in kwargs.items() if k != 'code'}
         )
-        
+
         # Log creation
         # Handled by GiftCardService.create_gift_card
-        
+
         return gift_card
-    
+
     @staticmethod
     @transaction.atomic
     def redeem_gift_card(code, amount, user=None, order=None, method='online'):
@@ -157,13 +157,13 @@ class GiftCardService:
         gift_card = GiftCard.objects.get(code=code, status='active')
         if gift_card.is_expired():
             raise ValueError("Gift card has expired")
-        
+
         if amount > gift_card.current_balance:
             raise ValueError("Insufficient balance")
-        
+
         gift_card.current_balance -= amount
         gift_card.save()
-        
+
         GiftCardHistory.objects.create(
             gift_card=gift_card,
             action='redeemed',
@@ -171,9 +171,9 @@ class GiftCardService:
             order=order,
             created_by=user
         )
-        
+
         return gift_card
-    
+
     @staticmethod
     def get_gift_card_balance(code):
         """Get current balance of a gift card"""
@@ -187,13 +187,13 @@ class GiftCardService:
             }
         except GiftCard.DoesNotExist:
             return None
-    
+
     @staticmethod
     def _generate_code(length=12):
         """Generate a random gift card code"""
         chars = string.ascii_uppercase + string.digits
         return ''.join(random.choices(chars, k=length))
-    
+
     @staticmethod
     def get_gift_card_analytics(store, start_date=None, end_date=None):
         """Generate analytics for gift cards"""
@@ -307,7 +307,7 @@ redemption_rate = (redeemed / total_issued) * 100 if total_issued > 0 else 0
 
 # Breakage
 breakage = GiftCard.objects.filter(
-    store=store, 
+    store=store,
     status='active',
     expires_at__lt=timezone.now()
 ).aggregate(total=Sum('current_balance'))['total'] or 0

@@ -1,34 +1,41 @@
 """
 Cache models for performance monitoring and management.
 """
+from datetime import timedelta
+
 from django.db import models
 from django.utils import timezone
-from datetime import timedelta
 
 
 class Cache(models.Model):
     """Cache entry model for monitoring cached content"""
 
     CACHE_TYPES = [
-        ('page', 'Page Cache'),
-        ('fragment', 'Fragment Cache'),
-        ('query', 'Query Cache'),
-        ('api', 'API Cache'),
-        ('session', 'Session Cache'),
-        ('template', 'Template Cache'),
+        ("page", "Page Cache"),
+        ("fragment", "Fragment Cache"),
+        ("query", "Query Cache"),
+        ("api", "API Cache"),
+        ("session", "Session Cache"),
+        ("template", "Template Cache"),
     ]
 
     key = models.CharField(max_length=500, db_index=True, help_text="Cache key")
-    cache_type = models.CharField(max_length=20, choices=CACHE_TYPES, default='page', db_index=True)
-    store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, related_name='cache_entries')
+    cache_type = models.CharField(max_length=20, choices=CACHE_TYPES, default="page", db_index=True)
+    store = models.ForeignKey(
+        "stores.Store", on_delete=models.CASCADE, related_name="cache_entries"
+    )
 
     # Content information
     content_type = models.CharField(max_length=100, blank=True, help_text="Type of cached content")
     object_id = models.CharField(max_length=100, blank=True, help_text="ID of cached object")
-    tags = models.JSONField(default=list, blank=True, help_text="Cache tags for selective invalidation")
+    tags = models.JSONField(
+        default=list, blank=True, help_text="Cache tags for selective invalidation"
+    )
 
     # Performance metrics
-    size_bytes = models.PositiveIntegerField(null=True, blank=True, help_text="Approximate size in bytes")
+    size_bytes = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Approximate size in bytes"
+    )
     hits = models.PositiveIntegerField(default=0, help_text="Number of cache hits")
     misses = models.PositiveIntegerField(default=0, help_text="Number of cache misses")
 
@@ -38,15 +45,15 @@ class Cache(models.Model):
     expires_at = models.DateTimeField(null=True, blank=True, help_text="When cache entry expires")
 
     class Meta:
-        db_table = 'cache_entry'
-        unique_together = [['store', 'key']]
+        db_table = "cache_entry"
+        unique_together = [["store", "key"]]
         indexes = [
-            models.Index(fields=['store', 'cache_type']),
-            models.Index(fields=['store', 'expires_at']),
-            models.Index(fields=['store', 'updated_at']),
-            models.Index(fields=['cache_type', 'updated_at']),
+            models.Index(fields=["store", "cache_type"]),
+            models.Index(fields=["store", "expires_at"]),
+            models.Index(fields=["store", "updated_at"]),
+            models.Index(fields=["cache_type", "updated_at"]),
         ]
-        ordering = ['-updated_at']
+        ordering = ["-updated_at"]
 
     def __str__(self):
         return f"{self.cache_type}: {self.key[:50]}..."
@@ -67,26 +74,26 @@ class Cache(models.Model):
     def increment_hit(self):
         """Increment hit counter"""
         self.hits += 1
-        self.save(update_fields=['hits', 'updated_at'])
+        self.save(update_fields=["hits", "updated_at"])
 
     def increment_miss(self):
         """Increment miss counter"""
         self.misses += 1
-        self.save(update_fields=['misses', 'updated_at'])
+        self.save(update_fields=["misses", "updated_at"])
 
 
 class CacheStats(models.Model):
     """Cache performance statistics"""
 
     INTERVAL_CHOICES = [
-        ('hourly', 'Hourly'),
-        ('daily', 'Daily'),
-        ('weekly', 'Weekly'),
-        ('monthly', 'Monthly'),
+        ("hourly", "Hourly"),
+        ("daily", "Daily"),
+        ("weekly", "Weekly"),
+        ("monthly", "Monthly"),
     ]
 
-    store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, related_name='cache_stats')
-    interval = models.CharField(max_length=20, choices=INTERVAL_CHOICES, default='hourly')
+    store = models.ForeignKey("stores.Store", on_delete=models.CASCADE, related_name="cache_stats")
+    interval = models.CharField(max_length=20, choices=INTERVAL_CHOICES, default="hourly")
     period_start = models.DateTimeField(db_index=True)
 
     # Overall statistics
@@ -116,14 +123,14 @@ class CacheStats(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'cache_stats'
-        unique_together = [['store', 'interval', 'period_start']]
+        db_table = "cache_stats"
+        unique_together = [["store", "interval", "period_start"]]
         indexes = [
-            models.Index(fields=['store', 'interval', 'period_start']),
-            models.Index(fields=['interval', 'period_start']),
-            models.Index(fields=['store', 'created_at']),
+            models.Index(fields=["store", "interval", "period_start"]),
+            models.Index(fields=["interval", "period_start"]),
+            models.Index(fields=["store", "created_at"]),
         ]
-        ordering = ['-period_start']
+        ordering = ["-period_start"]
 
     def __str__(self):
         return f"{self.store.name} - {self.interval} - {self.period_start}"

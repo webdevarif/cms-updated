@@ -1,7 +1,7 @@
 """
 Signal handlers for search indexing.
 """
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
 from .models import SearchLog
@@ -14,24 +14,24 @@ def index_content_on_save(sender, instance, created=False, **kwargs):
     Triggers search vector updates for searchable models.
     """
     # Only index specific models
-    searchable_models = ['Product', 'Post', 'Page']
-    
+    searchable_models = ["Product", "Post", "Page"]
+
     if sender.__name__ in searchable_models:
         # Update search vector if model has the method
-        if hasattr(instance, 'update_search_vector'):
+        if hasattr(instance, "update_search_vector"):
             try:
                 instance.update_search_vector()
             except Exception as e:
                 # Log error but don't fail the save
                 print(f"Error updating search vector for {sender.__name__}: {e}")
-        
+
         # Update search results cache
         try:
             # Clear cached results that might be affected
             from .models import SearchResult
+
             SearchResult.objects.filter(
-                content_type=sender.__name__.lower(),
-                object_id=instance.id
+                content_type=sender.__name__.lower(), object_id=instance.id
             ).delete()
         except Exception as e:
             print(f"Error clearing search cache for {sender.__name__}: {e}")
@@ -43,15 +43,15 @@ def remove_content_on_delete(sender, instance, **kwargs):
     Remove content from search index when deleted.
     """
     # Only handle specific models
-    searchable_models = ['Product', 'Post', 'Page']
-    
+    searchable_models = ["Product", "Post", "Page"]
+
     if sender.__name__ in searchable_models:
         try:
             # Remove from search results cache
             from .models import SearchResult
+
             SearchResult.objects.filter(
-                content_type=sender.__name__.lower(),
-                object_id=instance.id
+                content_type=sender.__name__.lower(), object_id=instance.id
             ).delete()
         except Exception as e:
             print(f"Error removing from search index for {sender.__name__}: {e}")

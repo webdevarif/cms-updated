@@ -1,169 +1,177 @@
 """
 Services for stores module.
 """
-from django.db import transaction
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-from datetime import timedelta
 import logging
+from datetime import timedelta
+
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
 
 class StoreService:
     """Store business logic following DFCMS patterns"""
-    
+
     @staticmethod
     @transaction.atomic
     def create_store(owner, store_data):
         """Create new store with settings and theme"""
         try:
             from ..models import Store, StoreSettings
-            
+
             # Create store
             store = Store.objects.create(
                 owner=owner,
-                name=store_data['name'],
-                slug=store_data.get('slug', ''),
-                description=store_data.get('description', ''),
-                store_type=store_data.get('store_type', 'ecommerce')
+                name=store_data["name"],
+                slug=store_data.get("slug", ""),
+                description=store_data.get("description", ""),
+                store_type=store_data.get("store_type", "ecommerce"),
             )
-            
+
             # Create default settings
             StoreSettings.objects.create(
-                store=store,
-                site_name=store.name,
-                contact_email=owner.email
+                store=store, site_name=store.name, contact_email=owner.email
             )
-            
+
             # Log store creation
             from apps.logs.tasks import log_event_async
-            log_event_async.delay({
-                'event_type': 'CONTENT_CREATE',
-                'message': f"Store created: {store.name}",
-                'user': owner,
-                'store': store,
-                'entity_type': 'Store',
-                'entity_id': store.id,
-                'metadata': {'store_data': store_data}
-            })
-            
+
+            log_event_async.delay(
+                {
+                    "event_type": "CONTENT_CREATE",
+                    "message": f"Store created: {store.name}",
+                    "user": owner,
+                    "store": store,
+                    "entity_type": "Store",
+                    "entity_id": store.id,
+                    "metadata": {"store_data": store_data},
+                }
+            )
+
             return store
-            
+
         except Exception as e:
             from apps.logs.tasks import log_event_async
-            log_event_async.delay({
-                'event_type': 'SYSTEM_ERROR',
-                'message': f"Failed to create store: {str(e)}",
-                'user': owner,
-                'level': 'ERROR',
-                'metadata': {'error': str(e), 'store_data': store_data}
-            })
+
+            log_event_async.delay(
+                {
+                    "event_type": "SYSTEM_ERROR",
+                    "message": f"Failed to create store: {str(e)}",
+                    "user": owner,
+                    "level": "ERROR",
+                    "metadata": {"error": str(e), "store_data": store_data},
+                }
+            )
             raise
-    
+
     @staticmethod
     def update_store(store, update_data, user=None):
         """Update store with logging"""
         try:
             old_data = {
-                'name': store.name,
-                'status': store.status,
-                'description': store.description
+                "name": store.name,
+                "status": store.status,
+                "description": store.description,
             }
-            
+
             for field, value in update_data.items():
                 if hasattr(store, field):
                     setattr(store, field, value)
-            
+
             store.save()
-            
+
             # Log update
             from apps.logs.tasks import log_event_async
-            log_event_async.delay({
-                'event_type': 'CONTENT_UPDATE',
-                'message': f"Store updated: {store.name}",
-                'user': user,
-                'store': store,
-                'entity_type': 'Store',
-                'entity_id': store.id,
-                'metadata': {
-                    'old_data': old_data,
-                    'new_data': update_data
+
+            log_event_async.delay(
+                {
+                    "event_type": "CONTENT_UPDATE",
+                    "message": f"Store updated: {store.name}",
+                    "user": user,
+                    "store": store,
+                    "entity_type": "Store",
+                    "entity_id": store.id,
+                    "metadata": {"old_data": old_data, "new_data": update_data},
                 }
-            })
-            
+            )
+
             return store
-            
+
         except Exception as e:
             from apps.logs.tasks import log_event_async
-            log_event_async.delay({
-                'event_type': 'SYSTEM_ERROR',
-                'message': f"Failed to update store: {str(e)}",
-                'user': user,
-                'store': store,
-                'level': 'ERROR',
-                'metadata': {'error': str(e), 'update_data': update_data}
-            })
+
+            log_event_async.delay(
+                {
+                    "event_type": "SYSTEM_ERROR",
+                    "message": f"Failed to update store: {str(e)}",
+                    "user": user,
+                    "store": store,
+                    "level": "ERROR",
+                    "metadata": {"error": str(e), "update_data": update_data},
+                }
+            )
             raise
-    
+
     @staticmethod
     def verify_store(store, token):
         """Verify store email"""
         if store.verification_token == token:
-            store.status = 'active'
+            store.status = "active"
             store.verification_token = None
             store.save()
-            
+
             from apps.logs.tasks import log_event_async
-            log_event_async.delay({
-                'event_type': 'CONTENT_UPDATE',
-                'message': f"Store verified: {store.name}",
-                'store': store,
-                'entity_type': 'Store',
-                'entity_id': store.id,
-                'metadata': {'verification': True}
-            })
-            
+
+            log_event_async.delay(
+                {
+                    "event_type": "CONTENT_UPDATE",
+                    "message": f"Store verified: {store.name}",
+                    "store": store,
+                    "entity_type": "Store",
+                    "entity_id": store.id,
+                    "metadata": {"verification": True},
+                }
+            )
+
             return True
         return False
-    
+
     @staticmethod
     def get_store_analytics(store, days=30):
         """Get store analytics data from logs"""
         from apps.logs.models import LogEntry
-        
+
         since = timezone.now() - timedelta(days=days)
-        
+
         # Get analytics from logs app
         page_views = LogEntry.objects.filter(
-            store=store,
-            event_type='PAGE_VIEW',
-            created_at__gte=since
+            store=store, event_type="PAGE_VIEW", created_at__gte=since
         ).count()
-        
-        unique_visitors = LogEntry.objects.filter(
-            store=store,
-            event_type='PAGE_VIEW',
-            created_at__gte=since
-        ).values('session_id').distinct().count()
-        
+
+        unique_visitors = (
+            LogEntry.objects.filter(store=store, event_type="PAGE_VIEW", created_at__gte=since)
+            .values("session_id")
+            .distinct()
+            .count()
+        )
+
         security_events = LogEntry.objects.filter(
-            store=store,
-            is_suspicious=True,
-            created_at__gte=since
+            store=store, is_suspicious=True, created_at__gte=since
         ).count()
-        
+
         return {
-            'page_views': page_views,
-            'unique_visitors': unique_visitors,
-            'security_events': security_events,
-            'period_days': days,
+            "page_views": page_views,
+            "unique_visitors": unique_visitors,
+            "security_events": security_events,
+            "period_days": days,
         }
 
 
 class StoreBootstrapService:
     """Store bootstrap service"""
-    
+
     @staticmethod
     @transaction.atomic
     def bootstrap_store(store, actor=None):
@@ -173,377 +181,367 @@ class StoreBootstrapService:
         try:
             logger.info(f"Starting bootstrap for store: {store.slug}")
             actor = actor or store.owner
-            
+
             # Phase 1: Core store creation (already done)
             StoreBootstrapService._phase1_complete(store)
-            
+
             # Phase 2: Content type initialization
             StoreBootstrapService._bootstrap_phase_2(store, actor)
-            
+
             # Phase 3: Role and permission setup
             StoreBootstrapService._bootstrap_phase_3(store, actor)
-            
+
             # Phase 4: Default configuration
             StoreBootstrapService._phase4_configuration(store)
-            
+
             # Phase 5: Theme initialization
             StoreBootstrapService._phase5_theme(store)
-            
+
             # Phase 6: Search index creation
             StoreBootstrapService._phase6_search_index(store)
-            
+
             # Phase 7: Cache warming
             StoreBootstrapService._phase7_cache_warming(store)
-            
+
             # Phase 8: Notification setup
             StoreBootstrapService._phase8_notifications(store)
-            
+
             # Mark as complete
             store.bootstrap_completed = True
-            store.bootstrap_phase = 'completed'
-            store.save(update_fields=['bootstrap_completed', 'bootstrap_phase'])
-            
+            store.bootstrap_phase = "completed"
+            store.save(update_fields=["bootstrap_completed", "bootstrap_phase"])
+
             logger.info(f"Bootstrap complete for store: {store.slug}")
-            
+
         except Exception as e:
             store.bootstrap_error = str(e)
-            store.save(update_fields=['bootstrap_error'])
+            store.save(update_fields=["bootstrap_error"])
             logger.error(f"Bootstrap failed for store {store.slug}: {e}")
             raise
-    
+
     @staticmethod
     def _phase1_complete(store):
         """Phase 1: Core store creation (already done)"""
-        store.bootstrap_phase = 'phase1_complete'
-        store.save(update_fields=['bootstrap_phase'])
+        store.bootstrap_phase = "phase1_complete"
+        store.save(update_fields=["bootstrap_phase"])
         logger.info(f"Phase 1 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _bootstrap_phase_2(store, actor):
         """Initialize content types and default pages"""
         logger.info(f"Starting phase 2 for store: {store.slug}")
-        
+
         # Create required post types
         post_types = [
             {
-                'name': 'Page',
-                'slug': 'page',
-                'description': 'Static pages for the store',
-                'is_system': True,
-                'is_deletable': False
+                "name": "Page",
+                "slug": "page",
+                "description": "Static pages for the store",
+                "is_system": True,
+                "is_deletable": False,
             },
             {
-                'name': 'Blog',
-                'slug': 'blog',
-                'description': 'Blog posts for the store',
-                'is_system': True,
-                'is_deletable': False
+                "name": "Blog",
+                "slug": "blog",
+                "description": "Blog posts for the store",
+                "is_system": True,
+                "is_deletable": False,
             },
             {
-                'name': 'Product',
-                'slug': 'product',
-                'description': 'Product catalog',
-                'is_system': True,
-                'is_deletable': False
-            }
+                "name": "Product",
+                "slug": "product",
+                "description": "Product catalog",
+                "is_system": True,
+                "is_deletable": False,
+            },
         ]
-        
+
         for post_type_data in post_types:
             from apps.posts.models import PostType
+
             PostType.objects.get_or_create(
                 store=store,
-                slug=post_type_data['slug'],
+                slug=post_type_data["slug"],
                 defaults={
-                    'name': post_type_data['name'],
-                    'description': post_type_data['description'],
-                    'is_system': post_type_data['is_system'],
-                    'is_deletable': post_type_data['is_deletable'],
-                    'created_by': actor
-                }
+                    "name": post_type_data["name"],
+                    "description": post_type_data["description"],
+                    "is_system": post_type_data["is_system"],
+                    "is_deletable": post_type_data["is_deletable"],
+                    "created_by": actor,
+                },
             )
-        
+
         # Create default pages
         StoreBootstrapService._create_default_pages(store, actor)
-        
-        store.bootstrap_phase = 'phase2_complete'
-        store.save(update_fields=['bootstrap_phase'])
+
+        store.bootstrap_phase = "phase2_complete"
+        store.save(update_fields=["bootstrap_phase"])
         logger.info(f"Phase 2 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _create_default_pages(store, actor):
         """Create default pages"""
         from apps.posts.models import Post, PostType
-        
-        page_type = PostType.objects.get(store=store, slug='page')
-        
+
+        page_type = PostType.objects.get(store=store, slug="page")
+
         pages = [
-            {
-                'title': 'Home',
-                'slug': 'home',
-                'content': 'Welcome to your store!'
-            },
-            {
-                'title': 'About Us',
-                'slug': 'about',
-                'content': 'About our store'
-            },
-            {
-                'title': 'Contact',
-                'slug': 'contact',
-                'content': 'Contact us'
-            }
+            {"title": "Home", "slug": "home", "content": "Welcome to your store!"},
+            {"title": "About Us", "slug": "about", "content": "About our store"},
+            {"title": "Contact", "slug": "contact", "content": "Contact us"},
         ]
-        
+
         for page_data in pages:
             Post.objects.get_or_create(
                 store=store,
-                slug=page_data['slug'],
+                slug=page_data["slug"],
                 defaults={
-                    'title': page_data['title'],
-                    'content': page_data['content'],
-                    'post_type': page_type,
-                    'is_published': True,
-                    'created_by': actor
-                }
+                    "title": page_data["title"],
+                    "content": page_data["content"],
+                    "post_type": page_type,
+                    "is_published": True,
+                    "created_by": actor,
+                },
             )
-    
+
     @staticmethod
     def _bootstrap_phase_3(store, actor):
         """Initialize roles and permissions"""
         logger.info(f"Starting phase 3 for store: {store.slug}")
-        
+
         # Create default roles
         roles = [
             {
-                'name': 'Owner',
-                'slug': 'owner',
-                'description': 'Full access to all store features',
-                'is_system': True,
-                'permissions': ['*']
+                "name": "Owner",
+                "slug": "owner",
+                "description": "Full access to all store features",
+                "is_system": True,
+                "permissions": ["*"],
             },
             {
-                'name': 'Admin',
-                'slug': 'admin',
-                'description': 'Administrative access to store',
-                'is_system': True,
-                'permissions': ['content.*', 'ecommerce.*', 'settings.*']
+                "name": "Admin",
+                "slug": "admin",
+                "description": "Administrative access to store",
+                "is_system": True,
+                "permissions": ["content.*", "ecommerce.*", "settings.*"],
             },
             {
-                'name': 'Manager',
-                'slug': 'manager',
-                'description': 'Manager access to store',
-                'is_system': True,
-                'permissions': ['content.read', 'content.write', 'ecommerce.read', 'ecommerce.write']
+                "name": "Manager",
+                "slug": "manager",
+                "description": "Manager access to store",
+                "is_system": True,
+                "permissions": [
+                    "content.read",
+                    "content.write",
+                    "ecommerce.read",
+                    "ecommerce.write",
+                ],
             },
             {
-                'name': 'Staff',
-                'slug': 'staff',
-                'description': 'Staff access to store',
-                'is_system': True,
-                'permissions': ['content.read', 'ecommerce.read']
+                "name": "Staff",
+                "slug": "staff",
+                "description": "Staff access to store",
+                "is_system": True,
+                "permissions": ["content.read", "ecommerce.read"],
             },
             {
-                'name': 'Viewer',
-                'slug': 'viewer',
-                'description': 'Read-only access to store',
-                'is_system': True,
-                'permissions': ['content.read']
-            }
+                "name": "Viewer",
+                "slug": "viewer",
+                "description": "Read-only access to store",
+                "is_system": True,
+                "permissions": ["content.read"],
+            },
         ]
-        
+
         owner_role = None
-        
+
         for role_data in roles:
             from apps.accounts.models import Role
+
             role, created = Role.objects.get_or_create(
                 store=store,
-                slug=role_data['slug'],
+                slug=role_data["slug"],
                 defaults={
-                    'name': role_data['name'],
-                    'description': role_data['description'],
-                    'is_system': role_data['is_system'],
-                    'created_by': actor
-                }
+                    "name": role_data["name"],
+                    "description": role_data["description"],
+                    "is_system": role_data["is_system"],
+                    "created_by": actor,
+                },
             )
-            
-            if created and role_data.get('permissions'):
-                role.permissions.set(role_data['permissions'])
-            
-            if role.slug == 'owner':
+
+            if created and role_data.get("permissions"):
+                role.permissions.set(role_data["permissions"])
+
+            if role.slug == "owner":
                 owner_role = role
-        
+
         # Assign owner role to the actor
         if owner_role:
             from apps.accounts.models import StoreMember
+
             StoreMember.objects.get_or_create(
-                store=store,
-                user=actor,
-                defaults={
-                    'role': owner_role,
-                    'is_active': True
-                }
+                store=store, user=actor, defaults={"role": owner_role, "is_active": True}
             )
-        
-        store.bootstrap_phase = 'phase3_complete'
-        store.save(update_fields=['bootstrap_phase'])
+
+        store.bootstrap_phase = "phase3_complete"
+        store.save(update_fields=["bootstrap_phase"])
         logger.info(f"Phase 3 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase4_configuration(store):
         """Phase 4: Default configuration"""
         from apps.metafields.services import MetafieldService
-        
+
         # Set default store configuration
         default_config = {
-            'currency': 'USD',
-            'timezone': 'UTC',
-            'language': 'en_US',
-            'date_format': 'MM/DD/YYYY',
-            'time_format': 'HH:mm',
-            'tax_rate': '0.00',
-            'shipping_free_threshold': '0'
+            "currency": "USD",
+            "timezone": "UTC",
+            "language": "en_US",
+            "date_format": "MM/DD/YYYY",
+            "time_format": "HH:mm",
+            "tax_rate": "0.00",
+            "shipping_free_threshold": "0",
         }
-        
+
         for key, value in default_config.items():
-            MetafieldService.set_metafield(
-                instance=store,
-                namespace='config',
-                key=key,
-                value=value
-            )
-        
-        store.bootstrap_phase = 'phase4_complete'
-        store.save(update_fields=['bootstrap_phase'])
+            MetafieldService.set_metafield(instance=store, namespace="config", key=key, value=value)
+
+        store.bootstrap_phase = "phase4_complete"
+        store.save(update_fields=["bootstrap_phase"])
         logger.info(f"Phase 4 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase5_theme(store):
         """Phase 5: Theme initialization"""
         try:
-            from apps.themes.v2.services import ThemeService, TemplateService
-            
+            from apps.themes.v2.services import TemplateService, ThemeService
+
             # Create default theme
-            theme = ThemeService.create_theme(store, 'Default Theme')
-            
+            theme = ThemeService.create_theme(store, "Default Theme")
+
             # Activate the theme
             theme.activate()
-            
+
             # Create default templates
             TemplateService.create_default_templates(theme)
-            
+
         except Exception as e:
             logger.warning(f"Phase 5 skipped for store {store.slug}: {e}")
-        
-        store.bootstrap_phase = 'phase5_complete'
-        store.save(update_fields=['bootstrap_phase'])
+
+        store.bootstrap_phase = "phase5_complete"
+        store.save(update_fields=["bootstrap_phase"])
         logger.info(f"Phase 5 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase6_search_index(store):
         """Phase 6: Search index creation"""
         try:
             from apps.search.models import SearchIndex
-            
+
             # Create search index for store
             SearchIndex.objects.get_or_create(
                 store=store,
-                name='Default Search Index',
+                name="Default Search Index",
                 defaults={
-                    'content_types': ['Page', 'Post', 'Product'],
-                    'search_fields': ['title', 'content', 'description'],
-                    'is_active': True
-                }
+                    "content_types": ["Page", "Post", "Product"],
+                    "search_fields": ["title", "content", "description"],
+                    "is_active": True,
+                },
             )
         except Exception as e:
             logger.warning(f"Phase 6 skipped for store {store.slug}: {e}")
-        
-        store.bootstrap_phase = 'phase6_complete'
-        store.save(update_fields=['bootstrap_phase'])
+
+        store.bootstrap_phase = "phase6_complete"
+        store.save(update_fields=["bootstrap_phase"])
         logger.info(f"Phase 6 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase7_cache_warming(store):
         """Phase 7: Cache warming"""
         try:
             from apps.cache.services import CacheWarmupService
-            
+
             # Warm cache for store
             CacheWarmupService.warm_store_cache(store)
         except Exception as e:
             logger.warning(f"Phase 7 skipped for store {store.slug}: {e}")
-        
-        store.bootstrap_phase = 'phase7_complete'
-        store.save(update_fields=['bootstrap_phase'])
+
+        store.bootstrap_phase = "phase7_complete"
+        store.save(update_fields=["bootstrap_phase"])
         logger.info(f"Phase 7 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase8_notifications(store):
         """Phase 8: Notification setup"""
         try:
             from apps.notifications.models import NotificationPreference, NotificationTemplate
-            
+
             # Create default notification templates
             templates = [
                 {
-                    'notification_type': 'order.created',
-                    'title_template': 'Order Created',
-                    'message_template': 'Your order {{order_number}} has been created',
-                    'email_subject_template': 'Order Confirmation - {{order_number}}',
-                    'email_body_template': 'Thank you for your order!'
+                    "notification_type": "order.created",
+                    "title_template": "Order Created",
+                    "message_template": "Your order {{order_number}} has been created",
+                    "email_subject_template": "Order Confirmation - {{order_number}}",
+                    "email_body_template": "Thank you for your order!",
                 },
                 {
-                    'notification_type': 'user.registered',
-                    'title_template': 'Welcome to {{store_name}}',
-                    'message_template': 'Welcome to our store!',
-                    'email_subject_template': 'Welcome to {{store_name}}',
-                    'email_body_template': 'Thank you for registering!'
-                }
+                    "notification_type": "user.registered",
+                    "title_template": "Welcome to {{store_name}}",
+                    "message_template": "Welcome to our store!",
+                    "email_subject_template": "Welcome to {{store_name}}",
+                    "email_body_template": "Thank you for registering!",
+                },
             ]
-            
+
             for template_data in templates:
                 NotificationTemplate.objects.get_or_create(
                     store=store,
-                    notification_type=template_data['notification_type'],
-                    defaults=template_data
+                    notification_type=template_data["notification_type"],
+                    defaults=template_data,
                 )
-            
+
             # Create default notification preferences for owner
             notification_types = [
-                'order.created', 'order.shipped', 'order.delivered',
-                'user.registered', 'form.submitted', 'system.alert'
+                "order.created",
+                "order.shipped",
+                "order.delivered",
+                "user.registered",
+                "form.submitted",
+                "system.alert",
             ]
-            
+
             for notification_type in notification_types:
                 NotificationPreference.objects.get_or_create(
                     store=store,
                     user=store.owner,
                     notification_type=notification_type,
                     defaults={
-                        'channel_preferences': {'email': True, 'in_app': True},
-                        'digest_enabled': False
-                    }
+                        "channel_preferences": {"email": True, "in_app": True},
+                        "digest_enabled": False,
+                    },
                 )
         except Exception as e:
             logger.warning(f"Phase 8 skipped for store {store.slug}: {e}")
-        
-        store.bootstrap_phase = 'phase8_complete'
-        store.save(update_fields=['bootstrap_phase'])
+
+        store.bootstrap_phase = "phase8_complete"
+        store.save(update_fields=["bootstrap_phase"])
         logger.info(f"Phase 8 complete for store: {store.slug}")
-    
+
     @staticmethod
     def retry_bootstrap(store):
         """Retry bootstrap for a store"""
         if store.bootstrap_completed:
             logger.warning(f"Store {store.slug} already bootstrapped")
             return False
-        
+
         # Clear error
-        store.bootstrap_error = ''
-        store.save(update_fields=['bootstrap_error'])
-        
+        store.bootstrap_error = ""
+        store.save(update_fields=["bootstrap_error"])
+
         # Retry bootstrap
         StoreBootstrapService.bootstrap_store(store)
-        
+
         return True
 
 
@@ -554,8 +552,9 @@ class StoreAccessService:
     def generate_access_code():
         """Generate unique 6-digit access code"""
         import secrets
+
         while True:
-            code = ''.join(secrets.choice('0123456789') for _ in range(6))
+            code = "".join(secrets.choice("0123456789") for _ in range(6))
             if not Store.objects.filter(access_code=code).exists():
                 return code
 
@@ -563,20 +562,17 @@ class StoreAccessService:
     def validate_access_code(code, user):
         """Validate access code and check user eligibility"""
         from django.conf import settings
+
         try:
             # Check if code exists and is unused
-            store_request = Store.objects.get(
-                access_code=code,
-                status='pending'
-            )
+            store_request = Store.objects.get(access_code=code, status="pending")
 
             # Check if user already has active stores (limit)
             active_stores = Store.objects.filter(
-                owner=user,
-                status__in=['active', 'pending']
+                owner=user, status__in=["active", "pending"]
             ).count()
 
-            if active_stores >= getattr(settings, 'MAX_STORES_PER_USER', 5):
+            if active_stores >= getattr(settings, "MAX_STORES_PER_USER", 5):
                 raise ValidationError("User has reached maximum store limit")
 
             return store_request
@@ -593,15 +589,16 @@ class StoreAccessService:
         # Create store
         store = Store.objects.create(
             owner=user,
-            name=store_data['name'],
-            description=store_data.get('description', ''),
-            store_type=store_data.get('store_type', 'ecommerce'),
+            name=store_data["name"],
+            description=store_data.get("description", ""),
+            store_type=store_data.get("store_type", "ecommerce"),
             access_code=validated_request.access_code,
-            status='pending'
+            status="pending",
         )
 
         # Generate verification token
         import secrets
+
         store.verification_token = secrets.token_urlsafe(32)
         store.save()
 
@@ -627,24 +624,21 @@ class StoreAccessService:
             <a href="{verification_url}">Verify Store</a>
             <p>This link will expire in 7 days.</p>
             """,
-            context={'store': store, 'verification_url': verification_url}
+            context={"store": store, "verification_url": verification_url},
         )
 
     @staticmethod
     def verify_store(token):
         """Verify store using token"""
         try:
-            store = Store.objects.get(
-                verification_token=token,
-                status='pending'
-            )
+            store = Store.objects.get(verification_token=token, status="pending")
 
             # Check token expiry (7 days)
             if store.created_at < timezone.now() - timedelta(days=7):
                 raise ValidationError("Verification token has expired")
 
             # Activate store
-            store.status = 'active'
+            store.status = "active"
             store.verification_token = None
             store.save()
 
@@ -653,13 +647,16 @@ class StoreAccessService:
 
             # Log activation
             from apps.logs.tasks import log_event_async
-            log_event_async.delay({
-                'event_type': 'STORE_VERIFIED',
-                'message': f"Store {store.name} verified and activated",
-                'store': store,
-                'user': store.owner,
-                'metadata': {'store_id': store.id}
-            })
+
+            log_event_async.delay(
+                {
+                    "event_type": "STORE_VERIFIED",
+                    "message": f"Store {store.name} verified and activated",
+                    "store": store,
+                    "user": store.owner,
+                    "metadata": {"store_id": store.id},
+                }
+            )
 
             return store
 
@@ -677,17 +674,18 @@ class StoreOnboardingService:
         StoreSettings.objects.get_or_create(
             store=store,
             defaults={
-                'site_name': store.name,
-                'contact_email': store.owner.email,
-                'currency': 'USD',
-                'timezone': 'UTC',
-                'language': 'en'
-            }
+                "site_name": store.name,
+                "contact_email": store.owner.email,
+                "currency": "USD",
+                "timezone": "UTC",
+                "language": "en",
+            },
         )
 
         # Create default theme association
         try:
             from apps.themes.models import Theme
+
             default_theme = Theme.objects.filter(is_default=True).first()
             if default_theme:
                 store.theme = default_theme
@@ -701,12 +699,15 @@ class StoreOnboardingService:
 
         # Log onboarding completion
         from apps.logs.tasks import log_event_async
-        log_event_async.delay({
-            'event_type': 'STORE_ONBOARDED',
-            'message': f"Store {store.name} onboarding completed",
-            'store': store,
-            'user': store.owner
-        })
+
+        log_event_async.delay(
+            {
+                "event_type": "STORE_ONBOARDED",
+                "message": f"Store {store.name} onboarding completed",
+                "store": store,
+                "user": store.owner,
+            }
+        )
 
     @staticmethod
     def send_welcome_email(store):
@@ -728,5 +729,5 @@ class StoreOnboardingService:
             </ul>
             <a href="{settings.FRONTEND_URL}/stores/{store.slug}/dashboard">Go to Dashboard</a>
             """,
-            context={'store': store}
+            context={"store": store},
         )

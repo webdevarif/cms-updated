@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="core",
@@ -7,11 +7,11 @@ setup(
     install_requires=[
         # Core dependencies will be added here
     ],
-    python_requires='>=3.8',
+    python_requires=">=3.8",
     author="Digital Farmers",
     author_email="dev@digitalfarmers.com",
     description="Core functionality for Digital Farmers CMS",
-    long_description=open('README.md').read(),
+    long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/digitalfarmers/cms",
     classifiers=[

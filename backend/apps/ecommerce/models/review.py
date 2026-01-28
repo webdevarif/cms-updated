@@ -1,9 +1,9 @@
 """
 Review models - Product reviews with ratings and moderation.
 """
-from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 User = get_user_model()
 
@@ -12,12 +12,14 @@ class Review(models.Model):
     """Review model for products"""
 
     # Core fields
-    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='reviews')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
-    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
+    product = models.ForeignKey("Product", on_delete=models.CASCADE, related_name="reviews")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
+    parent = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.CASCADE, related_name="replies"
+    )
     rating = models.PositiveIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)],
-        help_text="Rating from 1 to 5 stars"
+        help_text="Rating from 1 to 5 stars",
     )
     title = models.CharField(max_length=255)
     content = models.TextField()
@@ -27,11 +29,11 @@ class Review(models.Model):
     moderation_status = models.CharField(
         max_length=20,
         choices=[
-            ('pending', 'Pending'),
-            ('approved', 'Approved'),
-            ('rejected', 'Rejected'),
+            ("pending", "Pending"),
+            ("approved", "Approved"),
+            ("rejected", "Rejected"),
         ],
-        default='pending'
+        default="pending",
     )
     is_featured = models.BooleanField(default=False)
 
@@ -55,18 +57,18 @@ class Review(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = 'ecommerce_review'
-        ordering = ['-created_at']
+        db_table = "ecommerce_review"
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['product', 'is_approved', 'created_at']),
-            models.Index(fields=['parent', 'is_approved']),
-            models.Index(fields=['user', 'created_at']),
-            models.Index(fields=['rating', 'is_approved']),
-            models.Index(fields=['is_approved', 'is_featured']),
-            models.Index(fields=['verified_purchase']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=["product", "is_approved", "created_at"]),
+            models.Index(fields=["parent", "is_approved"]),
+            models.Index(fields=["user", "created_at"]),
+            models.Index(fields=["rating", "is_approved"]),
+            models.Index(fields=["is_approved", "is_featured"]),
+            models.Index(fields=["verified_purchase"]),
+            models.Index(fields=["created_at"]),
         ]
-        unique_together = ('product', 'user')  # One review per product per user
+        unique_together = ("product", "user")  # One review per product per user
 
     def __str__(self):
         return f"Review by {self.user.get_display_name()} on {self.product.title}"
@@ -91,32 +93,33 @@ class Review(models.Model):
     def approve(self):
         """Approve this review"""
         from django.utils import timezone
+
         self.is_approved = True
         self.approved_at = timezone.now()
-        self.save(update_fields=['is_approved', 'approved_at'])
+        self.save(update_fields=["is_approved", "approved_at"])
 
     def reject(self):
         """Reject this review"""
         self.is_approved = False
-        self.save(update_fields=['is_approved'])
+        self.save(update_fields=["is_approved"])
 
     def add_vote(self, helpful=True):
         """Add a helpfulness vote"""
         self.total_votes += 1
         if helpful:
             self.helpful_votes += 1
-        self.save(update_fields=['helpful_votes', 'total_votes'])
+        self.save(update_fields=["helpful_votes", "total_votes"])
 
     def can_reply(self, user):
         """Check if a user can reply to this review"""
         if not user or not user.is_authenticated:
             return False
         # Only store owners/sellers can reply
-        return user.is_staff or getattr(user, 'store', None) == self.product.store
+        return user.is_staff or getattr(user, "store", None) == self.product.store
 
     def get_thread(self):
         """Get all reviews in this thread (including replies)"""
         thread = [self]
-        for reply in self.replies.filter().order_by('created_at'):
+        for reply in self.replies.filter().order_by("created_at"):
             thread.extend(reply.get_thread())
         return thread

@@ -64,45 +64,45 @@ class SearchIndex(TenantModel):
     """
     Store-scoped search index configuration
     """
-    
+
     # Core fields
     name = models.CharField(max_length=255)
     index_name = models.CharField(max_length=255, unique=True, db_index=True)
-    
+
     # Index configuration
     content_types = models.JSONField(
         default=list,
         help_text="List of content types to index: ['Page', 'Post', 'Product']"
     )
-    
+
     # Search configuration
     fields = models.JSONField(
         default=dict,
         help_text="Field mappings and search configuration"
     )
-    
+
     # Facet configuration
     facets = models.JSONField(
         default=list,
         help_text="Facet configuration for filtering"
     )
-    
+
     # Status
     is_active = models.BooleanField(default=True)
     last_reindexed_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'search_index'
         unique_together = [['store', 'name']]
         ordering = ['name']
-    
+
     def __str__(self):
         return f"{self.name} - {self.index_name}"
-    
+
     def get_index_name(self):
         """Get full index name with store prefix"""
         return f"{self.store.slug}_{self.index_name}"
@@ -114,10 +114,10 @@ class SearchQuery(TenantModel):
     """
     Track search queries for analytics
     """
-    
+
     # Core fields
     query = models.CharField(max_length=255, db_index=True)
-    
+
     # Search context
     search_type = models.CharField(
         max_length=50,
@@ -127,10 +127,10 @@ class SearchQuery(TenantModel):
             ('all', 'All')
         ]
     )
-    
+
     # Results
     results_count = models.PositiveIntegerField(default=0)
-    
+
     # User tracking
     user = models.ForeignKey(
         User,
@@ -139,16 +139,16 @@ class SearchQuery(TenantModel):
         blank=True
     )
     session_id = models.CharField(max_length=100, blank=True)
-    
+
     # Filters applied
     filters = models.JSONField(default=dict)
-    
+
     # Timing
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'search_query'
         indexes = [
@@ -157,7 +157,7 @@ class SearchQuery(TenantModel):
             models.Index(fields=['search_type']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.query} - {self.results_count} results"
 ```
@@ -185,11 +185,11 @@ class SearchViewSet(TenantViewSet):
     Search endpoints for public, customer, and dashboard
     """
     permission_classes = [AllowAny]
-    
+
     def get_queryset(self):
         """Override to return empty queryset (search uses Elasticsearch)"""
         return SearchIndex.objects.none()
-    
+
     @extend_schema(
         summary="Search",
         description="Full-text search with faceting",
@@ -202,13 +202,13 @@ class SearchViewSet(TenantViewSet):
         search_type = request.query_params.get('type', 'all')
         page = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 20))
-        
+
         # Get filters
         filters = {
             k: v for k, v in request.query_params.items()
             if k not in ['q', 'type', 'page', 'page_size']
         }
-        
+
         # Perform search
         from services.search import SearchService
         results = SearchService.search(
@@ -219,7 +219,7 @@ class SearchViewSet(TenantViewSet):
             page=page,
             page_size=page_size
         )
-        
+
         # Track search query
         SearchService.track_search(
             store=request.store,
@@ -230,10 +230,10 @@ class SearchViewSet(TenantViewSet):
             user=request.user if request.user.is_authenticated else None,
             duration_ms=results.get('duration_ms')
         )
-        
+
         serializer = SearchResultsSerializer(results)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Get Facets",
         description="Get available facets for filtering",
@@ -243,16 +243,16 @@ class SearchViewSet(TenantViewSet):
     def facets(self, request):
         """Get available facets"""
         search_type = request.query_params.get('type', 'all')
-        
+
         from services.search import SearchService
         facets = SearchService.get_facets(
             store=request.store,
             search_type=search_type
         )
-        
+
         serializer = FacetsSerializer(facets)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Get Suggestions",
         description="Get search suggestions",
@@ -262,13 +262,13 @@ class SearchViewSet(TenantViewSet):
     def suggestions(self, request):
         """Get search suggestions"""
         query = request.query_params.get('q', '')
-        
+
         from services.search import SearchService
         suggestions = SearchService.get_suggestions(
             store=request.store,
             query=query
         )
-        
+
         serializer = SuggestionsSerializer(suggestions)
         return Response(serializer.data, status=status.HTTP_200_OK)
 ```
@@ -291,22 +291,22 @@ logger = logging.getLogger(__name__)
 
 class SearchService:
     """Shared search management service"""
-    
+
     @staticmethod
     def search(store, query, search_type='all', filters=None, page=1, page_size=20):
         """
         Perform search query with faceting
         """
         from elasticsearch_dsl import Search, A
-        
+
         start_time = time.time()
-        
+
         # Get search index
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return {
                 'total': 0,
@@ -315,37 +315,37 @@ class SearchService:
                 'page': page,
                 'page_size': page_size
             }
-        
+
         # Build Elasticsearch query
         s = Search(index=index.get_index_name())
-        
+
         # Add query
         if query:
             s = s.query('multi_match', query=query, fields=['title^2', 'content', 'description'])
-        
+
         # Add filters
         if filters:
             for key, value in filters.items():
                 if value:
                     s = s.filter('term', **{key: value})
-        
+
         # Add store filter
         s = s.filter('term', store_id=str(store.id))
-        
+
         # Add aggregations for facets
         for facet in index.facets:
             s.aggs.bucket(facet['field'], 'terms', field=facet['field'], size=10)
-        
+
         # Pagination
         start = (page - 1) * page_size
         s = s[start:start + page_size]
-        
+
         # Execute search
         response = s.execute()
-        
+
         # Calculate duration
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         # Build results
         results = []
         for hit in response.hits:
@@ -357,7 +357,7 @@ class SearchService:
                 'url': hit.get('url'),
                 'score': hit.meta.score
             })
-        
+
         # Build facets
         facets = {}
         for facet in index.facets:
@@ -368,7 +368,7 @@ class SearchService:
                     {'value': bucket.key, 'count': bucket.doc_count}
                     for bucket in buckets
                 ]
-        
+
         return {
             'total': response.hits.total.value,
             'results': results,
@@ -377,7 +377,7 @@ class SearchService:
             'page_size': page_size,
             'duration_ms': duration_ms
         }
-    
+
     @staticmethod
     def get_facets(store, search_type='all'):
         """Get available facets"""
@@ -385,25 +385,25 @@ class SearchService:
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return []
-        
+
         return index.facets
-    
+
     @staticmethod
     def get_suggestions(store, query):
         """Get search suggestions"""
         from elasticsearch_dsl import Search
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return []
-        
+
         # Build suggestion query
         s = Search(index=index.get_index_name())
         s = s.suggest(
@@ -414,9 +414,9 @@ class SearchService:
                 'size': 10
             }
         )
-        
+
         response = s.execute()
-        
+
         suggestions = []
         if response.suggest.title_suggest:
             for suggestion in response.suggest.title_suggest[0].options:
@@ -424,26 +424,26 @@ class SearchService:
                     'text': suggestion.text,
                     'score': suggestion.score
                 })
-        
+
         return suggestions
-    
+
     @staticmethod
     def index_document(store, document_type, document_id, data):
         """Index a document"""
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Add store ID to document
         data['store_id'] = str(store.id)
         data['type'] = document_type
-        
+
         # Index document
         es = Elasticsearch()
         es.index(
@@ -451,54 +451,54 @@ class SearchService:
             id=document_id,
             body=data
         )
-        
+
         logger.info(f"Indexed {document_type} #{document_id}")
         return True
-    
+
     @staticmethod
     def delete_document(store, document_id):
         """Delete a document from index"""
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Delete document
         es = Elasticsearch()
         es.delete(
             index=index.get_index_name(),
             id=document_id
         )
-        
+
         logger.info(f"Deleted document #{document_id}")
         return True
-    
+
     @staticmethod
     def rebuild_index(store):
         """Rebuild entire search index"""
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Delete and recreate index
         es = Elasticsearch()
         index_name = index.get_index_name()
-        
+
         # Delete existing index
         if es.indices.exists(index=index_name):
             es.indices.delete(index=index_name)
-        
+
         # Create index with mappings
         mappings = {
             'properties': {
@@ -511,20 +511,20 @@ class SearchService:
                 'created_at': {'type': 'date'}
             }
         }
-        
+
         es.indices.create(index=index_name, body={'mappings': mappings})
-        
+
         # Reindex all content
         for content_type in index.content_types:
             SearchService._index_content_type(store, content_type)
-        
+
         # Update last reindexed timestamp
         index.last_reindexed_at = timezone.now()
         index.save(update_fields=['last_reindexed_at'])
-        
+
         logger.info(f"Rebuilt search index for store {store.slug}")
         return True
-    
+
     @staticmethod
     def _index_content_type(store, content_type):
         """Index all documents of a content type"""
@@ -540,7 +540,7 @@ class SearchService:
             queryset = Product.objects.filter(store=store, is_active=True)
         else:
             return
-        
+
         # Index each document
         for item in queryset:
             data = {
@@ -550,14 +550,14 @@ class SearchService:
                 'url': item.get_absolute_url(),
                 'created_at': item.created_at.isoformat()
             }
-            
+
             SearchService.index_document(
                 store=store,
                 document_type=content_type,
                 document_id=str(item.id),
                 data=data
             )
-    
+
     @staticmethod
     def track_search(store, query, search_type, results_count, filters=None, user=None, duration_ms=None):
         """Track search query for analytics"""
@@ -591,7 +591,7 @@ def index_document(self, store_id, document_type, document_id, data):
     """
     from .models import SearchIndex
     from .services import SearchService
-    
+
     try:
         store = Store.objects.get(id=store_id)
         result = SearchService.index_document(
@@ -600,16 +600,16 @@ def index_document(self, store_id, document_type, document_id, data):
             document_id=document_id,
             data=data
         )
-        
+
         return {
             'document_id': document_id,
             'indexed': result
         }
-        
+
     except Store.DoesNotExist:
         logger.error(f"Store #{store_id} not found")
         raise
-        
+
     except Exception as exc:
         logger.error(f"Document indexing failed: {exc}")
         raise self.retry(exc=exc, countdown=60)
@@ -621,16 +621,16 @@ def rebuild_index(store_id):
     """
     from .models import SearchIndex
     from .services import SearchService
-    
+
     try:
         store = Store.objects.get(id=store_id)
         result = SearchService.rebuild_index(store)
-        
+
         return {
             'store_id': store_id,
             'rebuilt': result
         }
-        
+
     except Store.DoesNotExist:
         logger.error(f"Store #{store_id} not found")
         return {'store_id': store_id, 'rebuilt': False}
@@ -693,7 +693,7 @@ class SearchServiceTest(TestCase):
             fields={'title': 'text', 'content': 'text'},
             facets=[{'field': 'type', 'label': 'Type'}]
         )
-    
+
     def test_search(self):
         """Test search functionality"""
         results = SearchService.search(
@@ -701,10 +701,10 @@ class SearchServiceTest(TestCase):
             query='test',
             search_type='content'
         )
-        
+
         self.assertIn('results', results)
         self.assertIn('facets', results)
-    
+
     def test_index_document(self):
         """Test document indexing"""
         data = {
@@ -712,14 +712,14 @@ class SearchServiceTest(TestCase):
             'content': 'Test content',
             'url': '/test-page'
         }
-        
+
         result = SearchService.index_document(
             store=self.store,
             document_type='Page',
             document_id='1',
             data=data
         )
-        
+
         self.assertTrue(result)
 ```
 
@@ -747,7 +747,7 @@ def index_page(sender, instance, **kwargs):
         'url': instance.get_absolute_url(),
         'created_at': instance.created_at.isoformat()
     }
-    
+
     from services.search import SearchService
     SearchService.index_document(
         store=instance.store,
@@ -769,7 +769,7 @@ def index_product(sender, instance, **kwargs):
         'url': instance.get_absolute_url(),
         'created_at': instance.created_at.isoformat()
     }
-    
+
     from services.search import SearchService
     SearchService.index_document(
         store=instance.store,

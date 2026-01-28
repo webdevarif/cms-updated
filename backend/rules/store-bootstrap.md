@@ -405,7 +405,7 @@ class StoreBootstrapTest(TestCase):
         # Should not create duplicate owner
         from apps.accounts.models import StoreMember
         owners = StoreMember.objects.filter(
-            store=self.store, 
+            store=self.store,
             role__slug='owner'
         )
         self.assertEqual(owners.count(), 1)
@@ -456,7 +456,7 @@ bootstrap_completed = models.BooleanField(
     help_text="Indicates if bootstrap process has completed successfully"
 )
 bootstrap_phase = models.CharField(
-    max_length=50, 
+    max_length=50,
     blank=True,
     help_text="Current phase of the bootstrap process"
 )
@@ -471,7 +471,7 @@ Add this to your `Store` model's `save()` method:
 def save(self, *args, **kwargs):
     is_new = self.pk is None
     super().save(*args, **kwargs)
-    
+
     if is_new:
         # Import here to avoid circular imports
         from .services import StoreBootstrapService
@@ -493,6 +493,6 @@ Your existing `Store` model should already have these core fields:
 [Benefits content to be added]
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

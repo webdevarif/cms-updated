@@ -1,5 +1,5 @@
 <!-- ===============================================================================
- START CORE.MD 
+ START CORE.MD
  ================================================================================= -->
 
 # Core Module Rules v1.0
@@ -58,7 +58,7 @@ backend/
 class Product(models.Model):
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
     # ... other fields
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'created_at']),
@@ -112,20 +112,20 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    
+
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
     'django_filters',
     'drf_spectacular',
-    
+
     # Core apps
     'apps.accounts',
     'apps.stores',
     'apps.media',
     'apps.logs',
-    
+
     # Feature apps
     'apps.ecommerce',
     'apps.themes',
@@ -370,35 +370,35 @@ class TenantMiddleware:
     Extracts store from URL path: domain.com/store/[store-slug]/
     Sets request.store for use in explicit ForeignKey queries.
     """
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         try:
             # Extract store from URL path
             store = self.get_store_from_path(request)
-            
+
             if store:
                 request.store = store
                 logger.info(f"Store middleware: Set store to '{store.name}' (ID: {store.id})")
             else:
                 logger.debug("Store middleware: No store detected")
-            
+
             return self.get_response(request)
-            
+
         except Exception as e:
             logger.error(f"Store middleware error: {str(e)}", exc_info=True)
             raise
-    
+
     def get_store_from_path(self, request):
         """
         Extract store from URL path: /store/[slug]/
         """
         from apps.stores.models import Store
-        
+
         path = request.path.strip('/')
-        
+
         # Check for /store/[slug]/ pattern
         if path.startswith('store/'):
             parts = path.split('/')
@@ -407,21 +407,21 @@ class TenantMiddleware:
                 store = Store.objects.filter(slug=store_slug, status='active').first()
                 if store:
                     return store
-        
+
         # Check for X-Store-Slug header (for API requests)
         store_slug = request.headers.get('X-Store-Slug')
         if store_slug:
             store = Store.objects.filter(slug=store_slug, status='active').first()
             if store:
                 return store
-        
+
         # Check session (for admin panel)
         store_id = request.session.get('store_id')
         if store_id:
             store = Store.objects.filter(id=store_id, status='active').first()
             if store:
                 return store
-        
+
         return None
 ```
 
@@ -439,10 +439,10 @@ class SecurityMiddleware:
     """
     Security middleware for request validation and protection.
     """
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         try:
             # Validate request body size
@@ -460,18 +460,18 @@ class SecurityMiddleware:
                         return JsonResponse({
                             'error': 'Invalid request body encoding'
                         }, status=400)
-            
+
             # Add security headers
             response = self.get_response(request)
-            
+
             # Security headers
             response['X-Content-Type-Options'] = 'nosniff'
             response['X-Frame-Options'] = 'DENY'
             response['X-XSS-Protection'] = '1; mode=block'
             response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-            
+
             return response
-            
+
         except Exception as e:
             logger.error(f"Security middleware error: {str(e)}", exc_info=True)
             return JsonResponse({'error': 'Internal server error'}, status=500)
@@ -511,13 +511,13 @@ app_name = 'v2'
 urlpatterns = [
     # Public APIs (no authentication)
     path('api/public/', include('apps.public.urls')),
-    
+
     # Customer APIs (customer authentication)
     path('api/customer/', include('apps.customer.urls')),
-    
+
     # Dashboard APIs (staff authentication)
     path('api/dashboard/', include('apps.dashboard.urls')),
-    
+
     # Admin
     path('admin/', admin.site.urls),
 ]
@@ -541,7 +541,7 @@ class EmailService:
     """
     Centralized email service for sending emails.
     """
-    
+
     @staticmethod
     def send_template_email(
         to_email,
@@ -557,12 +557,12 @@ class EmailService:
         try:
             # Render email content
             text_content = render_to_string(f'emails/{template_name}.txt', context)
-            
+
             if html_template:
                 html_content = render_to_string(f'emails/{html_template}.html', context)
             else:
                 html_content = render_to_string(f'emails/{template_name}.html', context)
-            
+
             # Send email
             send_mail(
                 subject=subject,
@@ -572,14 +572,14 @@ class EmailService:
                 html_message=html_content,
                 fail_silently=False,
             )
-            
+
             logger.info(f"Email sent to {to_email} with template {template_name}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {str(e)}", exc_info=True)
             return False
-    
+
     @staticmethod
     def send_welcome_email(user, store):
         """
@@ -590,7 +590,7 @@ class EmailService:
             'store': store,
             'login_url': f"{store.get_absolute_url()}/login",
         }
-        
+
         return EmailService.send_template_email(
             to_email=user.email,
             subject=f"Welcome to {store.name}",
@@ -610,7 +610,7 @@ class StatusChoices:
     INACTIVE = 'inactive'
     DRAFT = 'draft'
     ARCHIVED = 'archived'
-    
+
     CHOICES = [
         (ACTIVE, _('Active')),
         (INACTIVE, _('Inactive')),
@@ -627,7 +627,7 @@ class OrderStatusChoices:
     DELIVERED = 'delivered'
     CANCELLED = 'cancelled'
     REFUNDED = 'refunded'
-    
+
     CHOICES = [
         (PENDING, _('Pending')),
         (CONFIRMED, _('Confirmed')),
@@ -645,7 +645,7 @@ class PaymentStatusChoices:
     FAILED = 'failed'
     REFUNDED = 'refunded'
     PARTIALLY_REFUNDED = 'partially_refunded'
-    
+
     CHOICES = [
         (PENDING, _('Pending')),
         (COMPLETED, _('Completed')),
@@ -842,14 +842,14 @@ CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 
 Last Updated: January 23, 2026
 <!-- ===============================================================================
- END CORE.MD 
+ END CORE.MD
  ================================================================================= -->
 
 
 
 
 <!-- ===============================================================================
- START ACCOUNTS.MD 
+ START ACCOUNTS.MD
  ================================================================================= -->
  # Accounts App Rules v1.0
 
@@ -912,24 +912,24 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 
 class GlobalUserManager(BaseUserManager):
     """Global user manager - users exist across all stores"""
-    
+
     def create_user(self, email, username, password=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
         if not username:
             raise ValueError("The Username field must be set")
-            
+
         email = self.normalize_email(email)
-        
+
         # Check global uniqueness
         if self.model.objects.filter(email=email).exists():
             raise ValueError(f"User with email '{email}' already exists")
         if self.model.objects.filter(username=username).exists():
             raise ValueError(f"User with username '{username}' already exists")
-            
+
         user = self.model(
-            email=email, 
-            username=username, 
+            email=email,
+            username=username,
             **extra_fields
         )
         user.set_password(password)
@@ -955,7 +955,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
-    
+
     # Global fields (no store)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -963,12 +963,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     objects = GlobalUserManager()
-    
+
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
-    
+
     class Meta:
         db_table = 'accounts_user'
 
@@ -990,14 +990,14 @@ class StoreUser(models.Model):
         ('staff', 'Staff'),
         ('customer', 'Customer'),
     ]
-    
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='store_users')
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, related_name='store_users')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['user', 'store']]
         indexes = [
@@ -1089,7 +1089,7 @@ backend/
 ---
 
 Last Updated: January 23, 2026
-        
+
     return Response({
         'error': 'Validation failed',
         'details': serializer.errors
@@ -1110,7 +1110,7 @@ def logout(request):
         if refresh_token:
             token = RefreshToken(refresh_token)
             token.blacklist()
-        
+
         return Response({
             'message': 'Successfully logged out'
         })
@@ -1137,13 +1137,13 @@ class UserViewSet(TenantViewSet):
     User Management API - Django REST Framework
     Store-scoped user management for dashboard
     """
-    
+
     permission_classes = [IsAuthenticated, IsStoreStaff]
     filterset_fields = ['is_active', 'role', 'is_store_owner']
     search_fields = ['email', 'username', 'first_name', 'last_name']
     ordering_fields = ['created_at', 'email', 'last_login']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="List Users",
         description="Get paginated list of store users",
@@ -1152,7 +1152,7 @@ class UserViewSet(TenantViewSet):
     def list(self, request, *args, **kwargs):
         """List users with filtering and search"""
         return super().list(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Create User",
         description="Create new user in store",
@@ -1162,7 +1162,7 @@ class UserViewSet(TenantViewSet):
     def create(self, request, *args, **kwargs):
         """Create user with automatic store assignment"""
         return super().create(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Update User",
         description="Update user details",
@@ -1172,7 +1172,7 @@ class UserViewSet(TenantViewSet):
     def update(self, request, *args, **kwargs):
         """Update user with validation"""
         return super().update(request, *args, **kwargs)
-    
+
     @action(detail=True, methods=['post'])
     @extend_schema(
         summary="Deactivate User",
@@ -1187,14 +1187,14 @@ class UserViewSet(TenantViewSet):
                 'error': 'Cannot deactivate store owner',
                 'code': 'CANNOT_DEACTIVATE_OWNER'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         user.is_active = False
         user.save(update_fields=['is_active'])
-        
+
         return Response({
             'message': f'User {user.email} deactivated successfully'
         })
-    
+
     @action(detail=True, methods=['post'])
     @extend_schema(
         summary="Change User Role",
@@ -1210,17 +1210,17 @@ class UserViewSet(TenantViewSet):
                 'error': 'Cannot change store owner role',
                 'code': 'CANNOT_CHANGE_OWNER_ROLE'
             }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         serializer = RoleUpdateSerializer(data=request.data)
         if serializer.is_valid():
             from services.user import UserService
             UserService.update_user_role(user, serializer.validated_data['role'])
-            
+
             return Response({
                 'message': f'User {user.email} role updated successfully',
                 'new_role': user.role.name
             })
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 ```
 
@@ -1238,14 +1238,14 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     User Profile API - Django REST Framework
     Customer profile management
     """
-    
+
     permission_classes = [IsAuthenticated, IsStoreUser]
     serializer_class = UserProfileSerializer
-    
+
     def get_object(self):
         """Return current user profile"""
         return self.request.user
-    
+
     @extend_schema(
         summary="Get User Profile",
         description="Get current user profile information",
@@ -1255,7 +1255,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         """Get user profile"""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Update User Profile",
         description="Update current user profile",
@@ -1265,24 +1265,24 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     def patch(self, request, *args, **kwargs):
         """Update user profile"""
         serializer = self.get_serializer(
-            request.user, 
-            data=request.data, 
+            request.user,
+            data=request.data,
             partial=True
         )
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ChangePasswordView(generics.GenericAPIView):
     """
     Password Change API - Django REST Framework
     """
-    
+
     permission_classes = [IsAuthenticated, IsStoreUser]
     serializer_class = PasswordChangeSerializer
-    
+
     @extend_schema(
         summary="Change Password",
         description="Change user password",
@@ -1294,22 +1294,22 @@ class ChangePasswordView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             user = request.user
-            
+
             # Verify current password
             if not user.check_password(serializer.validated_data['current_password']):
                 return Response({
                     'error': 'Current password is incorrect',
                     'code': 'INVALID_CURRENT_PASSWORD'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
             # Set new password
             user.set_password(serializer.validated_data['new_password'])
             user.save(update_fields=['password'])
-            
+
             return Response({
                 'message': 'Password changed successfully'
             })
-        
+
 
 ### **1. Authentication Service**
 ```python
@@ -1323,7 +1323,7 @@ logger = logging.getLogger(__name__)
 
 class AuthService:
     """Shared authentication service"""
-    
+
     @staticmethod
     def generate_token(user):
         """Generate JWT token for user"""
@@ -1332,7 +1332,7 @@ class AuthService:
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
-    
+
     @staticmethod
     def verify_token(token):
         """Verify JWT token"""
@@ -1343,14 +1343,14 @@ class AuthService:
         except Exception as e:
             logger.error(f"Token verification failed: {e}")
             return None
-    
+
     @staticmethod
     def send_password_reset_email(user, store):
         """Send password reset email"""
         from services.email import EmailService
         token = AuthService.generate_reset_token(user)
         EmailService.send_password_reset_email(user, store, token)
-    
+
     @staticmethod
     def generate_reset_token(user):
         """Generate password reset token"""
@@ -1369,7 +1369,7 @@ logger = logging.getLogger(__name__)
 
 class UserService:
     """Shared user management service"""
-    
+
     @staticmethod
     def create_user_store_owner(store, email, username, password):
         """Create store owner user"""
@@ -1388,7 +1388,7 @@ class UserService:
                 can_view_analytics=True,
                 level=100
             )
-            
+
             # Create owner user
             from apps.public.accounts.models import User
             user = User.objects.create_user(
@@ -1400,30 +1400,30 @@ class UserService:
                 is_verified=True,  # Auto-verify store owners
                 role=owner_role
             )
-            
+
             # Update store owner
             store.owner = user
             store.save()
-            
+
             return user
-    
+
     @staticmethod
     def update_user_role(user, new_role):
         """Update user role with permission validation"""
         if user.is_store_owner:
             raise ValidationError("Cannot change store owner role")
-        
+
         user.role = new_role
         user.save(update_fields=['role'])
-        
+
         logger.info(f"Updated user {user.email} role to {new_role.name}")
-    
+
     @staticmethod
     def deactivate_user(user):
         """Safely deactivate user"""
         user.is_active = False
         user.save(update_fields=['is_active'])
-        
+
         logger.info(f"Deactivated user {user.email}")
 ```
 
@@ -1438,10 +1438,10 @@ from rest_framework.permissions import BasePermission
 
 class IsStoreOwner(BasePermission):
     """Allow access only to store owners"""
-    
+
     def has_permission(self, request, view):
         return (
-            request.user and 
+            request.user and
             request.user.is_authenticated and
             hasattr(request.user, 'store') and
             request.user.is_store_owner
@@ -1449,10 +1449,10 @@ class IsStoreOwner(BasePermission):
 
 class IsStoreStaff(BasePermission):
     """Allow access to store staff (owners + staff users)"""
-    
+
     def has_permission(self, request, view):
         return (
-            request.user and 
+            request.user and
             request.user.is_authenticated and
             hasattr(request.user, 'store') and
             (request.user.is_store_owner or request.user.is_staff)
@@ -1460,28 +1460,28 @@ class IsStoreStaff(BasePermission):
 
 class IsStoreUser(BasePermission):
     """Allow access to any authenticated store user"""
-    
+
     def has_permission(self, request, view):
         return (
-            request.user and 
+            request.user and
             request.user.is_authenticated and
             hasattr(request.user, 'store')
         )
 
 class HasStorePermission(BasePermission):
     """Check specific store permissions"""
-    
+
     def __init__(self, permission_field):
         self.permission_field = permission_field
-    
+
     def has_permission(self, request, view):
         if not (request.user and request.user.is_authenticated):
             return False
-        
+
         # Check if user has required permission via role
         if hasattr(request.user, 'role') and request.user.role:
             return getattr(request.user.role, self.permission_field, False)
-        
+
         return False
 ```
 
@@ -1531,7 +1531,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    ProfileView, ChangePasswordView, 
+    ProfileView, ChangePasswordView,
     UpdateProfileView, DeleteAccountView
 )
 
@@ -1597,13 +1597,13 @@ from django.urls import path, include
 urlpatterns = [
     # Public account APIs
     path('v2/api/public/accounts/', include('apps.public.accounts.urls')),
-    
+
     # Customer account APIs
     path('v2/api/customer/accounts/', include('apps.customer.accounts.urls')),
-    
+
     # Dashboard account APIs
     path('v2/api/dashboard/accounts/', include('apps.dashboard.accounts.urls')),
-    
+
     # Other workspace APIs...
 ]
 ```
@@ -1622,7 +1622,7 @@ from ..models import User, Role
 class UserModelTest(TestCase):
     def setUp(self):
         self.store = Store.objects.create(name='Test Store', slug='test-store')
-    
+
     def test_create_user(self):
         """Test user creation with store context"""
         user = User.objects.create_user(
@@ -1631,11 +1631,11 @@ class UserModelTest(TestCase):
             password='testpass123',
             store=self.store
         )
-        
+
         self.assertEqual(user.email, 'test@example.com')
         self.assertEqual(user.store, self.store)
         self.assertTrue(user.check_password('testpass123'))
-    
+
     def test_email_unique_per_store(self):
         """Test email uniqueness within store"""
         User.objects.create_user(
@@ -1644,7 +1644,7 @@ class UserModelTest(TestCase):
             password='pass123',
             store=self.store
         )
-        
+
         with self.assertRaises(ValueError):
             User.objects.create_user(
                 email='test@example.com',
@@ -1652,25 +1652,25 @@ class UserModelTest(TestCase):
                 password='pass123',
                 store=self.store
             )
-    
+
     def test_same_email_different_store(self):
         """Test same email can exist in different stores"""
         store2 = Store.objects.create(name='Store 2', slug='store-2')
-        
+
         user1 = User.objects.create_user(
             email='test@example.com',
             username='user1',
             password='pass123',
             store=self.store
         )
-        
+
         user2 = User.objects.create_user(
             email='test@example.com',
             username='user2',
             password='pass123',
             store=store2
         )
-        
+
         self.assertNotEqual(user1.store, user2.store)
         self.assertEqual(user1.email, user2.email)
 ```
@@ -1689,7 +1689,7 @@ def migrate_global_users(apps, schema_editor):
     GlobalUser = apps.get_model('modules', 'GlobalUser')
     Store = apps.get_model('modules', 'Store')
     User = apps.get_model('public_accounts', 'User')
-    
+
     for global_user in GlobalUser.objects.all():
         # Create user for each store they belong to
         for store in global_user.stores.all():
@@ -1712,7 +1712,7 @@ def migrate_store_users(apps, schema_editor):
     UserAccount = apps.get_model('modules', 'UserAccount')
     Store = apps.get_model('modules', 'Store')
     User = apps.get_model('public_accounts', 'User')
-    
+
     for store_user in UserAccount.objects.all():
         # Map to new user model
         User.objects.create(
@@ -1732,7 +1732,7 @@ class Migration(migrations.Migration):
         ('public_accounts', '0001_initial'),
         ('modules', '0001_initial'),
     ]
-    
+
     operations = [
         migrations.RunPython(migrate_global_users),
         migrations.RunPython(migrate_store_users),
@@ -1770,12 +1770,12 @@ class Migration(migrations.Migration):
 Every accounts app development must follow these rules exactly. Any deviation will result in inconsistent user management and potential security issues.
 
 <!-- ===============================================================================
- END ACCOUNTS.MD 
+ END ACCOUNTS.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START CACHE.MD 
+ START CACHE.MD
  ================================================================================= -->
  # Cache App Rules v1.0
 
@@ -1853,14 +1853,14 @@ logger = logging.getLogger(__name__)
 
 class CacheService:
     """Shared cache management service"""
-    
+
     @staticmethod
     def get_cache_key(store, module, object_type, object_id, version='v1'):
         """
         Generate standardized cache key
         """
         return f"{store.slug}:{module}:{object_type}:{object_id}:{version}"
-    
+
     @staticmethod
     def get(store, module, object_type, object_id, default=None):
         """
@@ -1868,14 +1868,14 @@ class CacheService:
         """
         key = CacheService.get_cache_key(store, module, object_type, object_id)
         value = cache.get(key)
-        
+
         if value is not None:
             logger.debug(f"Cache HIT: {key}")
         else:
             logger.debug(f"Cache MISS: {key}")
-        
+
         return value
-    
+
     @staticmethod
     def set(store, module, object_type, object_id, value, timeout=3600):
         """
@@ -1883,10 +1883,10 @@ class CacheService:
         """
         key = CacheService.get_cache_key(store, module, object_type, object_id)
         cache.set(key, value, timeout)
-        
+
         logger.debug(f"Cache SET: {key} (timeout: {timeout}s)")
         return True
-    
+
     @staticmethod
     def delete(store, module, object_type, object_id):
         """
@@ -1894,62 +1894,62 @@ class CacheService:
         """
         key = CacheService.get_cache_key(store, module, object_type, object_id)
         cache.delete(key)
-        
+
         logger.debug(f"Cache DELETE: {key}")
         return True
-    
+
     @staticmethod
     def delete_pattern(store, pattern):
         """
         Delete all keys matching pattern
         """
         from django.core.cache.backends.redis import RedisCache
-        
+
         if not isinstance(cache, RedisCache):
             logger.warning("Pattern deletion only works with Redis cache")
             return False
-        
+
         # Get Redis client
         client = cache._client
-        
+
         # Build pattern
         full_pattern = f"{store.slug}:{pattern}*"
-        
+
         # Find and delete keys
         keys = client.keys(full_pattern)
         if keys:
             client.delete(*keys)
             logger.debug(f"Cache DELETE PATTERN: {full_pattern} ({len(keys)} keys)")
-        
+
         return True
-    
+
     @staticmethod
     def invalidate_store(store):
         """
         Invalidate all cache for a store
         """
         return CacheService.delete_pattern(store, '*')
-    
+
     @staticmethod
     def invalidate_module(store, module):
         """
         Invalidate all cache for a module in a store
         """
         return CacheService.delete_pattern(store, f"{module}:*")
-    
+
     @staticmethod
     def get_or_set(store, module, object_type, object_id, callback, timeout=3600):
         """
         Get value from cache or set using callback
         """
         value = CacheService.get(store, module, object_type, object_id)
-        
+
         if value is None:
             value = callback()
             CacheService.set(store, module, object_type, object_id, value, timeout)
-        
+
         return value
-    
+
     @staticmethod
     def cache_json(store, module, object_type, object_id, data, timeout=3600):
         """
@@ -1957,39 +1957,39 @@ class CacheService:
         """
         key = CacheService.get_cache_key(store, module, object_type, object_id)
         cache.set(key, json.dumps(data), timeout)
-        
+
         logger.debug(f"Cache JSON: {key}")
         return True
-    
+
     @staticmethod
     def get_json(store, module, object_type, object_id):
         """
         Get JSON data from cache
         """
         value = CacheService.get(store, module, object_type, object_id)
-        
+
         if value is not None:
             try:
                 return json.loads(value)
             except json.JSONDecodeError:
                 logger.error(f"Failed to decode JSON from cache: {key}")
                 return None
-        
+
         return None
-    
+
     @staticmethod
     def get_cache_stats():
         """
         Get cache statistics
         """
         from django.core.cache.backends.redis import RedisCache
-        
+
         if not isinstance(cache, RedisCache):
             return {'error': 'Only Redis cache supports stats'}
-        
+
         client = cache._client
         info = client.info('stats')
-        
+
         return {
             'hits': info.get('keyspace_hits', 0),
             'misses': info.get('keyspace_misses', 0),
@@ -2052,35 +2052,35 @@ CacheService.invalidate_store(store)
 
 class CacheWarmupService:
     """Cache warming service"""
-    
+
     @staticmethod
     def warm_store_cache(store):
         """
         Warm cache for a store
         """
         logger.info(f"Warming cache for store: {store.slug}")
-        
+
         # Warm pages
         CacheWarmupService._warm_pages(store)
-        
+
         # Warm products
         CacheWarmupService._warm_products(store)
-        
+
         # Warm translations
         CacheWarmupService._warm_translations(store)
-        
+
         logger.info(f"Cache warming complete for store: {store.slug}")
-    
+
     @staticmethod
     def _warm_pages(store):
         """Warm page cache"""
         from apps.pages.models import Page
-        
+
         pages = Page.objects.filter(
             store=store,
             status='published'
         ).select_related('store')
-        
+
         for page in pages:
             data = {
                 'id': page.id,
@@ -2090,17 +2090,17 @@ class CacheWarmupService:
                 'url': page.get_absolute_url()
             }
             CacheService.cache_json(store, 'pages', 'page', page.id, data, timeout=3600)
-    
+
     @staticmethod
     def _warm_products(store):
         """Warm product cache"""
         from apps.ecommerce.models import Product
-        
+
         products = Product.objects.filter(
             store=store,
             is_active=True
         ).select_related('store').prefetch_related('variants')
-        
+
         for product in products:
             data = {
                 'id': product.id,
@@ -2110,16 +2110,16 @@ class CacheWarmupService:
                 'is_active': product.is_active
             }
             CacheService.cache_json(store, 'ecommerce', 'product', product.id, data, timeout=3600)
-    
+
     @staticmethod
     def _warm_translations(store):
         """Warm translation cache"""
         from apps.translations.models import Translation
-        
+
         translations = Translation.objects.filter(
             store=store
         ).select_related('language', 'translation_key')
-        
+
         for translation in translations:
             key = f"{translation.language.code}:{translation.translation_key.key}"
             CacheService.set(store, 'translations', 'translation', key, translation.text, timeout=86400)
@@ -2159,7 +2159,7 @@ def warm_cache(store_id):
     """
     from .models import Store
     from .services import CacheWarmupService
-    
+
     store = Store.objects.get(id=store_id)
     CacheWarmupService.warm_store_cache(store)
 
@@ -2169,9 +2169,9 @@ def analyze_cache():
     Analyze cache performance
     """
     stats = CacheService.get_cache_stats()
-    
+
     logger.info(f"Cache Stats: {stats}")
-    
+
     # Alert if hit rate is low
     if stats.get('hit_rate', 0) < 50:
         logger.warning(f"Low cache hit rate: {stats['hit_rate']:.2f}%")
@@ -2250,10 +2250,10 @@ class PageService:
         cached = CacheService.get_json(store, 'pages', 'page', page_id)
         if cached:
             return cached
-        
+
         # Fetch from database
         page = Page.objects.get(store=store, id=page_id)
-        
+
         # Cache the result
         data = {
             'id': page.id,
@@ -2263,7 +2263,7 @@ class PageService:
             'url': page.get_absolute_url()
         }
         CacheService.cache_json(store, 'pages', 'page', page.id, data, timeout=3600)
-        
+
         return data
 ```
 
@@ -2280,10 +2280,10 @@ class ProductService:
         cached = CacheService.get_json(store, 'ecommerce', 'product', product_id)
         if cached:
             return cached
-        
+
         # Fetch from database
         product = Product.objects.get(store=store, id=product_id)
-        
+
         # Cache the result
         data = {
             'id': product.id,
@@ -2293,7 +2293,7 @@ class ProductService:
             'is_active': product.is_active
         }
         CacheService.cache_json(store, 'ecommerce', 'product', product.id, data, timeout=3600)
-        
+
         return data
 ```
 
@@ -2307,22 +2307,22 @@ class TranslationService:
     def get_translation(store, language_code, key):
         """Get translation with caching"""
         cache_key = f"{language_code}:{key}"
-        
+
         # Try cache first
         cached = CacheService.get(store, 'translations', 'translation', cache_key)
         if cached:
             return cached
-        
+
         # Fetch from database
         translation = Translation.objects.get(
             store=store,
             language__code=language_code,
             translation_key__key=key
         )
-        
+
         # Cache the result
         CacheService.set(store, 'translations', 'translation', cache_key, translation.text, timeout=86400)
-        
+
         return translation.text
 ```
 
@@ -2373,42 +2373,42 @@ from ..services import CacheService
 class CacheServiceTest(TestCase):
     def setUp(self):
         self.store = Store.objects.create(name='Test Store', slug='test-store')
-    
+
     def test_cache_set_and_get(self):
         """Test cache set and get"""
         data = {'test': 'data'}
-        
+
         CacheService.set(self.store, 'test', 'object', '1', data)
         cached = CacheService.get(self.store, 'test', 'object', '1')
-        
+
         self.assertEqual(cached, data)
-    
+
     def test_cache_delete(self):
         """Test cache delete"""
         data = {'test': 'data'}
-        
+
         CacheService.set(self.store, 'test', 'object', '1', data)
         CacheService.delete(self.store, 'test', 'object', '1')
-        
+
         cached = CacheService.get(self.store, 'test', 'object', '1')
         self.assertIsNone(cached)
-    
+
     def test_cache_get_or_set(self):
         """Test cache get_or_set"""
         callback_called = []
-        
+
         def callback():
             callback_called.append(True)
             return {'test': 'data'}
-        
+
         # First call - should execute callback
         result1 = CacheService.get_or_set(self.store, 'test', 'object', '1', callback)
         self.assertEqual(len(callback_called), 1)
-        
+
         # Second call - should use cache
         result2 = CacheService.get_or_set(self.store, 'test', 'object', '1', callback)
         self.assertEqual(len(callback_called), 1)
-        
+
         self.assertEqual(result1, result2)
 ```
 
@@ -2448,12 +2448,12 @@ class CacheServiceTest(TestCase):
 ---
 
 <!-- ===============================================================================
- END CACHE.MD 
+ END CACHE.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START ENTITIES.MD 
+ START ENTITIES.MD
  ================================================================================= -->
 # Entities Rules v1.0
 
@@ -2530,12 +2530,12 @@ class EntityAction(TenantModel):
     Store-scoped entity actions (Like, Heart, Upvote, DownVote, etc.)
     Defines available actions for content types
     """
-    
+
     # Core fields
     name = models.CharField(max_length=50)
     slug = models.SlugField(max_length=50)
     description = models.TextField(blank=True)
-    
+
     # Action configuration
     ACTION_TYPES = [
         ('toggle', 'Toggle (Like/Unlike)'),
@@ -2544,25 +2544,25 @@ class EntityAction(TenantModel):
         ('counter', 'Counter (View count)'),
     ]
     action_type = models.CharField(max_length=20, choices=ACTION_TYPES, default='toggle')
-    
+
     # Visual configuration
     icon = models.CharField(max_length=50, blank=True)
     color = models.CharField(max_length=20, blank=True)
-    
+
     # Content type targeting
     content_types = models.JSONField(
         default=list,
         help_text="Which models this action applies to"
     )
-    
+
     # Settings
     is_active = models.BooleanField(default=True)
     is_public = models.BooleanField(default=True)
     allow_anonymous = models.BooleanField(default=False)
-    
+
     # Metadata
     metadata = models.JSONField(default=dict, blank=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'entities_entity_action'
         unique_together = [['store', 'slug']]
@@ -2571,7 +2571,7 @@ class EntityAction(TenantModel):
             models.Index(fields=['content_types']),
         ]
         ordering = ['name']
-    
+
     def __str__(self):
         return f"{self.name} ({self.action_type})"
 ```
@@ -2589,7 +2589,7 @@ class EntityInteraction(TenantModel):
     User interactions with entities (likes, votes, etc.)
     Generic relationship to any model
     """
-    
+
     # Relationships
     action = models.ForeignKey(
         'entities.EntityAction',
@@ -2603,7 +2603,7 @@ class EntityInteraction(TenantModel):
         null=True,
         blank=True
     )
-    
+
     # Generic foreign key to any model
     content_type = models.ForeignKey(
         ContentType,
@@ -2611,20 +2611,20 @@ class EntityInteraction(TenantModel):
     )
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-    
+
     # Interaction data
     value = models.JSONField(default=dict, blank=True)
     rating = models.IntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    
+
     # Metadata
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'entities_entity_interaction'
         unique_together = [
@@ -2636,7 +2636,7 @@ class EntityInteraction(TenantModel):
             models.Index(fields=['created_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.user} {self.action.name} {self.content_object}"
 ```
@@ -2656,22 +2656,22 @@ logger = logging.getLogger(__name__)
 
 class EntityService:
     """Shared entity interaction service"""
-    
+
     @staticmethod
     @transaction.atomic
     def toggle_action(user, content_object, action_slug, store=None):
         """Toggle an action (like/unlike, favorite/unfavorite)"""
         from .models import EntityAction, EntityInteraction
-        
+
         # Get action
         action = EntityAction.objects.get(store=store, slug=action_slug)
-        
+
         if action.action_type != 'toggle':
             raise ValueError(f"Action '{action.name}' is not a toggle action")
-        
+
         # Get content type
         content_type = ContentType.objects.get_for_model(content_object)
-        
+
         # Check existing interaction
         try:
             interaction = EntityInteraction.objects.get(
@@ -2681,11 +2681,11 @@ class EntityService:
                 content_type=content_type,
                 object_id=content_object.id
             )
-            
+
             # Remove existing interaction
             interaction.delete()
             action_performed = 'removed'
-            
+
         except EntityInteraction.DoesNotExist:
             # Create new interaction
             interaction = EntityInteraction.objects.create(
@@ -2696,7 +2696,7 @@ class EntityService:
                 object_id=content_object.id
             )
             action_performed = 'added'
-        
+
         # Log action
         log_event_async(
             user=user,
@@ -2710,21 +2710,21 @@ class EntityService:
                 'object_id': content_object.id
             }
         )
-        
+
         return {
             'action': action_performed,
             'entity_action': action,
             'interaction': interaction if action_performed == 'added' else None
         }
-    
+
     @staticmethod
     def get_interaction_count(content_object, action_slug, store=None):
         """Get total count for an action"""
         from .models import EntityAction, EntityInteraction
-        
+
         action = EntityAction.objects.get(store=store, slug=action_slug)
         content_type = ContentType.objects.get_for_model(content_object)
-        
+
         return EntityInteraction.objects.filter(
             store=store,
             action=action,
@@ -2732,14 +2732,14 @@ class EntityService:
             object_id=content_object.id,
             is_active=True
         ).count()
-    
+
     @staticmethod
     def get_user_interactions(user, content_object, store=None):
         """Get all user interactions for an object"""
         from .models import EntityInteraction
-        
+
         content_type = ContentType.objects.get_for_model(content_object)
-        
+
         return EntityInteraction.objects.filter(
             store=store,
             user=user,
@@ -2747,14 +2747,14 @@ class EntityService:
             object_id=content_object.id,
             is_active=True
         ).select_related('action')
-    
+
     @staticmethod
     def get_popular_objects(action_slug, limit=10, store=None):
         """Get most popular objects for an action"""
         from .models import EntityAction, EntityInteraction
-        
+
         action = EntityAction.objects.get(store=store, slug=action_slug)
-        
+
         return EntityInteraction.objects.filter(
             store=store,
             action=action,
@@ -2780,7 +2780,7 @@ class CustomerEntityViewSet(TenantViewSet):
     Customer entity interaction endpoints
     """
     permission_classes = [IsAuthenticated, IsStoreUser]
-    
+
     @extend_schema(
         summary="Toggle Entity Action",
         request=EntityActionSerializer,
@@ -2791,7 +2791,7 @@ class CustomerEntityViewSet(TenantViewSet):
         """Toggle an entity action (like/unlike, etc.)"""
         serializer = EntityActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         content_type = ContentType.objects.get(
             model=serializer.validated_data['content_type']
         )
@@ -2799,16 +2799,16 @@ class CustomerEntityViewSet(TenantViewSet):
         content_object = model_class.objects.get(
             id=serializer.validated_data['object_id']
         )
-        
+
         result = EntityService.toggle_action(
             user=request.user,
             content_object=content_object,
             action_slug=serializer.validated_data['action_slug'],
             store=request.store
         )
-        
+
         return Response(result)
-    
+
     @extend_schema(
         summary="Get Entity Stats",
         responses={200: dict}
@@ -2819,29 +2819,29 @@ class CustomerEntityViewSet(TenantViewSet):
         content_type = request.query_params.get('content_type')
         object_id = request.query_params.get('object_id')
         action_slug = request.query_params.get('action_slug')
-        
+
         if not all([content_type, object_id]):
             return Response(
                 {'error': 'content_type and object_id are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         content_type_obj = ContentType.objects.get(model=content_type)
         model_class = content_type_obj.model_class()
         content_object = model_class.objects.get(id=object_id)
-        
+
         count = EntityService.get_interaction_count(
             content_object=content_object,
             action_slug=action_slug,
             store=request.store
         )
-        
+
         user_interactions = EntityService.get_user_interactions(
             user=request.user,
             content_object=content_object,
             store=request.store
         )
-        
+
         return Response({
             'count': count,
             'user_interactions': EntityInteractionSerializer(
@@ -2859,7 +2859,7 @@ class CustomerEntityViewSet(TenantViewSet):
 # Example: Adding entity actions to a Post model
 class Post(TenantModel):
     # ... existing fields ...
-    
+
     @property
     def like_count(self):
         """Get total likes"""
@@ -2869,7 +2869,7 @@ class Post(TenantModel):
             action_slug='like',
             store=self.store
         )
-    
+
     def user_liked(self, user):
         """Check if user liked this post"""
         from entities.services import EntityService
@@ -2879,7 +2879,7 @@ class Post(TenantModel):
             store=self.store
         )
         return interactions.filter(action__slug='like').exists()
-    
+
     def toggle_like(self, user):
         """Toggle like for user"""
         from entities.services import EntityService
@@ -2908,15 +2908,15 @@ async function toggleLike(postId) {
                 object_id: postId
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.action === 'added') {
             updateLikeButton(true, result.interaction);
         } else {
             updateLikeButton(false, null);
         }
-        
+
     } catch (error) {
         console.error('Error toggling like:', error);
     }
@@ -2977,7 +2977,7 @@ class EntityServiceTest(TestCase):
             title='Test Post',
             slug='test-post'
         )
-        
+
         # Create like action
         self.like_action = EntityAction.objects.create(
             store=self.store,
@@ -2985,7 +2985,7 @@ class EntityServiceTest(TestCase):
             slug='like',
             action_type='toggle'
         )
-    
+
     def test_toggle_like_add(self):
         """Test adding a like"""
         result = EntityService.toggle_action(
@@ -2994,10 +2994,10 @@ class EntityServiceTest(TestCase):
             action_slug='like',
             store=self.store
         )
-        
+
         self.assertEqual(result['action'], 'added')
         self.assertIsNotNone(result['interaction'])
-    
+
     def test_toggle_like_remove(self):
         """Test removing a like"""
         # Add like first
@@ -3007,7 +3007,7 @@ class EntityServiceTest(TestCase):
             action_slug='like',
             store=self.store
         )
-        
+
         # Remove like
         result = EntityService.toggle_action(
             user=self.user,
@@ -3015,7 +3015,7 @@ class EntityServiceTest(TestCase):
             action_slug='like',
             store=self.store
         )
-        
+
         self.assertEqual(result['action'], 'removed')
         self.assertIsNone(result['interaction'])
 ```
@@ -3068,12 +3068,12 @@ class EntityServiceTest(TestCase):
 - Complete documentation
 
 <!-- ===============================================================================
- END ENTITIES.MD 
+ END ENTITIES.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START FORMS.MD 
+ START FORMS.MD
  ================================================================================= -->
 # Forms App Rules v1.0
 
@@ -3153,36 +3153,36 @@ class FormTemplate(TenantModel):
     Store-scoped form template for dynamic form builder
     Similar to Shopify's forms with Fluent Form features
     """
-    
+
     # Core fields
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     # Form Identification (6-digit unique ID)
     form_id = models.CharField(
-        max_length=6, 
-        unique=True, 
+        max_length=6,
+        unique=True,
         db_index=True,
         help_text="6-digit unique form identifier for HTML forms"
     )
-    
+
     # Configuration
     fields = models.JSONField(default=dict, help_text="Dynamic form fields configuration")
     settings = models.JSONField(default=dict, help_text="Form settings and options")
-    
+
     # Status and visibility
     status = models.CharField(max_length=20, choices=FORM_STATUS_CHOICES, default='draft')
     is_active = models.BooleanField(default=True)
-    
+
     # Submission handling
     save_to_database = models.BooleanField(default=True)
     send_email_notifications = models.BooleanField(default=True)
-    
+
     # SEO and meta
     seo_title = models.CharField(max_length=255, blank=True)
     seo_description = models.CharField(max_length=500, blank=True)
-    
+
     class Meta:
         db_table = 'forms_form_template'
         unique_together = [['store', 'slug']]
@@ -3193,16 +3193,16 @@ class FormTemplate(TenantModel):
             models.Index(fields=['form_id']),  # Add index for form_id lookups
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.title} (ID: {self.form_id})"
-    
+
     def save(self, *args, **kwargs):
         """Generate 6-digit form_id if not exists"""
         if not self.form_id:
             self.form_id = self.generate_unique_form_id()
         super().save(*args, **kwargs)
-    
+
     @staticmethod
     def generate_unique_form_id():
         """Generate unique 6-digit form ID"""
@@ -3210,25 +3210,25 @@ class FormTemplate(TenantModel):
             # Generate 6-digit alphanumeric ID
             chars = string.ascii_uppercase + string.digits
             form_id = ''.join(random.choices(chars, k=6))
-            
+
             # Check uniqueness
             if not FormTemplate.objects.filter(form_id=form_id).exists():
                 return form_id
-    
+
     def get_field_by_name(self, field_name):
         """Get field configuration by name"""
         return self.fields.get(field_name)
-    
+
     def validate_submission_data(self, data):
         """Validate submitted data against field configuration"""
         errors = {}
-        
+
         for field_name, field_config in self.fields.items():
             if field_config.get('required', False) and not data.get(field_name):
                 errors[field_name] = f"{field_config.get('label', field_name)} is required"
-        
+
         return errors
-    
+
     def get_html_form_attributes(self):
         """Get HTML form attributes for frontend"""
         return {
@@ -3247,25 +3247,25 @@ class FormSubmission(TenantModel):
     """
     Stores submitted form data with tracking
     """
-    
+
     # Relationships
     form_template = models.ForeignKey(FormTemplate, on_delete=models.CASCADE, related_name='submissions')
-    
+
     # Submission data
     data = models.JSONField(default=dict, help_text="Submitted form data")
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    
+
     # Status tracking
     status = models.CharField(max_length=20, choices=SUBMISSION_STATUS_CHOICES, default='pending')
     email_sent = models.BooleanField(default=False)
     email_opened = models.BooleanField(default=False)
-    
+
     # Timestamps
     submitted_at = models.DateTimeField(auto_now_add=True)
     email_sent_at = models.DateTimeField(null=True, blank=True)
     opened_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         db_table = 'forms_form_submission'
         indexes = [
@@ -3274,10 +3274,10 @@ class FormSubmission(TenantModel):
             models.Index(fields=['email_sent']),
         ]
         ordering = ['-submitted_at']
-    
+
     def __str__(self):
         return f"Submission for {self.form_template.title} (ID: {self.form_template.form_id})"
-    
+
     def send_notification_emails(self):
         """Trigger async email sending"""
         from services.form import FormService
@@ -3291,25 +3291,25 @@ class EmailTemplate(TenantModel):
     """
     Email templates for form notifications
     """
-    
+
     # Core fields
     title = models.CharField(max_length=255)
     subject = models.CharField(max_length=255)
     body_html = models.TextField()
     body_text = models.TextField(blank=True)
-    
+
     # Configuration
     headers = models.JSONField(default=dict, help_text="Custom email headers")
     variables = models.JSONField(default=dict, help_text="Template variables documentation")
-    
+
     # Recipients
     recipient_type = models.CharField(max_length=20, choices=RECIPIENT_CHOICES, default='admin')
     recipient_email = models.EmailField(blank=True, help_text="Custom recipient email")
     auto_detect_recipient = models.BooleanField(default=True, help_text="Auto-detect from form fields")
-    
+
     # Status
     is_active = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = 'forms_email_template'
         indexes = [
@@ -3317,22 +3317,22 @@ class EmailTemplate(TenantModel):
             models.Index(fields=['is_active']),
         ]
         ordering = ['title']
-    
+
     def render_with_context(self, context):
         """Render template with submission data"""
         from django.template import Template, Context
         from django.template.loader import render_to_string
-        
+
         # Simple variable replacement
         html_content = self.body_html
         text_content = self.body_text
-        
+
         for key, value in context.items():
             placeholder = f"{{ {key} }}"
             html_content = html_content.replace(placeholder, str(value))
             if text_content:
                 text_content = text_content.replace(placeholder, str(value))
-        
+
         return {
             'html': html_content,
             'text': text_content,
@@ -3361,19 +3361,19 @@ class PublicFormViewSet(TenantViewSet):
     """
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = FormTemplate.objects.filter(status='published', is_active=True)
     serializer_class = PublicFormTemplateSerializer
     search_fields = ['title', 'description']
     ordering = ['title']
-    
+
     def get_object(self):
         """Override to lookup by form_id instead of pk"""
         form_id = self.kwargs.get('pk')
         if form_id:
             return get_object_or_404(self.get_queryset(), form_id=form_id)
         return super().get_object()
-    
+
     @extend_schema(
         summary="Get Form by ID",
         description="Get form configuration by 6-digit form ID",
@@ -3384,7 +3384,7 @@ class PublicFormViewSet(TenantViewSet):
         form_template = self.get_object()
         serializer = self.get_serializer(form_template)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Submit Form",
         description="Submit form data using 6-digit form ID",
@@ -3395,16 +3395,16 @@ class PublicFormViewSet(TenantViewSet):
     def submit(self, request, pk=None):
         """Submit form data using service layer"""
         form_template = self.get_object()
-        
+
         from services.form import FormService
         try:
             submission = FormService.submit_form(
                 form_template, request.data, request
             )
-            
+
             serializer = FormSubmissionSerializer(submission)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -3425,14 +3425,14 @@ class DashboardFormViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = FormTemplate.objects.all()
     serializer_class = FormTemplateSerializer
     filterset_fields = ['status', 'is_active']
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'title']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Duplicate Form",
         description="Create duplicate of existing form",
@@ -3442,10 +3442,10 @@ class DashboardFormViewSet(TenantViewSet):
     def duplicate(self, request, pk=None):
         """Duplicate form template using service layer"""
         form_template = self.get_object()
-        
+
         from services.form import FormService
         new_form = FormService.duplicate_form(form_template, request.user)
-        
+
         serializer = self.get_serializer(new_form)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 ```
@@ -3468,7 +3468,7 @@ logger = logging.getLogger(__name__)
 
 class FormService:
     """Shared form management service"""
-    
+
     @staticmethod
     @transaction.atomic
     def submit_form(form_template, data, request):
@@ -3477,7 +3477,7 @@ class FormService:
         errors = form_template.validate_submission_data(data)
         if errors:
             raise ValidationError(errors)
-        
+
         # Create submission
         submission = FormSubmission.objects.create(
             form_template=form_template,
@@ -3486,7 +3486,7 @@ class FormService:
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
             status='pending'
         )
-        
+
         # Log submission
         log_event_async(
             user=request.user if request.user.is_authenticated else None,
@@ -3499,28 +3499,28 @@ class FormService:
                 'submission_id': submission.id
             }
         )
-        
+
         # Trigger email notifications
         if form_template.send_email_notifications:
             FormService.send_form_notifications.delay(submission.id)
-        
+
         return submission
-    
+
     @staticmethod
     def duplicate_form(form_template, user):
         """Duplicate form template with new slug"""
         from django.utils.text import slugify
-        
+
         new_title = f"{form_template.title} (Copy)"
         new_slug = slugify(new_title)
-        
+
         # Ensure unique slug
         counter = 1
         original_slug = new_slug
         while FormTemplate.objects.filter(store=form_template.store, slug=new_slug).exists():
             new_slug = f"{original_slug}-{counter}"
             counter += 1
-        
+
         new_form = FormTemplate.objects.create(
             store=form_template.store,
             title=new_title,
@@ -3531,7 +3531,7 @@ class FormService:
             status='draft',
             created_by=user
         )
-        
+
         # Duplicate email templates
         for email_template in form_template.email_templates.all():
             EmailTemplate.objects.create(
@@ -3547,7 +3547,7 @@ class FormService:
                 recipient_email=email_template.recipient_email,
                 auto_detect_recipient=email_template.auto_detect_recipient
             )
-        
+
         log_event_async(
             user=user,
             store=new_form.store,
@@ -3559,7 +3559,7 @@ class FormService:
                 'new_form_title': new_form.title
             }
         )
-        
+
         return new_form
 ```
 
@@ -3586,13 +3586,13 @@ def send_form_notifications(self, submission_id):
     try:
         from .models import FormSubmission
         from services.smtp import SMTPService
-        
+
         submission = FormSubmission.objects.select_related('form_template').get(id=submission_id)
         form_template = submission.form_template
-        
+
         # Get email templates
         email_templates = form_template.email_templates.filter(is_active=True)
-        
+
         for email_template in email_templates:
             # Prepare context
             context = {
@@ -3601,15 +3601,15 @@ def send_form_notifications(self, submission_id):
                 'submitted_at': submission.submitted_at,
                 'submission_id': submission.id
             }
-            
+
             # Render template
             rendered = email_template.render_with_context(context)
-            
+
             # Determine recipients
             recipients = FormService.get_email_recipients(
                 email_template, submission.data, form_template.store
             )
-            
+
             # Send via SMTP service
             SMTPService.send_template_email(
                 template_name='form_notification',
@@ -3620,13 +3620,13 @@ def send_form_notifications(self, submission_id):
                 headers=email_template.headers,
                 store=form_template.store
             )
-        
+
         # Update submission status
         submission.email_sent = True
         submission.email_sent_at = timezone.now()
         submission.status = 'sent'
         submission.save(update_fields=['email_sent', 'email_sent_at', 'status'])
-        
+
     except Exception as exc:
         logger.error(f"Failed to send form notifications: {exc}")
         # Update submission status
@@ -3690,7 +3690,7 @@ def send_form_notifications(self, submission_id):
 
 ### **Required Coverage**
 - **Models**: 95% code coverage
-- **Views**: 90% code coverage  
+- **Views**: 90% code coverage
 - **Services**: 100% code coverage
 - **Integration**: Critical path testing
 
@@ -3722,27 +3722,27 @@ class FormServiceTest(TestCase):
                 }
             }
         )
-    
+
     def test_submit_form_valid_data(self):
         """Test form submission with valid data"""
         data = {
             'email': 'test@example.com',
             'message': 'Test message'
         }
-        
+
         submission = FormService.submit_form(self.form_template, data, self.request)
-        
+
         self.assertEqual(submission.form_template, self.form_template)
         self.assertEqual(submission.data, data)
         self.assertEqual(submission.status, 'pending')
-    
+
     def test_submit_form_invalid_data(self):
         """Test form submission with invalid data"""
         data = {
             'email': '',  # Required field missing
             'message': 'Test message'
         }
-        
+
         with self.assertRaises(ValidationError):
             FormService.submit_form(self.form_template, data, self.request)
 ```
@@ -3844,18 +3844,18 @@ The 6-digit `form_id` makes it easy to identify and submit forms:
 <form action="/v2/api/public/forms/ABC123/submit/" method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
     <input type="hidden" name="form_id" value="ABC123" data-form-id="ABC123">
-    
+
     <!-- Dynamic fields from form_template.fields JSON -->
     <div class="form-field">
         <label for="email">Email Address *</label>
         <input type="email" id="email" name="email" required>
     </div>
-    
+
     <div class="form-field">
         <label for="message">Message *</label>
         <textarea id="message" name="message" required></textarea>
     </div>
-    
+
     <button type="submit">Submit Form</button>
 </form>
 
@@ -3863,10 +3863,10 @@ The 6-digit `form_id` makes it easy to identify and submit forms:
 <script>
 document.querySelector('form[data-form-id]').addEventListener('submit', async function(e) {
     e.preventDefault();
-    
+
     const formId = this.dataset.formId;
     const formData = new FormData(this);
-    
+
     try {
         const response = await fetch(`/v2/api/public/forms/${formId}/submit/`, {
             method: 'POST',
@@ -3875,9 +3875,9 @@ document.querySelector('form[data-form-id]').addEventListener('submit', async fu
                 'X-CSRFToken': formData.get('csrfmiddlewaretoken')
             }
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok) {
             alert('Form submitted successfully!');
             this.reset();
@@ -3911,7 +3911,7 @@ def migrate_dfcms_forms(apps, schema_editor):
         # Check if DFCMS has form models
         OldForm = apps.get_model('modules', 'Form')
         OldFormField = apps.get_model('modules', 'FormField')
-        
+
         # Migrate to new FormTemplate structure
         for old_form in OldForm.objects.all():
             form_template = FormTemplate.objects.create(
@@ -3923,7 +3923,7 @@ def migrate_dfcms_forms(apps, schema_editor):
                 status='published',
                 is_active=old_form.is_active
             )
-            
+
             # Migrate email templates
             for old_template in old_form.email_templates.all():
                 EmailTemplate.objects.create(
@@ -3934,7 +3934,7 @@ def migrate_dfcms_forms(apps, schema_editor):
                     body_html=old_template.body_html,
                     recipient_type=old_template.recipient_type
                 )
-                
+
     except LookupError:
         # DFCMS form models don't exist, skip migration
         pass
@@ -3960,7 +3960,7 @@ class FormField(models.Model):
     field_type = models.CharField(max_length=20, choices=FIELD_TYPE_CHOICES)
     allow_uploads = models.BooleanField(default=False)
     upload_max_size = models.IntegerField(default=5242880)  # 5MB
-    
+
     def get_upload_media_files(self, submission_data):
         """Get uploaded media files for this field"""
         if self.field_type == 'file' and self.allow_uploads:
@@ -3971,12 +3971,12 @@ class FormField(models.Model):
 # Integration with translations.md
 class FormTemplate(TenantModel):
     # ... other fields ...
-    
+
     def get_translated_field(self, field_name, language_code):
         """Get translated field configuration"""
         from services.translation import TranslationService
         return TranslationService.get_translated_field(
-            self.fields.get(field_name, {}), 
+            self.fields.get(field_name, {}),
             language_code,
             context='form_field'
         )
@@ -4072,12 +4072,12 @@ class FormTemplate(TenantModel):
 - Complete documentation and deployment guides
 
 <!-- ===============================================================================
- END FORMS.MD 
+ END FORMS.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START GIFTCARDS.MD 
+ START GIFTCARDS.MD
  ================================================================================= -->
 # Gift Cards Module
 
@@ -4125,14 +4125,14 @@ class GiftCard(TenantModel):
         ('refund', 'Refund'),
         ('loyalty', 'Loyalty'),
     )
-    
+
     STATUS_CHOICES = (
         ('active', 'Active'),
         ('redeemed', 'Redeemed'),
         ('expired', 'Expired'),
         ('voided', 'Voided'),
     )
-    
+
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
     code = models.CharField(max_length=20, unique=True, db_index=True)
     initial_balance = models.DecimalField(max_digits=10, decimal_places=2)
@@ -4150,7 +4150,7 @@ class GiftCard(TenantModel):
     created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['code']),
@@ -4158,17 +4158,17 @@ class GiftCard(TenantModel):
             models.Index(fields=['expires_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.code} - {self.current_balance}/{self.initial_balance} {self.currency}"
-    
+
     def is_expired(self):
         return self.expires_at and timezone.now() > self.expires_at
-    
+
     def is_redeemable(self):
         return (
-            self.status == 'active' and 
-            self.current_balance > 0 and 
+            self.status == 'active' and
+            self.current_balance > 0 and
             not self.is_expired()
         )
 ```
@@ -4184,7 +4184,7 @@ class GiftCardHistory(TenantModel):
         ('expired', 'Expired'),
         ('voided', 'Voided'),
     )
-    
+
     gift_card = models.ForeignKey(GiftCard, on_delete=models.CASCADE, related_name='history')
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -4193,11 +4193,11 @@ class GiftCardHistory(TenantModel):
     metadata = JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name_plural = 'Gift Card History'
-    
+
     def __str__(self):
         return f"{self.gift_card.code} - {self.get_action_display()} - {self.amount if self.amount else ''}"
 ```
@@ -4215,7 +4215,7 @@ class GiftCardService:
         """
         # Generate unique code
         code = kwargs.get('code') or GiftCardService._generate_code()
-        
+
         # Create gift card
         gift_card = GiftCardService.create_gift_card(
             store=store,
@@ -4223,12 +4223,12 @@ class GiftCardService:
             code=code,
             **{k: v for k, v in kwargs.items() if k != 'code'}
         )
-        
+
         # Log creation
         # Handled by GiftCardService.create_gift_card
-        
+
         return gift_card
-    
+
     @staticmethod
     @transaction.atomic
     def redeem_gift_card(code, amount, user=None, order=None, method='online'):
@@ -4238,13 +4238,13 @@ class GiftCardService:
         gift_card = GiftCard.objects.get(code=code, status='active')
         if gift_card.is_expired():
             raise ValueError("Gift card has expired")
-        
+
         if amount > gift_card.current_balance:
             raise ValueError("Insufficient balance")
-        
+
         gift_card.current_balance -= amount
         gift_card.save()
-        
+
         GiftCardHistory.objects.create(
             gift_card=gift_card,
             action='redeemed',
@@ -4252,9 +4252,9 @@ class GiftCardService:
             order=order,
             created_by=user
         )
-        
+
         return gift_card
-    
+
     @staticmethod
     def get_gift_card_balance(code):
         """Get current balance of a gift card"""
@@ -4268,13 +4268,13 @@ class GiftCardService:
             }
         except GiftCard.DoesNotExist:
             return None
-    
+
     @staticmethod
     def _generate_code(length=12):
         """Generate a random gift card code"""
         chars = string.ascii_uppercase + string.digits
         return ''.join(random.choices(chars, k=length))
-    
+
     @staticmethod
     def get_gift_card_analytics(store, start_date=None, end_date=None):
         """Generate analytics for gift cards"""
@@ -4388,7 +4388,7 @@ redemption_rate = (redeemed / total_issued) * 100 if total_issued > 0 else 0
 
 # Breakage
 breakage = GiftCard.objects.filter(
-    store=store, 
+    store=store,
     status='active',
     expires_at__lt=timezone.now()
 ).aggregate(total=Sum('current_balance'))['total'] or 0
@@ -4570,12 +4570,12 @@ GIFT_CARD_MAX_AMOUNT=1000.00
 6. Loyalty program integration
 
 <!-- ===============================================================================
- END GIFTCARDS.MD 
+ END GIFTCARDS.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START LOGS.MD 
+ START LOGS.MD
 ================================================================================ -->
 # Logs App Rules - DFCMS Compatible
 
@@ -4631,38 +4631,38 @@ class LogEntry(TenantModel):
         # System
         ('SYSTEM_STARTUP', 'System Startup'),
         ('SYSTEM_ERROR', 'System Error'),
-        
+
         # User actions
         ('USER_LOGIN', 'User Login'),
         ('USER_LOGOUT', 'User Logout'),
         ('USER_REGISTER', 'User Registration'),
         ('PASSWORD_CHANGE', 'Password Change'),
         ('PASSWORD_RESET', 'Password Reset'),
-        
+
         # Content actions
         ('CONTENT_CREATE', 'Content Created'),
         ('CONTENT_UPDATE', 'Content Updated'),
         ('CONTENT_DELETE', 'Content Deleted'),
         ('CONTENT_PUBLISH', 'Content Published'),
-        
+
         # Visitor analytics
         ('PAGE_VIEW', 'Page View'),
         ('CLICK', 'Click Event'),
         ('FORM_SUBMIT', 'Form Submit'),
         ('FILE_DOWNLOAD', 'File Download'),
         ('BOUNCE', 'Bounce (quick exit)'),
-        
+
         # Security
         ('LOGIN_FAILED', 'Failed Login'),
         ('SUSPICIOUS_ACTIVITY', 'Suspicious Activity'),
         ('RATE_LIMIT', 'Rate Limit Exceeded'),
         ('BLOCKED_IP', 'IP Blocked'),
-        
+
         # API
         ('API_CALL', 'API Call'),
         ('API_ERROR', 'API Error'),
     ]
-    
+
     LOG_LEVELS = [
         ('DEBUG', 'Debug'),
         ('INFO', 'Info'),
@@ -4670,38 +4670,38 @@ class LogEntry(TenantModel):
         ('ERROR', 'Error'),
         ('CRITICAL', 'Critical'),
     ]
-    
+
     # Core fields
     event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
     level = models.CharField(max_length=20, choices=LOG_LEVELS, default='INFO')
     message = models.TextField(blank=True)
-    
+
     # User tracking
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     session_id = models.CharField(max_length=100, blank=True)  # For anonymous visitors
-    
+
     # Request tracking
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     request_id = models.CharField(max_length=100, blank=True)
-    
+
     # Event details
     entity_type = models.CharField(max_length=100, blank=True)  # 'Product', 'Order', etc.
     entity_id = models.PositiveIntegerField(null=True, blank=True)
     metadata = models.JSONField(default=dict)  # Flexible event data
-    
+
     # Analytics
     page_url = models.URLField(blank=True)
     referrer = models.URLField(blank=True)
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Security
     is_suspicious = models.BooleanField(default=False)
     risk_score = models.PositiveSmallIntegerField(default=0)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta(TenantModel.Meta):
         ordering = ['-created_at']
         indexes = [
@@ -4711,7 +4711,7 @@ class LogEntry(TenantModel):
             models.Index(fields=['ip_address']),
             models.Index(fields=['is_suspicious']),
         ]
-    
+
     def __str__(self):
         return f"{self.store.name} - {self.event_type} - {self.created_at}"
 ```
@@ -4730,21 +4730,21 @@ from .tasks import log_event_async
 class LoggingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         # Skip static files and admin
         if request.path.startswith('/static/') or request.path.startswith('/admin/'):
             return self.get_response(request)
-        
+
         # Generate request ID
         request.request_id = str(uuid.uuid4())
         start_time = time.time()
-        
+
         response = self.get_response(request)
-        
+
         # Calculate duration
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         # Log page view asynchronously
         log_data = {
             'event_type': 'PAGE_VIEW',
@@ -4765,12 +4765,12 @@ class LoggingMiddleware:
                 'query_params': dict(request.GET),
             }
         }
-        
+
         # Use async for performance
         log_event_async.delay(log_data)
-        
+
         return response
-    
+
     def get_client_ip(self, request):
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
         if x_forwarded_for:
@@ -4791,9 +4791,9 @@ def log_model_save(sender, instance, created, **kwargs):
     # Skip logging models and system models
     if sender._meta.app_label in ['logs', 'sessions', 'admin', 'contenttypes']:
         return
-    
+
     event_type = 'CONTENT_CREATE' if created else 'CONTENT_UPDATE'
-    
+
     log_data = {
         'event_type': event_type,
         'level': 'INFO',
@@ -4805,18 +4805,18 @@ def log_model_save(sender, instance, created, **kwargs):
             'changed_fields': getattr(instance, '_changed_fields', {}),
         }
     }
-    
+
     # Add store if model has it
     if hasattr(instance, 'store'):
         log_data['store'] = instance.store
-    
+
     log_event_async.delay(log_data)
 
 @receiver(post_delete)
 def log_model_delete(sender, instance, **kwargs):
     if sender._meta.app_label in ['logs', 'sessions', 'admin', 'contenttypes']:
         return
-    
+
     log_data = {
         'event_type': 'CONTENT_DELETE',
         'level': 'WARNING',
@@ -4825,10 +4825,10 @@ def log_model_delete(sender, instance, **kwargs):
         'entity_id': instance.pk,
         'metadata': {}
     }
-    
+
     if hasattr(instance, 'store'):
         log_data['store'] = instance.store
-    
+
     log_event_async.delay(log_data)
 ```
 
@@ -4858,10 +4858,10 @@ def track_event(request):
             'page_url': request.data.get('page_url', ''),
             'metadata': request.data.get('metadata', {}),
         }
-        
+
         log_event_async.delay(event_data)
         return Response({'status': 'logged'}, status=status.HTTP_201_CREATED)
-    
+
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 ```
@@ -4879,20 +4879,20 @@ class LogService:
     def get_store_analytics(store, days=30):
         """Get analytics for a store"""
         since = timezone.now() - timedelta(days=days)
-        
+
         # Basic metrics
         total_visits = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).count()
-        
+
         unique_visitors = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).values('session_id').distinct().count()
-        
+
         # Bounce rate (single page view sessions)
         bounce_sessions = LogEntry.objects.filter(
             store=store,
@@ -4901,15 +4901,15 @@ class LogService:
         ).values('session_id').annotate(
             page_views=Count('id')
         ).filter(page_views=1).count()
-        
+
         total_sessions = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).values('session_id').distinct().count()
-        
+
         bounce_rate = (bounce_sessions / total_sessions * 100) if total_sessions > 0 else 0
-        
+
         # Top pages
         top_pages = LogEntry.objects.filter(
             store=store,
@@ -4918,14 +4918,14 @@ class LogService:
         ).values('page_url').annotate(
             views=Count('id')
         ).order_by('-views')[:10]
-        
+
         # Security events
         security_events = LogEntry.objects.filter(
             store=store,
             is_suspicious=True,
             created_at__gte=since
         ).count()
-        
+
         return {
             'total_visits': total_visits,
             'unique_visitors': unique_visitors,
@@ -4934,14 +4934,14 @@ class LogService:
             'security_events': security_events,
             'period_days': days,
         }
-    
+
     @staticmethod
     def detect_suspicious_activity(store, hours=24):
         """Detect suspicious patterns"""
         since = timezone.now() - timedelta(hours=hours)
-        
+
         suspicious = []
-        
+
         # Failed logins from same IP
         failed_logins = LogEntry.objects.filter(
             store=store,
@@ -4950,7 +4950,7 @@ class LogService:
         ).values('ip_address').annotate(
             count=Count('id')
         ).filter(count__gt=5)
-        
+
         for item in failed_logins:
             suspicious.append({
                 'type': 'brute_force',
@@ -4958,7 +4958,7 @@ class LogService:
                 'count': item['count'],
                 'risk_score': min(100, item['count'] * 10),
             })
-        
+
         # Unusual page access patterns
         rapid_requests = LogEntry.objects.filter(
             store=store,
@@ -4967,7 +4967,7 @@ class LogService:
         ).values('ip_address').annotate(
             count=Count('id')
         ).filter(count__gt=1000)
-        
+
         for item in rapid_requests:
             suspicious.append({
                 'type': 'bot_activity',
@@ -4975,7 +4975,7 @@ class LogService:
                 'count': item['count'],
                 'risk_score': min(100, item['count'] // 10),
             })
-        
+
         return suspicious
 ```
 
@@ -5001,7 +5001,7 @@ def cleanup_old_logs(days=90):
     """Clean up old logs to prevent table bloat"""
     from datetime import timedelta
     from django.utils import timezone
-    
+
     cutoff = timezone.now() - timedelta(days=days)
     deleted_count = LogEntry.objects.filter(created_at__lt=cutoff).delete()[0]
     return f"Deleted {deleted_count} old log entries"
@@ -5031,31 +5031,31 @@ from apps.logs.models import LogEntry
 
 class Command(BaseCommand):
     help = 'Migrate old activity_logs to new logs system'
-    
+
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Show what would be migrated')
         parser.add_argument('--batch-size', type=int, default=1000, help='Batch size for migration')
-    
+
     def handle(self, *args, **options):
         from apps.activity_logs.models import ActivityLog  # Old model
-        
+
         queryset = ActivityLog.objects.all().order_by('id')
         batch_size = options['batch_size']
         dry_run = options['dry_run']
-        
+
         if dry_run:
             self.stdout.write(f"Would migrate {queryset.count()} records")
             return
-        
+
         migrated = 0
         for i in range(0, queryset.count(), batch_size):
             batch = queryset[i:i + batch_size]
-            
+
             with transaction.atomic():
                 for old_log in batch:
                     # Map old action to new event_type
                     event_type = self.map_action_to_event_type(old_log.action)
-                    
+
                     LogEntry.objects.create(
                         store=old_log.storeId,
                         user=old_log.userId,
@@ -5070,11 +5070,11 @@ class Command(BaseCommand):
                         created_at=old_log.createdAt,
                     )
                     migrated += 1
-            
+
             self.stdout.write(f"Migrated {migrated} records...")
-        
+
         self.stdout.write(self.style.SUCCESS(f"Successfully migrated {migrated} log entries"))
-    
+
     def map_action_to_event_type(self, old_action):
         """Map old action choices to new event types"""
         mapping = {
@@ -5105,7 +5105,7 @@ class TestLogEntry(TestCase):
         )
         self.assertEqual(log.event_type, 'PAGE_VIEW')
         self.assertEqual(log.level, 'INFO')
-    
+
     def test_str_representation(self):
         log = LogEntry.objects.create(
             store=self.store,
@@ -5205,12 +5205,12 @@ Enforced At: models.py, services.py, middleware, views
 - Store-scoped queries prevent data leaks
 
 <!-- ===============================================================================
- END LOGS.MD 
+ END LOGS.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START MEDIAFILE.MD 
+ START MEDIAFILE.MD
  ================================================================================= -->
 # Media App Rules - Cloudflare R2 + ImageKit.io
 
@@ -5263,50 +5263,50 @@ class MediaFile(models.Model):
     IMAGE_MAX_SIZE = 10 * 1024 * 1024  # 10MB
     VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB
     DOCUMENT_MAX_SIZE = 20 * 1024 * 1024  # 20MB
-    
+
     RESOURCE_TYPES = [
         ('image', 'Image'),
         ('video', 'Video'),
         ('document', 'Document'),
         ('other', 'Other')
     ]
-    
+
     # Core fields
     original_filename = models.CharField(max_length=255)
     file_extension = models.CharField(max_length=10)
     file_size = models.PositiveIntegerField()
     mime_type = models.CharField(max_length=100)
     resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES)
-    
+
     # R2 storage path (format: store_{id}/media/{folder_path}/filename.xxx)
     storage_path = models.CharField(max_length=512)
-    
+
     # ImageKit.io specific
     imagekit_id = models.CharField(max_length=255, blank=True, null=True)
     width = models.PositiveIntegerField(null=True, blank=True)
     height = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Metadata
     alt_text = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     metadata = models.JSONField(default=dict, blank=True)
-    
+
     # Relations
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, related_name='media_files')
     folder = models.ForeignKey(
-        'mediaFile.MediaFolder', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        'mediaFile.MediaFolder',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='media_files'
     )
     uploaded_by = models.ForeignKey(
-        'accounts.UserAccount', 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        'accounts.UserAccount',
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='uploaded_files'
     )
-    
+
     # Reverse relationships for user media
     # These are defined here for documentation and type hinting
     user_avatars = models.ManyToManyField(
@@ -5321,11 +5321,11 @@ class MediaFile(models.Model):
         blank=True,
         help_text="Users who use this file as their cover photo"
     )
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -5334,10 +5334,10 @@ class MediaFile(models.Model):
             models.Index(fields=['created_at']),
             models.Index(fields=['file_size']),
         ]
-    
+
     def __str__(self):
         return self.original_filename
-    
+
     @property
     def file_size_formatted(self):
         """Return human-readable file size"""
@@ -5346,15 +5346,15 @@ class MediaFile(models.Model):
                 return f"{self.file_size:.1f} {unit}"
             self.file_size /= 1024.0
         return f"{self.file_size:.1f} GB"
-    
+
     @property
     def is_image(self):
         return self.resource_type == 'image'
-    
+
     @property
     def is_video(self):
         return self.resource_type == 'video'
-    
+
     @property
     def is_document(self):
         return self.resource_type == 'document'
@@ -5362,10 +5362,10 @@ class MediaFile(models.Model):
     def get_absolute_url(self, transformation=None):
         """
         Get the public URL for this media file with optional transformations
-        
+
         Args:
             transformation (str, optional): ImageKit transformation string
-            
+
         Returns:
             str: Public URL with transformations applied
         """
@@ -5375,28 +5375,28 @@ class MediaFile(models.Model):
     def get_thumbnail_url(self, width=200, height=200, crop='fill'):
         """
         Get a thumbnail URL for this media file
-        
+
         Args:
             width (int): Width in pixels
             height (int): Height in pixels
             crop (str): Crop mode (fill, fit, etc.)
-            
+
         Returns:
             str: Thumbnail URL or None if not applicable
         """
         if not self.is_image and not self.is_video:
             return None
-            
+
         transformation = f'tr:w-{width},h-{height},c-{crop}'
         return self.get_absolute_url(transformation)
 
     def get_presigned_url(self, expires_in=3600):
         """
         Generate a presigned URL for private file access
-        
+
         Args:
             expires_in (int): Expiration time in seconds
-            
+
         Returns:
             str: Presigned URL or None if not applicable
         """
@@ -5480,11 +5480,11 @@ class MediaService:
     """
     Service class for handling media file operations with Cloudflare R2 and ImageKit.io
     """
-    
+
     # Allowed MIME types and their corresponding resource types
     ALLOWED_MIME_TYPES = {
         'image': [
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
             'image/svg+xml', 'image/tiff', 'image/bmp'
         ],
         'video': [
@@ -5504,7 +5504,7 @@ class MediaService:
             'application/x-gzip'
         ]
     }
-    
+
     def __init__(self):
         """Initialize R2 and ImageKit clients"""
         # Initialize R2 client
@@ -5516,28 +5516,28 @@ class MediaService:
             region_name='auto',
             config=boto3.session.Config(signature_version='s3v4')
         )
-        
+
         # Initialize ImageKit
         self.imagekit = ImageKit(
             private_key=settings.IMAGEKIT_PRIVATE_KEY,
             public_key=settings.IMAGEKIT_PUBLIC_KEY,
             url_endpoint=settings.IMAGEKIT_URL_ENDPOINT
         )
-    
+
     def upload_file(self, file_obj, store, user, folder=None, metadata=None):
         """
         Upload a file to R2 and create a MediaFile record
-        
+
         Args:
             file_obj: File object or InMemoryUploadedFile
             store: Store instance
             user: UserAccount instance
             folder: Optional MediaFolder instance
             metadata: Optional dict of metadata
-            
+
         Returns:
             MediaFile: Created media file instance
-            
+
         Raises:
             InvalidFileTypeError: If file type is not allowed
             FileTooLargeError: If file exceeds size limits
@@ -5548,13 +5548,13 @@ class MediaService:
             # Validate file
             if not file_obj or not hasattr(file_obj, 'name'):
                 raise MediaUploadError("Invalid file object")
-                
+
             # Get file metadata
             file_name = file_obj.name
             file_size = file_obj.size
-            mime_type = getattr(file_obj, 'content_type', 
+            mime_type = getattr(file_obj, 'content_type',
                               mimetypes.guess_type(file_name)[0] or 'application/octet-stream')
-            
+
             # Determine resource type and validate
             resource_type = self._get_resource_type(mime_type, file_name)
             if not resource_type:
@@ -5562,7 +5562,7 @@ class MediaService:
                     f"File type {mime_type} is not allowed. "
                     f"Allowed types: {', '.join(self.ALLOWED_MIME_TYPES.keys())}"
                 )
-            
+
             # Validate file size
             max_size = getattr(MediaFile, f"{resource_type.upper()}_MAX_SIZE")
             if file_size > max_size:
@@ -5570,20 +5570,20 @@ class MediaService:
                     f"{resource_type.capitalize()} exceeds maximum size of "
                     f"{max_size / (1024 * 1024):.1f}MB"
                 )
-            
+
             # Generate storage path
             file_extension = os.path.splitext(file_name)[1].lower()
             base_filename = os.path.splitext(os.path.basename(file_name))[0]
             safe_filename = f"{slugify(base_filename)}{file_extension}"
-            
+
             # Create folder path
             folder_path = f"store_{store.id}/media"
             if folder:
                 folder_path = f"{folder_path}/{folder.path}"
-            
+
             # Upload to R2
             r2_key = f"{folder_path}/{safe_filename}"
-            
+
             try:
                 if hasattr(file_obj, 'temporary_file_path'):
                     # File is stored on disk
@@ -5610,7 +5610,7 @@ class MediaService:
             except ClientError as e:
                 logger.error(f"Failed to upload to R2: {str(e)}")
                 raise StorageError("Failed to upload file to storage")
-            
+
             # Get file dimensions if image
             width, height = None, None
             if resource_type == 'image':
@@ -5628,7 +5628,7 @@ class MediaService:
                         file_obj.seek(0)
                 except Exception as e:
                     logger.warning(f"Could not get image dimensions: {str(e)}")
-            
+
             # Create MediaFile record
             media_file = MediaFile.objects.create(
                 original_filename=file_name,
@@ -5644,13 +5644,13 @@ class MediaService:
                 uploaded_by=user,
                 metadata=metadata or {}
             )
-            
+
             # Register with ImageKit for images and videos
             if resource_type in ['image', 'video']:
                 try:
                     # Get public URL from R2
                     public_url = f"{settings.AWS_S3_PUBLIC_URL}/{r2_key}"
-                    
+
                     # Upload to ImageKit
                     result = self.imagekit.upload(
                         file=public_url,
@@ -5662,15 +5662,15 @@ class MediaService:
                             'response_fields': ['url', 'fileId']
                         }
                     )
-                    
+
                     # Update MediaFile with ImageKit ID
                     media_file.imagekit_id = result['fileId']
                     media_file.save(update_fields=['imagekit_id'])
-                    
+
                 except Exception as e:
                     logger.error(f"Failed to register with ImageKit: {str(e)}")
                     # Don't fail the upload, just log the error
-            
+
             # Log the upload
             self._log_media_action(
                 action='UPLOAD',
@@ -5683,29 +5683,29 @@ class MediaService:
                     'folder': folder.name if folder else None
                 }
             )
-            
+
             return media_file
-            
+
         except Exception as e:
             logger.error(f"Error uploading file: {str(e)}")
             if not isinstance(e, (InvalidFileTypeError, FileTooLargeError, StorageError)):
                 raise MediaUploadError(f"Failed to upload file: {str(e)}")
             raise
-    
+
     def delete_media(self, media_file, user):
         """
         Delete a media file from storage and database
-        
+
         Args:
             media_file: MediaFile instance to delete
             user: UserAccount performing the deletion
-            
+
         Returns:
             bool: True if deletion was successful
         """
         try:
             store = media_file.store
-            
+
             # Delete from R2
             try:
                 self.s3_client.delete_object(
@@ -5715,14 +5715,14 @@ class MediaService:
             except ClientError as e:
                 logger.error(f"Failed to delete from R2: {str(e)}")
                 # Continue with DB deletion even if R2 delete fails
-            
+
             # Delete from ImageKit if it exists
             if media_file.imagekit_id:
                 try:
                     self.imagekit.delete_file(media_file.imagekit_id)
                 except Exception as e:
                     logger.error(f"Failed to delete from ImageKit: {str(e)}")
-            
+
             # Log before deletion (to have the ID)
             self._log_media_action(
                 action='DELETE',
@@ -5730,34 +5730,34 @@ class MediaService:
                 store=store,
                 media_file=media_file
             )
-            
+
             # Delete from database
             media_file.delete()
-            
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Error deleting media file {media_file.id}: {str(e)}")
             raise MediaUploadError(f"Failed to delete media file: {str(e)}")
-    
+
     def get_media_url(self, media_file, transformation=None):
         """
         Get URL for a media file with optional transformations
-        
+
         Args:
             media_file: MediaFile instance
             transformation: Optional transformation string for ImageKit
-            
+
         Returns:
             str: Public URL to the media file
         """
         if not media_file:
             return None
-            
+
         # For private files, generate a presigned URL
         if media_file.resource_type not in ['image', 'video']:
             return self.get_presigned_url(media_file)
-            
+
         # For public files, use ImageKit if available
         if media_file.imagekit_id:
             try:
@@ -5768,18 +5768,18 @@ class MediaService:
             except Exception as e:
                 logger.warning(f"Failed to get ImageKit URL: {str(e)}")
                 # Fall back to R2 URL
-        
+
         # Fallback to R2 public URL
         return f"{settings.AWS_S3_PUBLIC_URL}/{media_file.storage_path}"
-    
+
     def get_presigned_url(self, media_file, expires_in=3600):
         """
         Generate a presigned URL for private file access
-        
+
         Args:
             media_file: MediaFile instance
             expires_in: Expiration time in seconds
-            
+
         Returns:
             str: Presigned URL or None if not applicable
         """
@@ -5798,34 +5798,34 @@ class MediaService:
         except ClientError as e:
             logger.error(f"Failed to generate presigned URL: {str(e)}")
             return None
-    
+
     def get_thumbnail_url(self, media_file, width=200, height=200, crop='fill'):
         """
         Get a thumbnail URL for a media file
-        
+
         Args:
             media_file: MediaFile instance
             width: Thumbnail width in pixels
             height: Thumbnail height in pixels
             crop: Crop mode (fill, fit, etc.)
-            
+
         Returns:
             str: Thumbnail URL or None if not applicable
         """
         if not media_file or media_file.resource_type not in ['image', 'video']:
             return None
-            
+
         transformation = f'w-{width},h-{height},c-{crop}'
         return self.get_media_url(media_file, transformation)
-    
+
     def _get_resource_type(self, mime_type, file_name):
         """
         Determine resource type from MIME type and file name
-        
+
         Args:
             mime_type: MIME type string
             file_name: Original file name
-            
+
         Returns:
             str: Resource type (image, video, document, other) or None if not allowed
         """
@@ -5833,17 +5833,17 @@ class MediaService:
             # Try to determine from file extension as fallback
             ext = os.path.splitext(file_name)[1].lower().lstrip('.')
             mime_type = mimetypes.guess_type(file_name)[0] or 'application/octet-stream'
-        
+
         for resource_type, allowed_mimes in self.ALLOWED_MIME_TYPES.items():
             if mime_type in allowed_mimes:
                 return resource_type
-        
+
         return None
-    
+
     def _log_media_action(self, action, user, store, media_file, metadata=None):
         """
         Log media-related actions to the activity log
-        
+
         Args:
             action: Action type (UPLOAD, DELETE, etc.)
             user: UserAccount performing the action
@@ -5852,7 +5852,7 @@ class MediaService:
             metadata: Additional metadata to include in the log
         """
         from logs.services.log_service import log_event_async
-        
+
         log_data = {
             'event_type': 'MEDIA_' + action,
             'message': f"Media file {action.lower()}: {media_file.original_filename}",
@@ -5868,7 +5868,7 @@ class MediaService:
                 **(metadata or {})
             }
         }
-        
+
         log_event_async.delay(log_data)
 ```
 
@@ -5885,23 +5885,23 @@ class ImageKitService:
     """
     Service class for advanced ImageKit.io operations
     """
-    
+
     def __init__(self):
         self.client = ImageKit(
             private_key=settings.IMAGEKIT_PRIVATE_KEY,
             public_key=settings.IMAGEKIT_PUBLIC_KEY,
             url_endpoint=settings.IMAGEKIT_URL_ENDPOINT
         )
-    
+
     def get_transformed_url(self, image_url, transformations):
         """
         Get URL for an image with transformations applied
-        
+
         Args:
             image_url: Source image URL
             transformations: List of transformation dicts
                 Example: [{"height": 300, "width": 400}]
-                
+
         Returns:
             str: Transformed image URL
         """
@@ -5913,16 +5913,16 @@ class ImageKitService:
         except Exception as e:
             logger.error(f"Failed to generate transformed URL: {str(e)}")
             return image_url
-    
+
     def get_video_thumbnail(self, video_url, width=320, height=180):
         """
         Generate a thumbnail for a video
-        
+
         Args:
             video_url: Source video URL
             width: Thumbnail width
             height: Thumbnail height
-            
+
         Returns:
             str: URL to the generated thumbnail
         """
@@ -5943,15 +5943,15 @@ class ImageKitService:
         except Exception as e:
             logger.error(f"Failed to generate video thumbnail: {str(e)}")
             return None
-    
+
     def bulk_optimize(self, file_ids, transformations=None):
         """
         Optimize multiple images in bulk
-        
+
         Args:
             file_ids: List of ImageKit file IDs
             transformations: Optional transformations to apply
-            
+
         Returns:
             dict: Result of the bulk operation
         """
@@ -6058,12 +6058,12 @@ class MediaFileViewSet(viewsets.ModelViewSet):
     search_fields = ['original_filename', 'alt_text', 'description']
     ordering_fields = ['created_at', 'file_size', 'original_filename']
     ordering = ['-created_at']
-    
+
     def get_queryset(self):
         """Return media files for the current store"""
         store = self.request.store
         queryset = MediaFile.objects.filter(store=store)
-        
+
         # Filter by folder
         folder_id = self.request.query_params.get('folder_id')
         if folder_id:
@@ -6075,26 +6075,26 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                     queryset = queryset.filter(folder=folder)
                 except (ValueError, MediaFolder.DoesNotExist):
                     queryset = queryset.none()
-        
+
         # Filter by resource type
         resource_type = self.request.query_params.get('type')
         if resource_type in dict(MediaFile.RESOURCE_TYPES):
             queryset = queryset.filter(resource_type=resource_type)
-        
+
         return queryset
-    
+
     def get_serializer_class(self):
         """Return appropriate serializer class based on action"""
         if self.action == 'create':
             return MediaFileUploadSerializer
         return MediaFileSerializer
-    
+
     def perform_create(self, serializer):
         """Handle file upload and create MediaFile instance"""
         file_obj = self.request.FILES.get('file')
         if not file_obj:
             raise ValidationError({"file": ["No file was submitted."]})
-        
+
         folder_id = self.request.data.get('folder')
         folder = None
         if folder_id:
@@ -6102,7 +6102,7 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                 folder = MediaFolder.objects.get(id=folder_id, store=self.request.store)
             except (ValueError, MediaFolder.DoesNotExist):
                 raise ValidationError({"folder": ["Invalid folder ID."]})
-        
+
         media_service = MediaService()
         try:
             media_file = media_service.upload_file(
@@ -6116,16 +6116,16 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                     'ip_address': self.get_client_ip()
                 }
             )
-            
+
             # Set the instance for the serializer
             serializer.instance = media_file
-            
+
         except (InvalidFileTypeError, FileTooLargeError, StorageError) as e:
             raise ValidationError({"file": [str(e)]})
         except Exception as e:
             logger.error(f"Error uploading file: {str(e)}")
             raise ValidationError({"detail": "An error occurred while uploading the file."})
-    
+
     @action(detail=True, methods=['get'])
     def thumbnail(self, request, pk=None):
         """Get a thumbnail URL for the media file"""
@@ -6133,7 +6133,7 @@ class MediaFileViewSet(viewsets.ModelViewSet):
         width = request.query_params.get('width', 200)
         height = request.query_params.get('height', 200)
         crop = request.query_params.get('crop', 'fill')
-        
+
         try:
             thumbnail_url = media_file.get_thumbnail_url(
                 width=int(width),
@@ -6146,25 +6146,25 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                 {"detail": "Invalid width/height parameters"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
         """Get a presigned URL for downloading the file"""
         media_file = self.get_object()
         expires_in = min(int(request.query_params.get('expires_in', 3600)), 86400)  # Max 24 hours
-        
+
         download_url = media_file.get_presigned_url(expires_in=expires_in)
         if not download_url:
             return Response(
                 {"detail": "Could not generate download URL"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
+
         return Response({
             'url': download_url,
             'expires_in': expires_in
         })
-    
+
     @action(detail=False, methods=['post'])
     def bulk_delete(self, request):
         """Bulk delete media files"""
@@ -6174,11 +6174,11 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                 {"ids": ["Expected a list of media IDs"]},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         store = request.store
         media_service = MediaService()
         deleted_count = 0
-        
+
         for media_id in media_ids:
             try:
                 media_file = MediaFile.objects.get(id=media_id, store=store)
@@ -6186,12 +6186,12 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                     deleted_count += 1
             except (MediaFile.DoesNotExist, MediaUploadError):
                 continue
-        
+
         return Response({
             'deleted_count': deleted_count,
             'total_count': len(media_ids)
         })
-    
+
     def get_client_ip(self):
         """Get the client's IP address"""
         x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
@@ -6218,42 +6218,42 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
     """
     serializer_class = MediaFolderSerializer
     permission_classes = [IsStoreStaffOrReadOnly]
-    
+
     def get_queryset(self):
         """Return folders for the current store"""
         store = self.request.store
         return MediaFolder.objects.filter(store=store).select_related('parent')
-    
+
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
         if self.action == 'tree':
             return MediaFolderTreeSerializer
         return MediaFolderSerializer
-    
+
     def perform_create(self, serializer):
         """Set the store and created_by fields"""
         serializer.save(
             store=self.request.store,
             created_by=self.request.user
         )
-    
+
     @action(detail=False, methods=['get'])
     def tree(self, request):
         """Get folder hierarchy as a tree"""
         store = request.store
         folders = MediaFolder.objects.filter(store=store)
-        
+
         # Get count of files in each folder
         from ...models.media_file import MediaFile
         file_counts = MediaFile.objects.filter(store=store).values('folder').annotate(
             file_count=Count('id')
         )
         file_count_map = {fc['folder']: fc['file_count'] for fc in file_counts if fc['folder']}
-        
+
         # Build tree
         folder_map = {}
         root_folders = []
-        
+
         # First pass: create all folder nodes
         for folder in folders:
             folder_map[folder.id] = {
@@ -6264,7 +6264,7 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
                 'file_count': file_count_map.get(folder.id, 0),
                 'children': []
             }
-        
+
         # Second pass: build hierarchy
         for folder_id, folder_data in folder_map.items():
             if folder_data['parent_id'] is None:
@@ -6273,30 +6273,30 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
                 parent = folder_map.get(folder_data['parent_id'])
                 if parent:
                     parent['children'].append(folder_data)
-        
+
         # Add uncategorized count
         uncategorized_count = MediaFile.objects.filter(
             store=store,
             folder__isnull=True
         ).count()
-        
+
         return Response({
             'folders': root_folders,
             'uncategorized_count': uncategorized_count
         })
-    
+
     @action(detail=True, methods=['post'])
     def move(self, request, pk=None):
         """Move a folder to a new parent"""
         folder = self.get_object()
         parent_id = request.data.get('parent_id')
-        
+
         if parent_id == str(folder.id):
             return Response(
                 {"parent_id": ["A folder cannot be its own parent"]},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         if parent_id is None:
             folder.parent = None
         else:
@@ -6314,10 +6314,10 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
                     {"parent_id": ["Invalid parent folder"]},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
+
         folder.save()
         return Response(self.get_serializer(folder).data)
-    
+
     def _is_descendant(self, parent, child):
         """Check if child is a descendant of parent"""
         if not child.parent:
@@ -6340,7 +6340,7 @@ class MediaFileSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
     file_size_formatted = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = MediaFile
         fields = [
@@ -6353,15 +6353,15 @@ class MediaFileSerializer(serializers.ModelSerializer):
             'mime_type', 'resource_type', 'width', 'height', 'created_at', 'updated_at',
             'url', 'thumbnail_url'
         ]
-    
+
     def get_url(self, obj):
         """Get public URL for the media file"""
         return obj.get_absolute_url()
-    
+
     def get_thumbnail_url(self, obj):
         """Get thumbnail URL for the media file"""
         return obj.get_thumbnail_url()
-    
+
     def get_file_size_formatted(self, obj):
         """Get human-readable file size"""
         return obj.file_size_formatted
@@ -6375,7 +6375,7 @@ class MediaFileUploadSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-    
+
     class Meta:
         model = MediaFile
         fields = ['file', 'folder', 'alt_text', 'description']
@@ -6391,12 +6391,12 @@ from ...models.media_folder import MediaFolder
 class MediaFolderSerializer(serializers.ModelSerializer):
     """Serializer for MediaFolder model"""
     file_count = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = MediaFolder
         fields = ['id', 'name', 'slug', 'parent', 'file_count', 'created_at', 'updated_at']
         read_only_fields = ['slug', 'file_count', 'created_at', 'updated_at']
-    
+
     def validate_parent(self, value):
         """Validate that parent folder belongs to the same store"""
         if value and value.store != self.context['request'].store:
@@ -6407,11 +6407,11 @@ class MediaFolderSerializer(serializers.ModelSerializer):
 class MediaFolderTreeSerializer(serializers.ModelSerializer):
     """Serializer for folder tree view"""
     children = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = MediaFolder
         fields = ['id', 'name', 'slug', 'file_count', 'children']
-    
+
     def get_children(self, obj):
         """Recursively serialize children"""
         serializer = self.__class__(obj.children.all(), many=True, context=self.context)
@@ -6438,7 +6438,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = 'Migrate media files from Cloudinary to Cloudflare R2 + ImageKit.io'
-    
+
     def add_arguments(self, parser):
         parser.add_argument(
             '--store-id',
@@ -6456,65 +6456,65 @@ class Command(BaseCommand):
             action='store_true',
             help='Run without making any changes'
         )
-    
+
     def handle(self, *args, **options):
         store_id = options.get('store_id')
         limit = options.get('limit')
         dry_run = options.get('dry_run')
-        
+
         self.stdout.write(self.style.SUCCESS(
             f'Starting media migration for store {store_id or "all"} (dry run: {dry_run})'
         ))
-        
+
         # Configure Cloudinary
         cloudinary.config(
             cloud_name=settings.CLOUDINARY_CLOUD_NAME,
             api_key=settings.CLOUDINARY_API_KEY,
             api_secret=settings.CLOUDINARY_API_SECRET
         )
-        
+
         # Get media files to migrate
         queryset = MediaFile.objects.all()
         if store_id:
             queryset = queryset.filter(store_id=store_id)
-        
+
         total_count = queryset.count()
         self.stdout.write(f'Found {total_count} media files to migrate')
-        
+
         if not total_count:
             self.stdout.write(self.style.SUCCESS('No media files to migrate'))
             return
-        
+
         if dry_run:
             self.stdout.write(self.style.WARNING('Dry run - no changes will be made'))
-        
+
         migrated_count = 0
         skipped_count = 0
         error_count = 0
-        
+
         media_service = MediaService()
-        
+
         for media_file in queryset[:limit]:
             try:
                 self.stdout.write(f'Processing {media_file.original_filename}... ', ending='')
-                
+
                 # Skip if already migrated
                 if media_file.storage_path and media_file.storage_path.startswith('store_'):
                     self.stdout.write(self.style.WARNING('Already migrated'))
                     skipped_count += 1
                     continue
-                
+
                 # Download from Cloudinary
                 try:
                     cloudinary_url = f"v{media_file.version}/{media_file.public_id}.{media_file.format}"
                     temp_file = f'/tmp/{media_file.public_id}.{media_file.format}'
-                    
+
                     if not dry_run:
                         # Download the file
                         with open(temp_file, 'wb') as f:
                             result = cloudinary.utils.cloudinary_url(cloudinary_url)[0]
                             f.write(requests.get(result).content)
-                        
+
                         # Upload to R2 + ImageKit
                         with open(temp_file, 'rb') as f:
                             uploaded_file = SimpleUploadedFile(
@@ -6522,7 +6522,7 @@ class Command(BaseCommand):
                                 content=f.read(),
                                 content_type=media_file.mime_type
                             )
-                            
+
                             # Get folder if exists
                             folder = None
                             if media_file.folder_id:
@@ -6530,7 +6530,7 @@ class Command(BaseCommand):
                                     folder = MediaFolder.objects.get(id=media_file.folder_id)
                                 except MediaFolder.DoesNotExist:
                                     pass
-                            
+
                             # Upload the file
                             media_service.upload_file(
                                 file_obj=uploaded_file,
@@ -6542,30 +6542,30 @@ class Command(BaseCommand):
                                     'cloudinary_public_id': media_file.public_id
                                 }
                             )
-                        
+
                         # Delete local temp file
                         os.remove(temp_file)
-                        
+
                         # Delete from Cloudinary if migration is successful
                         if not dry_run and settings.CLOUDINARY_DELETE_AFTER_MIGRATE:
                             try:
                                 uploader.destroy(media_file.public_id)
                             except Exception as e:
                                 logger.error(f"Failed to delete from Cloudinary: {str(e)}")
-                
+
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f'Error: {str(e)}'))
                     error_count += 1
                     continue
-                
+
                 migrated_count += 1
                 self.stdout.write(self.style.SUCCESS('Done'))
-                
+
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Unexpected error: {str(e)}'))
                 error_count += 1
                 continue
-        
+
         # Print summary
         self.stdout.write('\n' + '=' * 50)
         self.stdout.write(self.style.SUCCESS('Migration complete!'))
@@ -6573,7 +6573,7 @@ class Command(BaseCommand):
         self.stdout.write(f'Successfully migrated: {migrated_count}')
         self.stdout.write(f'Skipped (already migrated): {skipped_count}')
         self.stdout.write(f'Errors: {error_count}')
-        
+
         if dry_run:
             self.stdout.write(self.style.WARNING('\nThis was a dry run. No changes were made.'))
 ```
@@ -6924,12 +6924,12 @@ Content-Type: application/json
 4. Validate and monitor
 
 <!-- ===============================================================================
- END MEDIAFILE.MD 
+ END MEDIAFILE.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START METAFIELDS.MD 
+ START METAFIELDS.MD
  ================================================================================= -->
 # Metafields System v2.0
 
@@ -6970,12 +6970,12 @@ from core.models import TenantModel
 
 class MetafieldDefinition(TenantModel):
     """Defines the structure and validation for metafields"""
-    
+
     # Core Identification
     name = models.CharField(max_length=100)
     namespace = models.CharField(max_length=50, help_text="Category for grouping fields")
     key = models.CharField(max_length=50, help_text="Unique identifier within namespace")
-    
+
     # Type and Validation
     TYPE_CHOICES = [
         ('text', 'Text'),
@@ -6990,18 +6990,18 @@ class MetafieldDefinition(TenantModel):
         ('file', 'File'),
     ]
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
-    
+
     # Configuration
     is_required = models.BooleanField(default=False)
     is_visible = models.BooleanField(default=True)
     is_filterable = models.BooleanField(default=False)
     is_sortable = models.BooleanField(default=False)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'metafields_definition'
         unique_together = [['store', 'namespace', 'key']]
         ordering = ['namespace', 'key']
-    
+
     def __str__(self):
         return f"{self.namespace}.{self.key}"
 
@@ -7015,37 +7015,37 @@ from core.models import TenantModel
 
 class Metafield(TenantModel):
     """Stores actual metafield values with generic relations"""
-    
+
     # Reference to the definition
     definition = models.ForeignKey(
         'metafields.MetafieldDefinition',
         on_delete=models.CASCADE,
         related_name='values'
     )
-    
+
     # Generic relation to any model
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-    
+
     # Value storage (type-specific)
     value_text = models.TextField(blank=True, null=True)
     value_number = models.FloatField(blank=True, null=True)
     value_boolean = models.BooleanField(blank=True, null=True)
     value_date = models.DateField(blank=True, null=True)
     value_json = models.JSONField(blank=True, null=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'metafields_metafield'
         unique_together = [['store', 'definition', 'content_type', 'object_id']]
         indexes = [
             models.Index(fields=['content_type', 'object_id']),
         ]
-    
+
     def __str__(self):
         return f"{self.definition} on {self.content_object}"
 ```
@@ -7146,7 +7146,7 @@ class MetafieldTests(TestCase):
             name="Test Product",
             sku="TEST-001"
         )
-        
+
         # Create a test metafield definition
         self.defn = MetafieldDefinition.objects.create(
             store=self.store,
@@ -7155,7 +7155,7 @@ class MetafieldTests(TestCase):
             key="stock_warning_level",
             type="number"
         )
-    
+
     def test_metafield_creation(self):
         """Test creating a metafield"""
         metafield = Metafield.objects.create(
@@ -7164,7 +7164,7 @@ class MetafieldTests(TestCase):
             content_object=self.product,
             value_number=10
         )
-        
+
         self.assertEqual(metafield.value_number, 10)
         self.assertEqual(metafield.content_object, self.product)
 ```
@@ -7187,13 +7187,13 @@ class MetafieldTests(TestCase):
         default=list,
         help_text="Which models this field applies to"
     )
-    
+
     # UI Configuration
     ui = models.JSONField(
         default=dict,
         help_text="UI configuration (placeholder, help text, etc.)"
     )
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'metafields_definition'
         unique_together = [['store', 'namespace', 'key']]
@@ -7202,21 +7202,21 @@ class MetafieldTests(TestCase):
             models.Index(fields=['is_visible']),
             models.Index(fields=['content_types'], name='content_types_idx')
         ]
-    
+
     def __str__(self):
         return f"{self.namespace}.{self.key}"
-    
+
     def clean(self):
         """Validate the definition"""
         from django.core.exceptions import ValidationError
-        
+
         # Validate namespace/key format
         if not self.namespace.islower():
             raise ValidationError("Namespace must be lowercase")
-            
+
         if not self.key.islower():
             raise ValidationError("Key must be lowercase")
-            
+
         # Validate options for select fields
         if self.type in ['select', 'multiselect'] and not self.options:
             raise ValidationError("Select fields must have options defined")
@@ -7232,14 +7232,14 @@ class Metafield(TenantModel):
     """
     Stores actual metafield values with generic relations
     """
-    
+
     # Link to definition
     definition = models.ForeignKey(
         'metafields.MetafieldDefinition',
         on_delete=models.CASCADE,
         related_name='values'
     )
-    
+
     # Generic relation to any model
     content_type = models.ForeignKey(
         'contenttypes.ContentType',
@@ -7247,14 +7247,14 @@ class Metafield(TenantModel):
     )
     object_id = models.PositiveIntegerField()
     content_object = models.GenericForeignKey('content_type', 'object_id')
-    
+
     # Value storage (type-specific)
     value_text = models.TextField(blank=True, null=True)
     value_number = models.FloatField(blank=True, null=True)
     value_boolean = models.BooleanField(blank=True, null=True)
     value_date = models.DateTimeField(blank=True, null=True)
     value_json = models.JSONField(blank=True, null=True)
-    
+
     # Media fields (for image/file types)
     value_media = models.ForeignKey(
         'media.MediaFile',
@@ -7262,11 +7262,11 @@ class Metafield(TenantModel):
         null=True,
         blank=True
     )
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'metafields_value'
         unique_together = [
@@ -7278,16 +7278,16 @@ class Metafield(TenantModel):
             models.Index(fields=['definition', 'value_number']),
             models.Index(fields=['definition', 'value_boolean']),
         ]
-    
+
     def __str__(self):
         return f"{self.definition} = {self.get_value()}"
-    
+
     def get_value(self):
         """Get the value in the correct type"""
         if self.definition.type in ['image', 'file']:
             return self.value_media
         return getattr(self, f'value_{self.definition.type}', None)
-    
+
     def set_value(self, value):
         """Set the value with type conversion"""
         if self.definition.type in ['image', 'file']:
@@ -7295,7 +7295,7 @@ class Metafield(TenantModel):
         else:
             field_name = f'value_{self.definition.type}'
             setattr(self, field_name, value)
-            
+
             # Clear other value fields
             for t in ['text', 'number', 'boolean', 'date', 'json']:
                 if t != self.definition.type:
@@ -7316,7 +7316,7 @@ from django.contrib.contenttypes.models import ContentType
 
 class MetafieldService:
     """Core service for metafield operations"""
-    
+
     @staticmethod
     def get_metafield_definition(store, namespace, key):
         """Get a metafield definition by namespace and key"""
@@ -7326,12 +7326,12 @@ class MetafieldService:
             namespace=namespace,
             key=key
         )
-    
+
     @staticmethod
     def get_metafield(instance, definition):
         """Get a metafield value for an instance"""
         from .models import Metafield
-        
+
         content_type = ContentType.objects.get_for_model(instance)
         return Metafield.objects.filter(
             definition=definition,
@@ -7339,12 +7339,12 @@ class MetafieldService:
             object_id=instance.id,
             store=instance.store
         ).first()
-    
+
     @staticmethod
     def set_metafield(instance, namespace, key, value):
         """Set a metafield value for an instance"""
         from .models import Metafield, MetafieldDefinition
-        
+
         # Get or create definition
         definition, created = MetafieldDefinition.objects.get_or_create(
             store=instance.store,
@@ -7356,7 +7356,7 @@ class MetafieldService:
                 'content_types': [ContentType.objects.get_for_model(instance).model]
             }
         )
-        
+
         # Get or create metafield
         content_type = ContentType.objects.get_for_model(instance)
         metafield, created = Metafield.objects.get_or_create(
@@ -7365,13 +7365,13 @@ class MetafieldService:
             object_id=instance.id,
             store=instance.store
         )
-        
+
         # Set and save value
         metafield.set_value(value)
         metafield.save()
-        
+
         return metafield
-    
+
     @staticmethod
     def _infer_type(value):
         """Infer metafield type from Python type"""
@@ -7382,24 +7382,24 @@ class MetafieldService:
         elif isinstance(value, dict):
             return 'json'
         return 'text'
-    
+
     @staticmethod
     def get_metafields_for_object(instance, namespace=None):
         """Get all metafields for an object, optionally filtered by namespace"""
         from .models import Metafield, MetafieldDefinition
-        
+
         content_type = ContentType.objects.get_for_model(instance)
         queryset = Metafield.objects.filter(
             store=instance.store,
             content_type=content_type,
             object_id=instance.id
         ).select_related('definition')
-        
+
         if namespace:
             queryset = queryset.filter(definition__namespace=namespace)
-        
+
         return queryset
-    
+
     @staticmethod
     def get_metafields_by_namespace(store, namespace):
         """Get all metafield definitions for a namespace"""
@@ -7408,22 +7408,22 @@ class MetafieldService:
             store=store,
             namespace=namespace
         )
-    
+
     @staticmethod
     @transaction.atomic
     def bulk_update_metafields(instance, metafield_data):
         """Update multiple metafields for an instance"""
         from .models import Metafield, MetafieldDefinition
-        
+
         content_type = ContentType.objects.get_for_model(instance)
         updated_metafields = []
-        
+
         for namespace_key, value in metafield_data.items():
             if '.' not in namespace_key:
                 continue
-                
+
             namespace, key = namespace_key.split('.', 1)
-            
+
             # Get or create definition
             definition, created = MetafieldDefinition.objects.get_or_create(
                 store=instance.store,
@@ -7435,7 +7435,7 @@ class MetafieldService:
                     'content_types': [content_type.model]
                 }
             )
-            
+
             # Get or create metafield
             metafield, created = Metafield.objects.get_or_create(
                 definition=definition,
@@ -7443,12 +7443,12 @@ class MetafieldService:
                 object_id=instance.id,
                 store=instance.store
             )
-            
+
             # Set value
             metafield.set_value(value)
             metafield.save()
             updated_metafields.append(metafield)
-        
+
         return updated_metafields
 ```
 
@@ -7470,21 +7470,21 @@ class MetafieldDefinitionViewSet(TenantViewSet):
     permission_classes = [IsAuthenticated, IsStoreOwner]
     serializer_class = MetafieldDefinitionSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     filterset_fields = ['namespace', 'type', 'is_required', 'is_visible']
     search_fields = ['name', 'namespace', 'key']
     ordering_fields = ['name', 'created_at']
-    
+
     def get_queryset(self):
         return MetafieldDefinition.objects.filter(store=self.request.store)
-    
+
     @extend_schema(
         summary="List Metafield Definitions",
         description="Get paginated list of metafield definitions"
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Create Metafield Definition",
         request=MetafieldDefinitionSerializer,
@@ -7503,10 +7503,10 @@ class MetafieldViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     serializer_class = MetafieldSerializer
-    
+
     def get_queryset(self):
         return Metafield.objects.filter(store=self.request.store)
-    
+
     @extend_schema(
         summary="Get Metafields for Object",
         description="Get all metafields for a specific object"
@@ -7516,22 +7516,22 @@ class MetafieldViewSet(TenantViewSet):
         """Get all metafields for a specific object"""
         content_type = request.query_params.get('content_type')
         object_id = request.query_params.get('object_id')
-        
+
         if not content_type or not object_id:
             return Response(
                 {"error": "content_type and object_id are required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
+
         metafields = Metafield.objects.filter(
             store=request.store,
             content_type__model=content_type,
             object_id=object_id
         )
-        
+
         serializer = self.get_serializer(metafields, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Bulk Update Metafields",
         request=BulkMetafieldSerializer,
@@ -7542,23 +7542,23 @@ class MetafieldViewSet(TenantViewSet):
         """Bulk update metafields for an object"""
         content_type = request.query_params.get('content_type')
         object_id = request.query_params.get('object_id')
-        
+
         if not content_type or not object_id:
             return Response(
                 {"error": "content_type and object_id are required"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Get the object
         content_type_obj = ContentType.objects.get(model=content_type)
         model_class = content_type_obj.model_class()
         instance = model_class.objects.get(id=object_id)
-        
+
         # Update metafields
         metafields = MetafieldService.bulk_update_metafields(
             instance, request.data
         )
-        
+
         serializer = self.get_serializer(metafields, many=True)
         return Response(serializer.data)
 ```
@@ -7575,17 +7575,17 @@ from core.models import TenantModel
 
 class UserProfile(TenantModel):
     """Example model with metafields support"""
-    
+
     user = models.OneToOneField('accounts.User', on_delete=models.CASCADE)
     bio = models.TextField(blank=True)
-    
+
     # Metafields property
     @property
     def metafields(self):
         """Access metafields as attributes"""
         from metafields.services import MetafieldService
         return MetafieldService.get_metafields_for_object(self)
-    
+
     def get_metafield(self, namespace, key):
         """Get a specific metafield"""
         from metafields.services import MetafieldService
@@ -7596,12 +7596,12 @@ class UserProfile(TenantModel):
             return MetafieldService.get_metafield(self, definition)
         except:
             return None
-    
+
     def set_metafield(self, namespace, key, value):
         """Set a metafield value"""
         from metafields.services import MetafieldService
         return MetafieldService.set_metafield(self, namespace, key, value)
-    
+
     def get_all_metafields(self):
         """Get all metafields as a dictionary"""
         metafields = {}
@@ -7649,10 +7649,10 @@ async function updateMetafields(objectType, objectId, metafields) {
                 body: JSON.stringify(metafields)
             }
         );
-        
+
         const result = await response.json();
         return result;
-        
+
     } catch (error) {
         console.error('Error updating metafields:', error);
     }
@@ -7790,12 +7790,12 @@ CREATE INDEX idx_metafields_value_boolean ON metafields_value(value_boolean);
 - [x] Security considerations
 
 <!-- ===============================================================================
- END METAFIELDS.MD 
+ END METAFIELDS.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START NOTIFICATIONS.MD 
+ START NOTIFICATIONS.MD
  ================================================================================= -->
 # Notifications App Rules v1.0
 
@@ -7899,7 +7899,7 @@ class Notification(TenantModel):
     """
     Store-scoped notification for multi-channel delivery
     """
-    
+
     # Core fields
     notification_type = models.CharField(
         max_length=50,
@@ -7908,7 +7908,7 @@ class Notification(TenantModel):
     )
     title = models.CharField(max_length=255)
     message = models.TextField()
-    
+
     # Relationships
     user = models.ForeignKey(
         User,
@@ -7917,7 +7917,7 @@ class Notification(TenantModel):
         null=True,
         blank=True
     )
-    
+
     # Targeting
     target_type = models.CharField(
         max_length=50,
@@ -7930,31 +7930,31 @@ class Notification(TenantModel):
         default='user'
     )
     target_id = models.CharField(max_length=100, blank=True)
-    
+
     # Channels
     channels = models.JSONField(
         default=list,
         help_text="List of channels to send notification through"
     )
-    
+
     # Status
     status = models.CharField(
         max_length=20,
         choices=NotificationStatus.choices,
         default='pending'
     )
-    
+
     # Delivery tracking
     delivery_attempts = models.PositiveSmallIntegerField(default=0)
     last_attempt_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     read_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Metadata
     metadata = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'notifications_notification'
         indexes = [
@@ -7964,21 +7964,21 @@ class Notification(TenantModel):
             models.Index(fields=['status', 'created_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.title} - {self.user.email if self.user else 'No user'}"
-    
+
     def mark_as_read(self):
         """Mark notification as read"""
         if self.status != 'read':
             self.status = 'read'
             self.read_at = timezone.now()
             self.save(update_fields=['status', 'read_at'])
-    
+
     def is_delivered(self):
         """Check if notification is delivered"""
         return self.status in ['delivered', 'read']
-    
+
     def should_send_via_channel(self, channel):
         """Check if notification should be sent via specific channel"""
         return channel in self.channels
@@ -7990,14 +7990,14 @@ class NotificationPreference(TenantModel):
     """
     User notification preferences per channel and type
     """
-    
+
     # Relationships
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='notification_preferences'
     )
-    
+
     # Preferences
     notification_type = models.CharField(
         max_length=50,
@@ -8007,7 +8007,7 @@ class NotificationPreference(TenantModel):
         default=dict,
         help_text="Channel preferences: {email: true, in_app: true, push: false, sms: false}"
     )
-    
+
     # Digest settings
     digest_enabled = models.BooleanField(default=False)
     digest_frequency = models.CharField(
@@ -8020,19 +8020,19 @@ class NotificationPreference(TenantModel):
         ],
         default='immediate'
     )
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'notifications_preference'
         unique_together = [['store', 'user', 'notification_type']]
         ordering = ['user', 'notification_type']
-    
+
     def __str__(self):
         return f"{self.user.email} - {self.notification_type}"
-    
+
     def is_channel_enabled(self, channel):
         """Check if channel is enabled for this notification type"""
         return self.channel_preferences.get(channel, True)
@@ -8044,54 +8044,54 @@ class NotificationTemplate(TenantModel):
     """
     Reusable notification templates
     """
-    
+
     # Core fields
     name = models.CharField(max_length=255)
     notification_type = models.CharField(
         max_length=50,
         choices=NotificationType.choices
     )
-    
+
     # Template content
     title_template = models.CharField(max_length=255)
     message_template = models.TextField()
-    
+
     # Channel-specific templates
     email_subject_template = models.CharField(max_length=255, blank=True)
     email_body_template = models.TextField(blank=True)
     push_title_template = models.CharField(max_length=255, blank=True)
     push_body_template = models.TextField(blank=True)
     sms_template = models.TextField(blank=True)
-    
+
     # Variables documentation
     variables = models.JSONField(
         default=dict,
         help_text="Available variables and their descriptions"
     )
-    
+
     # Status
     is_active = models.BooleanField(default=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'notifications_template'
         unique_together = [['store', 'notification_type', 'name']]
         ordering = ['notification_type', 'name']
-    
+
     def __str__(self):
         return f"{self.name} - {self.notification_type}"
-    
+
     def render(self, context):
         """Render template with context variables"""
         from django.template import Template, Context
-        
+
         def render_template(template_string):
             template = Template(template_string)
             return template.render(Context(context))
-        
+
         return {
             'title': render_template(self.title_template),
             'message': render_template(self.message_template),
@@ -8126,14 +8126,14 @@ class NotificationViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     filterset_fields = ['status', 'notification_type', 'user']
     search_fields = ['title', 'message']
     ordering_fields = ['created_at', 'title']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Mark as Read",
         description="Mark notification as read",
@@ -8144,10 +8144,10 @@ class NotificationViewSet(TenantViewSet):
         """Mark notification as read"""
         notification = self.get_object()
         notification.mark_as_read()
-        
+
         serializer = self.get_serializer(notification)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Resend Notification",
         description="Resend failed notification",
@@ -8157,10 +8157,10 @@ class NotificationViewSet(TenantViewSet):
     def resend(self, request, pk=None):
         """Resend notification"""
         notification = self.get_object()
-        
+
         from services.notification import NotificationService
         NotificationService.send_notification(notification)
-        
+
         serializer = self.get_serializer(notification)
         return Response(serializer.data, status=status.HTTP_200_OK)
 ```
@@ -8173,7 +8173,7 @@ class NotificationPreferenceViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    
+
     queryset = NotificationPreference.objects.all()
     serializer_class = NotificationPreferenceSerializer
     filterset_fields = ['notification_type']
@@ -8199,7 +8199,7 @@ logger = logging.getLogger(__name__)
 
 class NotificationService:
     """Shared notification management service"""
-    
+
     @staticmethod
     @transaction.atomic
     def create_notification(
@@ -8216,7 +8216,7 @@ class NotificationService:
         """
         if channels is None:
             channels = ['in_app']
-        
+
         notification = Notification.objects.create(
             store=store,
             notification_type=notification_type,
@@ -8226,13 +8226,13 @@ class NotificationService:
             channels=channels,
             metadata=metadata or {}
         )
-        
+
         # Trigger async sending
         from .tasks import send_notification
         send_notification.delay(notification.id)
-        
+
         return notification
-    
+
     @staticmethod
     def send_notification(notification):
         """
@@ -8245,7 +8245,7 @@ class NotificationService:
                 user=notification.user,
                 notification_type=notification.notification_type
             ).first()
-            
+
             if preferences:
                 # Filter channels based on preferences
                 enabled_channels = [
@@ -8254,22 +8254,22 @@ class NotificationService:
                 ]
                 notification.channels = enabled_channels
                 notification.save(update_fields=['channels'])
-        
+
         # Send via each channel
         for channel in notification.channels:
             try:
                 NotificationService._send_via_channel(notification, channel)
             except Exception as e:
                 logger.error(f"Failed to send notification via {channel}: {e}")
-        
+
         # Update status
         notification.status = 'sent'
         notification.delivery_attempts += 1
         notification.last_attempt_at = timezone.now()
         notification.save(update_fields=['status', 'delivery_attempts', 'last_attempt_at'])
-        
+
         return notification
-    
+
     @staticmethod
     def _send_via_channel(notification, channel):
         """Send notification via specific channel"""
@@ -8285,17 +8285,17 @@ class NotificationService:
         elif channel == 'sms':
             from .channels.sms import SMSChannel
             SMSChannel.send(notification)
-    
+
     @staticmethod
     def get_user_notifications(user, status=None, limit=50):
         """Get notifications for a user"""
         queryset = Notification.objects.filter(user=user)
-        
+
         if status:
             queryset = queryset.filter(status=status)
-        
+
         return queryset.order_by('-created_at')[:limit]
-    
+
     @staticmethod
     def get_unread_count(user):
         """Get unread notification count for user"""
@@ -8303,7 +8303,7 @@ class NotificationService:
             user=user,
             status='pending'
         ).count()
-    
+
     @staticmethod
     def mark_all_as_read(user):
         """Mark all user notifications as read"""
@@ -8311,7 +8311,7 @@ class NotificationService:
             user=user,
             status='pending'
         ).update(status='read', read_at=timezone.now())
-        
+
         return count
 ```
 
@@ -8326,13 +8326,13 @@ from abc import ABC, abstractmethod
 
 class BaseChannel(ABC):
     """Base channel class"""
-    
+
     @staticmethod
     @abstractmethod
     def send(notification):
         """Send notification via this channel"""
         pass
-    
+
     @staticmethod
     @abstractmethod
     def validate_config(notification):
@@ -8348,20 +8348,20 @@ from services.smtp import SMTPService
 
 class EmailChannel(BaseChannel):
     """Email notification channel"""
-    
+
     @staticmethod
     def send(notification):
         """Send notification via email"""
         if not notification.user or not notification.user.email:
             logger.warning(f"No email for notification #{notification.id}")
             return
-        
+
         # Get or create email template
         template = NotificationTemplate.objects.filter(
             store=notification.store,
             notification_type=notification.notification_type
         ).first()
-        
+
         if template:
             rendered = template.render(notification.metadata)
             subject = rendered.get('email_subject', notification.title)
@@ -8369,7 +8369,7 @@ class EmailChannel(BaseChannel):
         else:
             subject = notification.title
             body = notification.message
-        
+
         # Send via SMTP service
         SMTPService.send_template_email(
             template_name='notification',
@@ -8379,9 +8379,9 @@ class EmailChannel(BaseChannel):
             text_content=notification.message,
             store=notification.store
         )
-        
+
         logger.info(f"Email notification sent to {notification.user.email}")
-    
+
     @staticmethod
     def validate_config(notification):
         """Validate email configuration"""
@@ -8395,7 +8395,7 @@ from .base import BaseChannel
 
 class InAppChannel(BaseChannel):
     """In-app notification channel"""
-    
+
     @staticmethod
     def send(notification):
         """Store notification for in-app display"""
@@ -8404,9 +8404,9 @@ class InAppChannel(BaseChannel):
         notification.status = 'delivered'
         notification.delivered_at = timezone.now()
         notification.save(update_fields=['status', 'delivered_at'])
-        
+
         logger.info(f"In-app notification #{notification.id} delivered")
-    
+
     @staticmethod
     def validate_config(notification):
         """Validate in-app configuration"""
@@ -8420,7 +8420,7 @@ from .base import BaseChannel
 
 class PushChannel(BaseChannel):
     """Push notification channel"""
-    
+
     @staticmethod
     def send(notification):
         """Send notification via push"""
@@ -8430,17 +8430,17 @@ class PushChannel(BaseChannel):
             user=notification.user,
             is_active=True
         )
-        
+
         if not tokens.exists():
             logger.warning(f"No push tokens for user {notification.user.email}")
             return
-        
+
         # Get template
         template = NotificationTemplate.objects.filter(
             store=notification.store,
             notification_type=notification.notification_type
         ).first()
-        
+
         if template:
             rendered = template.render(notification.metadata)
             title = rendered.get('push_title', notification.title)
@@ -8448,13 +8448,13 @@ class PushChannel(BaseChannel):
         else:
             title = notification.title
             body = notification.message
-        
+
         # Send via FCM/APNs (implementation depends on provider)
         # This is a placeholder for actual push service integration
         for token in tokens:
             # Send push notification
             logger.info(f"Push notification sent to {token.token}")
-    
+
     @staticmethod
     def validate_config(notification):
         """Validate push configuration"""
@@ -8472,30 +8472,30 @@ from .base import BaseChannel
 
 class SMSChannel(BaseChannel):
     """SMS notification channel"""
-    
+
     @staticmethod
     def send(notification):
         """Send notification via SMS"""
         if not notification.user or not notification.user.phone:
             logger.warning(f"No phone number for notification #{notification.id}")
             return
-        
+
         # Get template
         template = NotificationTemplate.objects.filter(
             store=notification.store,
             notification_type=notification.notification_type
         ).first()
-        
+
         if template:
             rendered = template.render(notification.metadata)
             message = rendered.get('sms', notification.message)
         else:
             message = notification.message
-        
+
         # Send via SMS service (implementation depends on provider)
         # This is a placeholder for actual SMS service integration
         logger.info(f"SMS notification sent to {notification.user.phone}")
-    
+
     @staticmethod
     def validate_config(notification):
         """Validate SMS configuration"""
@@ -8521,20 +8521,20 @@ def send_notification(self, notification_id):
     """
     from .models import Notification
     from .services import NotificationService
-    
+
     try:
         notification = Notification.objects.get(id=notification_id)
         result = NotificationService.send_notification(notification)
-        
+
         return {
             'notification_id': notification_id,
             'status': result.status
         }
-        
+
     except Notification.DoesNotExist:
         logger.error(f"Notification #{notification_id} not found")
         raise
-        
+
     except Exception as exc:
         logger.error(f"Notification sending failed: {exc}")
         raise self.retry(exc=exc, countdown=60)
@@ -8546,13 +8546,13 @@ def cleanup_old_notifications(days=90):
     """
     from django.utils import timezone
     from .models import Notification
-    
+
     cutoff = timezone.now() - timezone.timedelta(days=days)
     deleted_count = Notification.objects.filter(
         created_at__lt=cutoff,
         status='read'
     ).delete()[0]
-    
+
     logger.info(f"Cleaned up {deleted_count} old notifications")
     return deleted_count
 
@@ -8563,12 +8563,12 @@ def send_digest_notifications():
     """
     from .models import Notification, NotificationPreference
     from django.utils import timezone
-    
+
     # Get users with digest enabled
     preferences = NotificationPreference.objects.filter(
         digest_enabled=True
     ).select_related('user')
-    
+
     for preference in preferences:
         # Get pending notifications
         cutoff = timezone.now() - timezone.timedelta(hours=24)
@@ -8578,7 +8578,7 @@ def send_digest_notifications():
             status='pending',
             created_at__gte=cutoff
         )
-        
+
         if notifications.exists():
             # Create digest notification
             NotificationService.create_notification(
@@ -8590,10 +8590,10 @@ def send_digest_notifications():
                 channels=['email'],
                 metadata={'notification_count': notifications.count()}
             )
-            
+
             # Mark as delivered
             notifications.update(status='delivered', delivered_at=timezone.now())
-    
+
     logger.info("Digest notifications sent")
 ```
 
@@ -8652,7 +8652,7 @@ class NotificationServiceTest(TestCase):
             email='test@example.com',
             password='password'
         )
-    
+
     def test_create_notification(self):
         """Test notification creation"""
         notification = NotificationService.create_notification(
@@ -8662,11 +8662,11 @@ class NotificationServiceTest(TestCase):
             message='Your order has been created',
             user=self.user
         )
-        
+
         self.assertEqual(notification.notification_type, 'order.created')
         self.assertEqual(notification.user, self.user)
         self.assertEqual(notification.status, 'pending')
-    
+
     def test_mark_as_read(self):
         """Test marking notification as read"""
         notification = Notification.objects.create(
@@ -8676,9 +8676,9 @@ class NotificationServiceTest(TestCase):
             message='Your order has been created',
             user=self.user
         )
-        
+
         notification.mark_as_read()
-        
+
         self.assertEqual(notification.status, 'read')
         self.assertIsNotNone(notification.read_at)
 ```
@@ -8872,12 +8872,12 @@ python manage.py send_digest
 - **v1.0** - Initial version with multi-channel notification support
 
 <!-- ===============================================================================
- END NOTIFICATIONS.MD 
+ END NOTIFICATIONS.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START POSTS.MD 
+ START POSTS.MD
  ================================================================================= -->
 # Posts Module Rules v1.1
 
@@ -8928,7 +8928,7 @@ apps/backend/modules/posts/
 class PostType(models.Model):
     """Define content types (blog, page, or custom)"""
     BUILTIN_TYPES = ['post', 'page']
-    
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True)
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, null=True, blank=True)
@@ -8948,7 +8948,7 @@ class Post(models.Model):
         ('private', 'Private'),
         ('trash', 'Trash'),
     ]
-    
+
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, db_index=True)
     content = models.TextField()
@@ -8967,7 +8967,7 @@ class Taxonomy(models.Model):
         ('tag', 'Tag'),
         ('custom', 'Custom'),
     ]
-    
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100)
     taxonomy_type = models.CharField(max_length=20, choices=TAXONOMY_TYPES)
@@ -9017,7 +9017,7 @@ class PostService:
     def create_post(store, user, post_type, **data):
         """Create a new post with validation and logging"""
         from .models import Post
-        
+
         # Create post logic
         post = Post.objects.create(
             store=store,
@@ -9025,7 +9025,7 @@ class PostService:
             author=user,
             **data
         )
-        
+
         # Log the creation
         log_event_async.delay(
             event_type='POST_CREATED',
@@ -9039,12 +9039,12 @@ class PostService:
             }
         )
         return post
-        
+
     @staticmethod
     def update_post(post, user, **data):
         """Update existing post with revision tracking and logging"""
         from .models import PostRevision
-        
+
         # Create revision before update
         revision = PostRevision.objects.create(
             post=post,
@@ -9055,12 +9055,12 @@ class PostService:
             custom_fields=post.custom_fields,
             revision_number=post.revisions.count() + 1
         )
-        
+
         # Update post
         for field, value in data.items():
             setattr(post, field, value)
         post.save()
-        
+
         # Log the update
         log_event_async.delay(
             event_type='POST_UPDATED',
@@ -9090,13 +9090,13 @@ class StoreScopedViewSet(viewsets.ModelViewSet):
     Base ViewSet that automatically filters by store.
     All ViewSets must inherit from this and filter by request.store
     """
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         if hasattr(self.request, 'store'):
             return queryset.filter(store=self.request.store)
         return queryset.none()
-    
+
     def perform_create(self, serializer):
         if hasattr(self.request, 'store'):
             serializer.save(store=self.request.store)
@@ -9165,26 +9165,26 @@ class TestPostViews:
         post1 = post_factory(store=store, title="Store 1 Post")
         other_store = Store.objects.create(name="Other Store")
         post2 = post_factory(store=other_store, title="Store 2 Post")
-        
+
         # Authenticate and make request
         client.force_authenticate(user=user)
         url = reverse('v2:post-list')
         response = client.get(url, HTTP_X_STORE_ID=str(store.id))
-        
+
         # Verify response
         assert response.status_code == 200
         results = response.data['results']
         assert len(results) == 1
         assert results[0]['title'] == "Store 1 Post"
-    
+
     def test_permission_denied(self, client, other_store, user, post_factory):
         """Test access control for other store's posts"""
         post = post_factory(store=other_store)
-        
+
         client.force_authenticate(user=user)
         url = reverse('v2:post-detail', args=[post.id])
         response = client.get(url, HTTP_X_STORE_ID=str(user.stores.first().id))
-        
+
         assert response.status_code == 404  # Not 403 to avoid leaking existence
 ```
 
@@ -9223,7 +9223,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Starting post migration...")
-        
+
         # Create default post types for each store
         for store in Store.objects.all():
             # Create or get blog post type
@@ -9236,17 +9236,17 @@ class Command(BaseCommand):
                     'supports_comments': True
                 }
             )
-            
+
             if created:
                 self.stdout.write(f"Created post type 'blog' for {store.name}")
-        
+
         # Migrate legacy posts
         from ...v1.blogs.models import BlogPost
         migrated = 0
-        
+
         for legacy_post in BlogPost.objects.all():
             post_type = PostType.objects.get(store=legacy_post.store, slug='blog')
-            
+
             Post.objects.update_or_create(
                 legacy_id=legacy_post.id,
                 store=legacy_post.store,
@@ -9261,7 +9261,7 @@ class Command(BaseCommand):
                 }
             )
             migrated += 1
-            
+
         self.stdout.write(
             self.style.SUCCESS(f'Successfully migrated {migrated} posts')
         )
@@ -9360,12 +9360,12 @@ Enforced At: models.py, services.py, views
 ## Review this final polished posts rules file carefully before applying.
 
 <!-- ===============================================================================
- END POSTS.MD 
+ END POSTS.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START QUEUE.MD 
+ START QUEUE.MD
  ================================================================================= -->
 # Queue App Rules v1.0
 
@@ -9434,7 +9434,7 @@ logger = logging.getLogger(__name__)
 
 class QueueService:
     """Shared queue management service"""
-    
+
     @staticmethod
     def enqueue_task(task_name, args=None, kwargs=None, countdown=0, eta=None):
         """
@@ -9447,17 +9447,17 @@ class QueueService:
             countdown=countdown,
             eta=eta
         )
-        
+
         logger.info(f"Enqueued task: {task_name} (ID: {task.id})")
         return task
-    
+
     @staticmethod
     def get_task_status(task_id):
         """
         Get task status
         """
         result = AsyncResult(task_id)
-        
+
         status_map = {
             'PENDING': 'pending',
             'STARTED': 'started',
@@ -9466,14 +9466,14 @@ class QueueService:
             'RETRY': 'retrying',
             'REVOKED': 'revoked'
         }
-        
+
         return {
             'task_id': task_id,
             'status': status_map.get(result.status, result.status),
             'result': result.result if result.ready() else None,
             'traceback': result.traceback if result.failed() else None
         }
-    
+
     @staticmethod
     def revoke_task(task_id, terminate=False):
         """
@@ -9482,7 +9482,7 @@ class QueueService:
         current_app.control.revoke(task_id, terminate=terminate)
         logger.info(f"Revoked task: {task_id}")
         return True
-    
+
     @staticmethod
     def retry_task(task_id, countdown=60):
         """
@@ -9490,16 +9490,16 @@ class QueueService:
         """
         current_app.control.revoke(task_id, terminate=False)
         result = AsyncResult(task_id)
-        
+
         if result.failed():
             # Re-enqueue the task
             task_name = result.args[0] if result.args else None
             if task_name:
                 QueueService.enqueue_task(task_name, args=result.args, kwargs=result.kwargs, countdown=countdown)
-        
+
         logger.info(f"Retrying task: {task_id}")
         return True
-    
+
     @staticmethod
     def get_active_tasks():
         """
@@ -9507,7 +9507,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         active = inspect.active()
-        
+
         tasks = []
         for worker, task_list in (active or {}).items():
             for task in task_list:
@@ -9518,9 +9518,9 @@ class QueueService:
                     'kwargs': task['kwargs'],
                     'worker': worker
                 })
-        
+
         return tasks
-    
+
     @staticmethod
     def get_scheduled_tasks():
         """
@@ -9528,7 +9528,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         scheduled = inspect.scheduled()
-        
+
         tasks = []
         for worker, task_list in (scheduled or {}).items():
             for task in task_list:
@@ -9538,9 +9538,9 @@ class QueueService:
                     'eta': task['request']['eta'],
                     'worker': worker
                 })
-        
+
         return tasks
-    
+
     @staticmethod
     def get_worker_stats():
         """
@@ -9548,7 +9548,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         stats = inspect.stats()
-        
+
         worker_stats = []
         for worker, stat in (stats or {}).items():
             worker_stats.append({
@@ -9556,7 +9556,7 @@ class QueueService:
                 'total_tasks': stat.get('total', {}),
                 'pool': stat.get('pool', {})
             })
-        
+
         return worker_stats
 ```
 
@@ -9580,13 +9580,13 @@ def example_task(self, *args, **kwargs):
     try:
         # Task logic here
         result = perform_operation(*args, **kwargs)
-        
+
         logger.info(f"Task completed successfully: {self.request.id}")
         return result
-        
+
     except Exception as exc:
         logger.error(f"Task failed: {exc}")
-        
+
         # Retry with exponential backoff
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 ```
@@ -9614,7 +9614,7 @@ def example_task(self, *args, **kwargs):
 
 class TaskMonitoringService:
     """Task monitoring service"""
-    
+
     @staticmethod
     def get_task_stats(hours=24):
         """
@@ -9623,11 +9623,11 @@ class TaskMonitoringService:
         from django.utils import timezone
         from datetime import timedelta
         from .models import TaskLog
-        
+
         since = timezone.now() - timedelta(hours=hours)
-        
+
         logs = TaskLog.objects.filter(created_at__gte=since)
-        
+
         stats = {
             'total': logs.count(),
             'success': logs.filter(status='success').count(),
@@ -9638,20 +9638,20 @@ class TaskMonitoringService:
                 avg=models.Avg('duration_ms')
             )['avg__duration'] or 0
         }
-        
+
         return stats
-    
+
     @staticmethod
     def get_slow_tasks(threshold_ms=5000):
         """
         Get slow tasks
         """
         from .models import TaskLog
-        
+
         return TaskLog.objects.filter(
             duration_ms__gt=threshold_ms
         ).order_by('-duration_ms')
-    
+
     @staticmethod
     def get_failing_tasks(limit=50):
         """
@@ -9659,20 +9659,20 @@ class TaskMonitoringService:
         """
         from .models import TaskLog
         from django.db.models import Count
-        
+
         return TaskLog.objects.filter(
             status='failed'
         ).values('task_name').annotate(
             count=Count('id')
         ).order_by('-count')[:limit]
-    
+
     @staticmethod
     def log_task(task_id, task_name, status, result=None, duration_ms=None, error=None):
         """
         Log task execution
         """
         from .models import TaskLog
-        
+
         TaskLog.objects.create(
             task_id=task_id,
             task_name=task_name,
@@ -9742,31 +9742,31 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.email.tasks.process_email_queue',
         'schedule': crontab(minute='*/5'),  # Every 5 minutes
     },
-    
+
     # Webhook deliveries
     'deliver-webhooks': {
         'task': 'apps.webhooks.tasks.deliver_webhook',
         'schedule': crontab(minute='*/1'),  # Every minute
     },
-    
+
     # Cache cleanup
     'cleanup-cache': {
         'task': 'apps.cache.tasks.clear_cache',
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
     },
-    
+
     # Search index rebuild
     'rebuild-search-index': {
         'task': 'apps.search.tasks.rebuild_index',
         'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
     },
-    
+
     # Notification cleanup
     'cleanup-notifications': {
         'task': 'apps.notifications.tasks.cleanup_old_notifications',
         'schedule': crontab(hour=4, minute=0),  # Daily at 4 AM
     },
-    
+
     # Log cleanup
     'cleanup-logs': {
         'task': 'apps.logs.tasks.cleanup_old_logs',
@@ -9827,22 +9827,22 @@ class QueueServiceTest(TestCase):
     def test_enqueue_task(self):
         """Test task enqueueing"""
         task = QueueService.enqueue_task('test_task', args=['arg1'], kwargs={'key': 'value'})
-        
+
         self.assertIsNotNone(task.id)
-    
+
     def test_get_task_status(self):
         """Test getting task status"""
         task = QueueService.enqueue_task('test_task', args=['arg1'])
         status = QueueService.get_task_status(task.id)
-        
+
         self.assertIn('status', status)
         self.assertIn('task_id', status)
-    
+
     def test_revoke_task(self):
         """Test task revocation"""
         task = QueueService.enqueue_task('test_task', args=['arg1'], countdown=60)
         result = QueueService.revoke_task(task.id)
-        
+
         self.assertTrue(result)
 ```
 
@@ -9865,11 +9865,11 @@ def deliver_webhook(self, delivery_id):
     """
     from .models import WebhookDelivery
     from .services import WebhookService
-    
+
     try:
         delivery = WebhookDelivery.objects.select_related('webhook').get(id=delivery_id)
         result = WebhookService.deliver_webhook_sync(delivery)
-        
+
         # Log task completion
         from apps.queue.services import TaskMonitoringService
         TaskMonitoringService.log_task(
@@ -9878,15 +9878,15 @@ def deliver_webhook(self, delivery_id):
             status='success',
             result={'delivery_id': delivery_id}
         )
-        
+
         return {
             'delivery_id': delivery_id,
             'status': result.status
         }
-        
+
     except Exception as exc:
         logger.error(f"Webhook delivery failed: {exc}")
-        
+
         # Log task failure
         from apps.queue.services import TaskMonitoringService
         TaskMonitoringService.log_task(
@@ -9895,7 +9895,7 @@ def deliver_webhook(self, delivery_id):
             status='failed',
             error=str(exc)
         )
-        
+
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 ```
 
@@ -9914,11 +9914,11 @@ def send_notification(self, notification_id):
     """
     from .models import Notification
     from .services import NotificationService
-    
+
     try:
         notification = Notification.objects.get(id=notification_id)
         result = NotificationService.send_notification(notification)
-        
+
         # Log task completion
         from apps.queue.services import TaskMonitoringService
         TaskMonitoringService.log_task(
@@ -9927,15 +9927,15 @@ def send_notification(self, notification_id):
             status='success',
             result={'notification_id': notification_id}
         )
-        
+
         return {
             'notification_id': notification_id,
             'status': result.status
         }
-        
+
     except Exception as exc:
         logger.error(f"Notification sending failed: {exc}")
-        
+
         # Log task failure
         from apps.queue.services import TaskMonitoringService
         TaskMonitoringService.log_task(
@@ -9944,7 +9944,7 @@ def send_notification(self, notification_id):
             status='failed',
             error=str(exc)
         )
-        
+
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 ```
 
@@ -9962,11 +9962,11 @@ class TaskLog(TenantModel):
     """
     Task execution log for monitoring
     """
-    
+
     # Core fields
     task_id = models.CharField(max_length=255, db_index=True)
     task_name = models.CharField(max_length=255, db_index=True)
-    
+
     # Status
     status = models.CharField(
         max_length=20,
@@ -9980,17 +9980,17 @@ class TaskLog(TenantModel):
         ],
         db_index=True
     )
-    
+
     # Results
     result = models.JSONField(default=dict, blank=True)
     error_message = models.TextField(blank=True)
-    
+
     # Timing
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'queue_task_log'
         indexes = [
@@ -9998,7 +9998,7 @@ class TaskLog(TenantModel):
             models.Index(fields=['task_name', 'created_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.task_name} - {self.status}"
 ```
@@ -10096,12 +10096,12 @@ Enforced At: services.py, tasks.py, management commands
 - **v1.0** - Initial version with Celery integration
 
 <!-- ===============================================================================
- END QUEUE.MD 
+ END QUEUE.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START SEARCH.MD 
+ START SEARCH.MD
  ================================================================================= -->
 # Search App Rules v1.0
 
@@ -10174,45 +10174,45 @@ class SearchIndex(TenantModel):
     """
     Store-scoped search index configuration
     """
-    
+
     # Core fields
     name = models.CharField(max_length=255)
     index_name = models.CharField(max_length=255, unique=True, db_index=True)
-    
+
     # Index configuration
     content_types = models.JSONField(
         default=list,
         help_text="List of content types to index: ['Page', 'Post', 'Product']"
     )
-    
+
     # Search configuration
     fields = models.JSONField(
         default=dict,
         help_text="Field mappings and search configuration"
     )
-    
+
     # Facet configuration
     facets = models.JSONField(
         default=list,
         help_text="Facet configuration for filtering"
     )
-    
+
     # Status
     is_active = models.BooleanField(default=True)
     last_reindexed_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'search_index'
         unique_together = [['store', 'name']]
         ordering = ['name']
-    
+
     def __str__(self):
         return f"{self.name} - {self.index_name}"
-    
+
     def get_index_name(self):
         """Get full index name with store prefix"""
         return f"{self.store.slug}_{self.index_name}"
@@ -10224,10 +10224,10 @@ class SearchQuery(TenantModel):
     """
     Track search queries for analytics
     """
-    
+
     # Core fields
     query = models.CharField(max_length=255, db_index=True)
-    
+
     # Search context
     search_type = models.CharField(
         max_length=50,
@@ -10237,10 +10237,10 @@ class SearchQuery(TenantModel):
             ('all', 'All')
         ]
     )
-    
+
     # Results
     results_count = models.PositiveIntegerField(default=0)
-    
+
     # User tracking
     user = models.ForeignKey(
         User,
@@ -10249,16 +10249,16 @@ class SearchQuery(TenantModel):
         blank=True
     )
     session_id = models.CharField(max_length=100, blank=True)
-    
+
     # Filters applied
     filters = models.JSONField(default=dict)
-    
+
     # Timing
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'search_query'
         indexes = [
@@ -10267,7 +10267,7 @@ class SearchQuery(TenantModel):
             models.Index(fields=['search_type']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.query} - {self.results_count} results"
 ```
@@ -10295,11 +10295,11 @@ class SearchViewSet(TenantViewSet):
     Search endpoints for public, customer, and dashboard
     """
     permission_classes = [AllowAny]
-    
+
     def get_queryset(self):
         """Override to return empty queryset (search uses Elasticsearch)"""
         return SearchIndex.objects.none()
-    
+
     @extend_schema(
         summary="Search",
         description="Full-text search with faceting",
@@ -10312,13 +10312,13 @@ class SearchViewSet(TenantViewSet):
         search_type = request.query_params.get('type', 'all')
         page = int(request.query_params.get('page', 1))
         page_size = int(request.query_params.get('page_size', 20))
-        
+
         # Get filters
         filters = {
             k: v for k, v in request.query_params.items()
             if k not in ['q', 'type', 'page', 'page_size']
         }
-        
+
         # Perform search
         from services.search import SearchService
         results = SearchService.search(
@@ -10329,7 +10329,7 @@ class SearchViewSet(TenantViewSet):
             page=page,
             page_size=page_size
         )
-        
+
         # Track search query
         SearchService.track_search(
             store=request.store,
@@ -10340,10 +10340,10 @@ class SearchViewSet(TenantViewSet):
             user=request.user if request.user.is_authenticated else None,
             duration_ms=results.get('duration_ms')
         )
-        
+
         serializer = SearchResultsSerializer(results)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Get Facets",
         description="Get available facets for filtering",
@@ -10353,16 +10353,16 @@ class SearchViewSet(TenantViewSet):
     def facets(self, request):
         """Get available facets"""
         search_type = request.query_params.get('type', 'all')
-        
+
         from services.search import SearchService
         facets = SearchService.get_facets(
             store=request.store,
             search_type=search_type
         )
-        
+
         serializer = FacetsSerializer(facets)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Get Suggestions",
         description="Get search suggestions",
@@ -10372,13 +10372,13 @@ class SearchViewSet(TenantViewSet):
     def suggestions(self, request):
         """Get search suggestions"""
         query = request.query_params.get('q', '')
-        
+
         from services.search import SearchService
         suggestions = SearchService.get_suggestions(
             store=request.store,
             query=query
         )
-        
+
         serializer = SuggestionsSerializer(suggestions)
         return Response(serializer.data, status=status.HTTP_200_OK)
 ```
@@ -10401,22 +10401,22 @@ logger = logging.getLogger(__name__)
 
 class SearchService:
     """Shared search management service"""
-    
+
     @staticmethod
     def search(store, query, search_type='all', filters=None, page=1, page_size=20):
         """
         Perform search query with faceting
         """
         from elasticsearch_dsl import Search, A
-        
+
         start_time = time.time()
-        
+
         # Get search index
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return {
                 'total': 0,
@@ -10425,37 +10425,37 @@ class SearchService:
                 'page': page,
                 'page_size': page_size
             }
-        
+
         # Build Elasticsearch query
         s = Search(index=index.get_index_name())
-        
+
         # Add query
         if query:
             s = s.query('multi_match', query=query, fields=['title^2', 'content', 'description'])
-        
+
         # Add filters
         if filters:
             for key, value in filters.items():
                 if value:
                     s = s.filter('term', **{key: value})
-        
+
         # Add store filter
         s = s.filter('term', store_id=str(store.id))
-        
+
         # Add aggregations for facets
         for facet in index.facets:
             s.aggs.bucket(facet['field'], 'terms', field=facet['field'], size=10)
-        
+
         # Pagination
         start = (page - 1) * page_size
         s = s[start:start + page_size]
-        
+
         # Execute search
         response = s.execute()
-        
+
         # Calculate duration
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         # Build results
         results = []
         for hit in response.hits:
@@ -10467,7 +10467,7 @@ class SearchService:
                 'url': hit.get('url'),
                 'score': hit.meta.score
             })
-        
+
         # Build facets
         facets = {}
         for facet in index.facets:
@@ -10478,7 +10478,7 @@ class SearchService:
                     {'value': bucket.key, 'count': bucket.doc_count}
                     for bucket in buckets
                 ]
-        
+
         return {
             'total': response.hits.total.value,
             'results': results,
@@ -10487,7 +10487,7 @@ class SearchService:
             'page_size': page_size,
             'duration_ms': duration_ms
         }
-    
+
     @staticmethod
     def get_facets(store, search_type='all'):
         """Get available facets"""
@@ -10495,25 +10495,25 @@ class SearchService:
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return []
-        
+
         return index.facets
-    
+
     @staticmethod
     def get_suggestions(store, query):
         """Get search suggestions"""
         from elasticsearch_dsl import Search
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return []
-        
+
         # Build suggestion query
         s = Search(index=index.get_index_name())
         s = s.suggest(
@@ -10524,9 +10524,9 @@ class SearchService:
                 'size': 10
             }
         )
-        
+
         response = s.execute()
-        
+
         suggestions = []
         if response.suggest.title_suggest:
             for suggestion in response.suggest.title_suggest[0].options:
@@ -10534,26 +10534,26 @@ class SearchService:
                     'text': suggestion.text,
                     'score': suggestion.score
                 })
-        
+
         return suggestions
-    
+
     @staticmethod
     def index_document(store, document_type, document_id, data):
         """Index a document"""
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Add store ID to document
         data['store_id'] = str(store.id)
         data['type'] = document_type
-        
+
         # Index document
         es = Elasticsearch()
         es.index(
@@ -10561,54 +10561,54 @@ class SearchService:
             id=document_id,
             body=data
         )
-        
+
         logger.info(f"Indexed {document_type} #{document_id}")
         return True
-    
+
     @staticmethod
     def delete_document(store, document_id):
         """Delete a document from index"""
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Delete document
         es = Elasticsearch()
         es.delete(
             index=index.get_index_name(),
             id=document_id
         )
-        
+
         logger.info(f"Deleted document #{document_id}")
         return True
-    
+
     @staticmethod
     def rebuild_index(store):
         """Rebuild entire search index"""
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Delete and recreate index
         es = Elasticsearch()
         index_name = index.get_index_name()
-        
+
         # Delete existing index
         if es.indices.exists(index=index_name):
             es.indices.delete(index=index_name)
-        
+
         # Create index with mappings
         mappings = {
             'properties': {
@@ -10621,20 +10621,20 @@ class SearchService:
                 'created_at': {'type': 'date'}
             }
         }
-        
+
         es.indices.create(index=index_name, body={'mappings': mappings})
-        
+
         # Reindex all content
         for content_type in index.content_types:
             SearchService._index_content_type(store, content_type)
-        
+
         # Update last reindexed timestamp
         index.last_reindexed_at = timezone.now()
         index.save(update_fields=['last_reindexed_at'])
-        
+
         logger.info(f"Rebuilt search index for store {store.slug}")
         return True
-    
+
     @staticmethod
     def _index_content_type(store, content_type):
         """Index all documents of a content type"""
@@ -10650,7 +10650,7 @@ class SearchService:
             queryset = Product.objects.filter(store=store, is_active=True)
         else:
             return
-        
+
         # Index each document
         for item in queryset:
             data = {
@@ -10660,14 +10660,14 @@ class SearchService:
                 'url': item.get_absolute_url(),
                 'created_at': item.created_at.isoformat()
             }
-            
+
             SearchService.index_document(
                 store=store,
                 document_type=content_type,
                 document_id=str(item.id),
                 data=data
             )
-    
+
     @staticmethod
     def track_search(store, query, search_type, results_count, filters=None, user=None, duration_ms=None):
         """Track search query for analytics"""
@@ -10701,7 +10701,7 @@ def index_document(self, store_id, document_type, document_id, data):
     """
     from .models import SearchIndex
     from .services import SearchService
-    
+
     try:
         store = Store.objects.get(id=store_id)
         result = SearchService.index_document(
@@ -10710,16 +10710,16 @@ def index_document(self, store_id, document_type, document_id, data):
             document_id=document_id,
             data=data
         )
-        
+
         return {
             'document_id': document_id,
             'indexed': result
         }
-        
+
     except Store.DoesNotExist:
         logger.error(f"Store #{store_id} not found")
         raise
-        
+
     except Exception as exc:
         logger.error(f"Document indexing failed: {exc}")
         raise self.retry(exc=exc, countdown=60)
@@ -10731,16 +10731,16 @@ def rebuild_index(store_id):
     """
     from .models import SearchIndex
     from .services import SearchService
-    
+
     try:
         store = Store.objects.get(id=store_id)
         result = SearchService.rebuild_index(store)
-        
+
         return {
             'store_id': store_id,
             'rebuilt': result
         }
-        
+
     except Store.DoesNotExist:
         logger.error(f"Store #{store_id} not found")
         return {'store_id': store_id, 'rebuilt': False}
@@ -10803,7 +10803,7 @@ class SearchServiceTest(TestCase):
             fields={'title': 'text', 'content': 'text'},
             facets=[{'field': 'type', 'label': 'Type'}]
         )
-    
+
     def test_search(self):
         """Test search functionality"""
         results = SearchService.search(
@@ -10811,10 +10811,10 @@ class SearchServiceTest(TestCase):
             query='test',
             search_type='content'
         )
-        
+
         self.assertIn('results', results)
         self.assertIn('facets', results)
-    
+
     def test_index_document(self):
         """Test document indexing"""
         data = {
@@ -10822,14 +10822,14 @@ class SearchServiceTest(TestCase):
             'content': 'Test content',
             'url': '/test-page'
         }
-        
+
         result = SearchService.index_document(
             store=self.store,
             document_type='Page',
             document_id='1',
             data=data
         )
-        
+
         self.assertTrue(result)
 ```
 
@@ -10857,7 +10857,7 @@ def index_page(sender, instance, **kwargs):
         'url': instance.get_absolute_url(),
         'created_at': instance.created_at.isoformat()
     }
-    
+
     from services.search import SearchService
     SearchService.index_document(
         store=instance.store,
@@ -10879,7 +10879,7 @@ def index_product(sender, instance, **kwargs):
         'url': instance.get_absolute_url(),
         'created_at': instance.created_at.isoformat()
     }
-    
+
     from services.search import SearchService
     SearchService.index_document(
         store=instance.store,
@@ -11076,12 +11076,12 @@ python manage.py index_content --type=Page
 - **v1.0** - Initial version with Elasticsearch integration
 
 <!-- ===============================================================================
- END SEARCH.MD 
+ END SEARCH.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START SMTP.MD 
+ START SMTP.MD
  ================================================================================= -->
 # SMTP Module Rules v1.0
 
@@ -11119,16 +11119,16 @@ class SmtpConfiguration(models.Model):
         ('amazon_ses', 'Amazon SES'),
         ('custom', 'Custom SMTP'),
     ]
-    
+
     # ... (keep existing fields)
-    
+
     def save(self, *args, **kwargs):
         # Log configuration changes
         from apps.logs.services import log_event_async
-        
+
         is_new = self._state.adding
         super().save(*args, **kwargs)
-        
+
         log_event_async.delay(
             event_type='SMTP_CONFIG_SAVED' if not is_new else 'SMTP_CONFIG_CREATED',
             message=f"SMTP Config {'created' if is_new else 'updated'}: {self.name}",
@@ -11180,11 +11180,11 @@ class EmailService:
             'store_id': str(store.id) if store else None,
             'user_id': str(user.id) if user else None
         }
-        
+
         try:
             # Get SMTP config (implementation omitted for brevity)
             smtp_config = cls._get_smtp_config(smtp_config_id, store)
-            
+
             # Log email sending attempt
             log_event_async.delay(
                 event_type='EMAIL_SEND_ATTEMPT',
@@ -11193,7 +11193,7 @@ class EmailService:
                 user=user,
                 metadata=log_data
             )
-            
+
             # Send email (implementation details)
             result = django_send_mail(
                 subject=subject,
@@ -11206,7 +11206,7 @@ class EmailService:
                 auth_password=smtp_config.get_decrypted_password(),
                 connection=smtp_config.get_connection()
             )
-            
+
             # Log success
             log_event_async.delay(
                 event_type='EMAIL_SEND_SUCCESS',
@@ -11218,9 +11218,9 @@ class EmailService:
                     'message_id': result.message_id if hasattr(result, 'message_id') else None
                 }
             )
-            
+
             return {'success': True, 'message_id': getattr(result, 'message_id', None)}
-            
+
         except Exception as e:
             # Log failure
             log_event_async.delay(
@@ -11276,7 +11276,7 @@ class SmtpConfigurationAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-    
+
     def save_model(self, request, obj, form, change):
         # Encrypt password before saving
         if 'password' in form.changed_data:
@@ -11289,7 +11289,7 @@ class EmailTemplateAdmin(admin.ModelAdmin):
     list_filter = ('template_type', 'is_active', 'store')
     search_fields = ('name', 'subject', 'html_content')
     readonly_fields = ('created_at', 'updated_at')
-    
+
     def save_model(self, request, obj, form, change):
         # Log template changes
         from apps.logs.services import log_event_async
@@ -11329,13 +11329,13 @@ from ...services import SmtpService
 class SmtpConfigViewSet(viewsets.ModelViewSet):
     serializer_class = SmtpConfigSerializer
     permission_classes = [IsAuthenticated, IsStoreAdmin]
-    
+
     def get_queryset(self):
         return SmtpConfiguration.objects.filter(store=self.request.store)
-    
+
     def perform_create(self, serializer):
         serializer.save(store=self.request.store)
-    
+
     @action(detail=True, methods=['post'])
     def test_connection(self, request, pk=None):
         """Test SMTP connection"""
@@ -11365,10 +11365,10 @@ from ...models import SmtpConfiguration
 
 class Command(BaseCommand):
     help = 'Migrate SMTP configurations from legacy system'
-    
+
     def handle(self, *args, **options):
         count = 0
-        
+
         for legacy in LegacySmtpConfig.objects.all():
             try:
                 with transaction.atomic():
@@ -11387,12 +11387,12 @@ class Command(BaseCommand):
                     )
                     count += 1
                     self.stdout.write(f"Migrated SMTP config: {config.name}")
-                    
+
             except Exception as e:
                 self.stderr.write(f"Error migrating {legacy.config_name}: {str(e)}")
-        
+
         self.stdout.write(self.style.SUCCESS(f'Successfully migrated {count} SMTP configurations'))
-    
+
     def _map_provider(self, legacy_provider):
         """Map legacy provider names to new ones"""
         provider_map = {
@@ -11414,7 +11414,7 @@ from fernet_fields import EncryptedCharField
 class SmtpConfiguration(models.Model):
     # ... other fields ...
     password = EncryptedCharField(max_length=255)
-    
+
     def get_decrypted_password(self):
         """Get decrypted password for SMTP auth"""
         return self.password
@@ -11435,7 +11435,7 @@ from rest_framework.throttling import UserRateThrottle
 
 class EmailRateThrottle(UserRateThrottle):
     scope = 'emails'
-    
+
     def get_cache_key(self, request, view):
         # Rate limit by store
         store_id = request.store.id if hasattr(request, 'store') else 'anon'
@@ -11457,7 +11457,7 @@ class TestEmailService(TestCase):
     def test_send_email_success(self, mock_send):
         # Setup
         mock_send.return_value = 1
-        
+
         # Test
         result = EmailService.send_email(
             to_email='test@example.com',
@@ -11465,16 +11465,16 @@ class TestEmailService(TestCase):
             html_content='<p>Test</p>',
             text_content='Test'
         )
-        
+
         # Assert
         self.assertTrue(result['success'])
         mock_send.assert_called_once()
-    
+
     @patch('django.core.mail.send_mail')
     def test_send_email_failure(self, mock_send):
         # Setup
         mock_send.side_effect = Exception('SMTP Error')
-        
+
         # Test & Assert
         with self.assertRaises(Exception):
             EmailService.send_email(
@@ -11500,10 +11500,10 @@ class TestSmtpConfiguration(TestCase):
             password='secret',
             use_tls=True
         )
-        
+
         # Test
         saved_config = SmtpConfiguration.objects.get(pk=config.pk)
-        
+
         # Assert
         self.assertNotEqual(saved_config.password, 'secret')  # Should be encrypted
         self.assertEqual(saved_config.get_decrypted_password(), 'secret')
@@ -11523,19 +11523,19 @@ from apps.logs.services import log_event_async
 def process_email_queue(self):
     """Process queued emails"""
     batch_size = getattr(settings, 'EMAIL_BATCH_SIZE', 50)
-    
+
     # Get pending emails, ordered by priority and creation time
     queued_emails = EmailQueue.objects.filter(
         is_processed=False,
         scheduled_at__lte=timezone.now()
     ).order_by('priority', 'created_at')[:batch_size]
-    
+
     for email in queued_emails:
         try:
             # Add tracking if enabled
             if email.is_tracked and email.html_content:
                 email.html_content = EmailService.add_tracking(email, email.html_content)
-            
+
             # Send email
             result = EmailService.send_email_async.delay({
                 'to_email': email.to_email,
@@ -11549,19 +11549,19 @@ def process_email_queue(self):
                 'track_clicks': email.is_tracked,
                 'tracking_id': str(email.tracking_id) if email.is_tracked else None
             })
-            
+
             # Mark as processed
             email.is_processed = True
             email.processed_at = timezone.now()
             email.status = 'processing'
             email.save()
-            
+
             # Log sent event
             email.add_tracking_event('sent', {
                 'queue_id': str(email.id),
                 'scheduled_at': str(email.scheduled_at)
             })
-            
+
         except Exception as e:
             # Handle retries
             email.retry_count += 1
@@ -11569,16 +11569,16 @@ def process_email_queue(self):
                 email.is_processed = True
                 email.status = 'failed'
                 email.error_message = str(e)
-                
+
                 # Log failure
                 email.add_tracking_event('failed', {
                     'error': str(e),
                     'retry_count': email.retry_count,
                     'max_retries': email.max_retries
                 })
-            
+
             email.save()
-            
+
             # Log error
             log_event_async.delay(
                 event_type='EMAIL_QUEUE_ERROR',
@@ -11592,7 +11592,7 @@ def process_email_queue(self):
                 },
                 level='ERROR'
             )
-            
+
             # Retry with exponential backoff
             raise self.retry(exc=e, countdown=60 * (2 ** email.retry_count))
 ```
@@ -11617,7 +11617,7 @@ def track_email_open(request, tracking_id):
     """
     try:
         email_log = EmailLog.objects.get(tracking_id=tracking_id)
-        
+
         # Add tracking event
         email_log.add_tracking_event(
             event_type='opened',
@@ -11628,18 +11628,18 @@ def track_email_open(request, tracking_id):
             },
             request=request
         )
-        
+
         # Return transparent 1x1 GIF
         pixel = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')
         response = HttpResponse(pixel, content_type='image/gif')
-        
+
         # Cache control headers
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
-        
+
         return response
-        
+
     except EmailLog.DoesNotExist:
         return HttpResponseNotFound()
 ```
@@ -11653,11 +11653,11 @@ from bs4 import BeautifulSoup
 
 class EmailService:
     # ... existing methods ...
-    
+
     URL_PATTERN = re.compile(
         r'https?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
     )
-    
+
     @classmethod
     def add_click_tracking(cls, email_log, content, is_html=True):
         """
@@ -11666,39 +11666,39 @@ class EmailService:
         """
         if not email_log.is_tracked or not content:
             return content
-        
+
         if is_html:
             return cls._track_html_links(email_log, content)
         return cls._track_text_links(email_log, content)
-    
+
     @classmethod
     def _track_html_links(cls, email_log, html_content):
         """Track links in HTML emails"""
         soup = BeautifulSoup(html_content, 'html.parser')
-        
+
         for link in soup.find_all('a', href=True):
             original_url = link['href']
             if not original_url or not original_url.startswith(('http://', 'https://')):
                 continue
-                
+
             # Create tracking URL
             tracking_url = cls._create_tracking_url(email_log, original_url)
-            
+
             # Update link
             link['href'] = tracking_url
-            
+
             # Add tracking class and style (if not already present)
             if 'tracked-link' not in link.get('class', []):
                 link['class'] = link.get('class', []) + ['tracked-link']
-                
+
             # Ensure link is visible in email clients
             link_style = link.get('style', '')
             if 'color:' not in link_style:
                 link_style = (link_style + ';color: #2563eb;').strip(';')
                 link['style'] = link_style
-        
+
         return str(soup)
-    
+
     @classmethod
     def _track_text_links(cls, email_log, text_content):
         """Track links in plain text emails"""
@@ -11706,24 +11706,24 @@ class EmailService:
             original_url = match.group(0)
             tracking_url = cls._create_tracking_url(email_log, original_url)
             return f"{original_url} [Tracked: {tracking_url}]"
-            
+
         return cls.URL_PATTERN.sub(replace_match, text_content)
-    
+
     @classmethod
     def _create_tracking_url(cls, email_log, original_url):
         """Create a tracking URL for click tracking"""
         from django.urls import reverse
         import hashlib
-        
+
         # Generate URL-safe hash of the original URL
         url_hash = hashlib.md5(original_url.encode()).hexdigest()[:8]
-        
+
         # Create tracking URL
         tracking_path = reverse('smtp:track-click', kwargs={
             'tracking_id': str(email_log.tracking_id),
             'url_hash': url_hash
         })
-        
+
         # Encode original URL as query parameter
         encoded_url = urllib.parse.quote(original_url)
         return f"{settings.SITE_URL}{tracking_path}?url={encoded_url}"
@@ -11775,20 +11775,20 @@ WEBHOOK_CONFIG = {
 @method_decorator(csrf_exempt, name='dispatch')
 class EmailWebhookView(APIView):
     permission_classes = [AllowAny]
-    
+
     def verify_webhook_signature(self, request, provider):
         """Verify webhook signature using provider's signing key"""
         config = WEBHOOK_CONFIG.get(provider, {})
-        
+
         if provider == 'sendgrid':
             # Verify SendGrid signature
             signature = request.headers.get(config['signature_header'])
             timestamp = request.headers.get(config['timestamp_header'])
-            
+
             if not all([signature, timestamp, config['signing_key']]):
                 logger.warning('Missing required signature headers or signing key')
                 return False
-                
+
             # Verify timestamp (prevent replay attacks)
             try:
                 event_time = datetime.fromtimestamp(int(timestamp))
@@ -11798,7 +11798,7 @@ class EmailWebhookView(APIView):
             except (ValueError, TypeError):
                 logger.warning('Invalid timestamp in webhook')
                 return False
-                
+
             # Verify signature
             payload = f"{timestamp}{request.body.decode('utf-8')}"
             expected_signature = hmac.new(
@@ -11806,26 +11806,26 @@ class EmailWebhookView(APIView):
                 msg=payload.encode('utf-8'),
                 digestmod=hashlib.sha256
             ).hexdigest()
-            
+
             return hmac.compare_digest(signature, expected_signature)
-            
+
         elif provider == 'mailgun':
             # Similar verification for Mailgun
             data = request.data
             signature = data.get(config['signature_param'])
             timestamp = data.get(config['timestamp_param'])
             token = data.get(config['token_param'])
-            
+
             if not all([signature, timestamp, token, config['signing_key']]):
                 return False
-                
+
             # Verify timestamp (Mailgun uses seconds since epoch)
             try:
                 if (time.time() - int(timestamp)) > config.get('max_age_seconds', 300):
                     return False
             except (ValueError, TypeError):
                 return False
-                
+
             # Verify signature
             signing_data = f"{timestamp}{token}"
             expected_signature = hmac.new(
@@ -11833,11 +11833,11 @@ class EmailWebhookView(APIView):
                 msg=signing_data.encode('utf-8'),
                 digestmod=hashlib.sha256
             ).hexdigest()
-            
+
             return hmac.compare_digest(signature, expected_signature)
-            
+
         return False  # Default to deny for unknown providers
-    
+
     def post(self, request, provider=None, *args, **kwargs):
         """
         Handle email webhooks from various providers with signature verification
@@ -11845,7 +11845,7 @@ class EmailWebhookView(APIView):
         try:
             # Get provider handler
             provider = provider or request.GET.get('provider', 'sendgrid')
-            
+
             # Verify webhook signature
             if not self.verify_webhook_signature(request, provider):
                 logger.warning(f'Invalid webhook signature from {provider}')
@@ -11853,7 +11853,7 @@ class EmailWebhookView(APIView):
                     {'error': 'Invalid signature'},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
-            
+
             # Get handler for this provider
             handler = getattr(self, f'handle_{provider}', None)
             if not handler:
@@ -11861,36 +11861,36 @@ class EmailWebhookView(APIView):
                     {'error': 'Unsupported email provider'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
+
             # Process events
             events = handler(request.data)
             return Response({
                 'status': 'success',
                 'events_processed': len(events)
             })
-            
+
         except Exception as e:
             logger.error(f"Webhook processing error: {str(e)}", exc_info=True)
             return Response(
                 {'error': 'Internal server error'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-    
+
     def handle_sendgrid(self, data):
         """Process SendGrid webhook events"""
         events = []
-        
+
         # Handle both array and single event
         event_list = data if isinstance(data, list) else [data]
-        
+
         for event in event_list:
             try:
                 event_type = event.get('event')
                 tracking_id = event.get('tracking_id') or event.get('email_id')
-                
+
                 if not tracking_id:
                     continue
-                
+
                 # Map SendGrid event types to our system
                 event_map = {
                     'processed': 'sent',
@@ -11902,30 +11902,30 @@ class EmailWebhookView(APIView):
                     'spamreport': 'spam',
                     'unsubscribe': 'unsubscribed'
                 }
-                
+
                 mapped_type = event_map.get(event_type)
                 if not mapped_type:
                     continue
-                
+
                 # Find and update email log
                 email_log = EmailLog.objects.get(tracking_id=tracking_id)
                 email_log.add_tracking_event(
                     event_type=mapped_type,
                     event_data=event
                 )
-                
+
                 # Update email status if needed
                 if mapped_type in ['delivered', 'bounced', 'dropped']:
                     email_log.status = mapped_type
                     email_log.save(update_fields=['status', 'updated_at'])
-                
+
                 events.append(mapped_type)
-                
+
             except EmailLog.DoesNotExist:
                 logger.warning(f"Email log not found for tracking_id: {tracking_id}")
             except Exception as e:
                 logger.error(f"Error processing {event_type} event: {str(e)}")
-        
+
         return events
 ```
 
@@ -11939,17 +11939,17 @@ class EmailWebhookView(APIView):
        """Anonymize IP address by zeroing the last octet"""
        if not ip_address or ip_address == '127.0.0.1':
            return ip_address
-       
+
        # Handle IPv4
        if '.' in ip_address:
            parts = ip_address.split('.')
            if len(parts) == 4:
                return f"{'.'.join(parts[:3])}.0"
-       
+
        # Handle IPv6 (simplified)
        if ':' in ip_address:
            return ':'.join(ip_address.split(':')[:4] + ['0000'] * 4)
-       
+
        return ip_address
    ```
 
@@ -11978,7 +11978,7 @@ class EmailWebhookView(APIView):
    <div class="chart-container">
      <canvas id="emailMetricsChart"></canvas>
    </div>
-   
+
    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
    <script>
    // Fetch data from backend API
@@ -12037,7 +12037,7 @@ def check_email_health():
     from datetime import timedelta
     from django.utils import timezone
     from ...models import EmailLog
-    
+
     # Check for emails stuck in sending state
     threshold = timezone.now() - timedelta(hours=1)
     stuck_emails = EmailLog.objects.filter(
@@ -12045,24 +12045,24 @@ def check_email_health():
         created_at__lt=threshold,
         is_processed=False
     )
-    
+
     if stuck_emails.exists():
         send_alert(
             'high',
             f'{stuck_emails.count()} emails stuck in sending state',
             'Check Celery workers and SMTP configuration'
         )
-    
+
     # Check for high bounce rate
     bounce_threshold = 5  # 5% bounce rate
     last_hour = timezone.now() - timedelta(hours=1)
-    
+
     sent_count = EmailLog.objects.filter(created_at__gte=last_hour).count()
     bounced_count = EmailLog.objects.filter(
         created_at__gte=last_hour,
         status='bounced'
     ).count()
-    
+
     if sent_count > 0:
         bounce_rate = (bounced_count / sent_count) * 100
         if bounce_rate > bounce_threshold:
@@ -12078,23 +12078,23 @@ def check_email_health():
 # v1/views/analytics.py
 class EmailAnalyticsView(APIView):
     """API for email analytics and reporting"""
-    
+
     def get(self, request, *args, **kwargs):
         store = getattr(request, 'store', None)
         days = int(request.query_params.get('days', 30))
-        
+
         # Date range
         end_date = timezone.now()
         start_date = end_date - timedelta(days=days)
-        
+
         # Base queryset
         logs = EmailLog.objects.filter(
             created_at__range=(start_date, end_date)
         )
-        
+
         if store:
             logs = logs.filter(store=store)
-        
+
         # Calculate metrics
         metrics = {
             'sent': logs.count(),
@@ -12107,7 +12107,7 @@ class EmailAnalyticsView(APIView):
             'unsubscribed': logs.filter(tracking_events__event_type='unsubscribed')
                              .distinct().count(),
         }
-        
+
         # Calculate rates
         metrics.update({
             'delivery_rate': self._safe_divide(metrics['delivered'], metrics['sent']) * 100,
@@ -12116,10 +12116,10 @@ class EmailAnalyticsView(APIView):
             'bounce_rate': self._safe_divide(metrics['bounced'], metrics['sent']) * 100,
             'unsubscribe_rate': self._safe_divide(metrics['unsubscribed'], metrics['delivered']) * 100,
         })
-        
+
         # Time series data
         time_series = self._get_time_series_data(logs, start_date, end_date)
-        
+
         return Response({
             'metrics': metrics,
             'time_series': time_series,
@@ -12128,23 +12128,23 @@ class EmailAnalyticsView(APIView):
                 'end': end_date
             }
         })
-    
+
     def _safe_divide(self, numerator, denominator):
         """Safely divide two numbers, return 0 if denominator is 0"""
         return numerator / denominator if denominator else 0
-    
+
     def _get_time_series_data(self, queryset, start_date, end_date):
         """Generate time series data for the given date range"""
         from django.db.models import Count, Q
         from django.db.models.functions import TruncDate
-        
+
         # Group by date
         date_series = queryset.annotate(
             date=TruncDate('created_at')
         ).values('date').annotate(
             sent=Count('id'),
             delivered=Count('id', filter=Q(status='delivered')),
-            opened=Count('tracking_events', 
+            opened=Count('tracking_events',
                        filter=Q(tracking_events__event_type='opened'),
                        distinct=True),
             clicked=Count('tracking_events',
@@ -12155,15 +12155,15 @@ class EmailAnalyticsView(APIView):
                              filter=Q(tracking_events__event_type='unsubscribed'),
                              distinct=True)
         ).order_by('date')
-        
+
         # Convert to dict for easier lookup
         date_map = {item['date']: item for item in date_series}
-        
+
         # Generate full date range
         result = []
         current_date = start_date.date()
         end_date = end_date.date()
-        
+
         while current_date <= end_date:
             data = date_map.get(current_date, {
                 'date': current_date,
@@ -12174,7 +12174,7 @@ class EmailAnalyticsView(APIView):
                 'bounced': 0,
                 'unsubscribed': 0
             })
-            
+
             # Calculate rates
             data.update({
                 'delivery_rate': self._safe_divide(data['delivered'], data['sent']) * 100,
@@ -12183,10 +12183,10 @@ class EmailAnalyticsView(APIView):
                 'bounce_rate': self._safe_divide(data['bounced'], data['sent']) * 100,
                 'unsubscribe_rate': self._safe_divide(data['unsubscribed'], data['delivered']) * 100,
             })
-            
+
             result.append(data)
             current_date += timedelta(days=1)
-        
+
         return result
 
 ### 9.1 Important Metrics
@@ -12203,14 +12203,14 @@ def check_email_queues():
     from datetime import timedelta
     from django.utils import timezone
     from ..models import EmailQueue
-    
+
     # Check for emails stuck in queue for too long
     threshold = timezone.now() - timedelta(hours=1)
     stuck_emails = EmailQueue.objects.filter(
         is_processed=False,
         created_at__lt=threshold
     ).count()
-    
+
     if stuck_emails > 10:
         send_alert(
             'high',
@@ -12222,12 +12222,12 @@ def check_email_queues():
 ## Review this final polished SMTP rules file carefully before applying.
 
 <!-- ===============================================================================
- END SMTP.MD 
+ END SMTP.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START STORE-BOOTSTRAP.MD 
+ START STORE-BOOTSTRAP.MD
  ================================================================================= -->
 # Store Bootstrap Lifecycle Rules v1.0
 
@@ -12274,7 +12274,7 @@ bootstrap_completed = models.BooleanField(
     help_text="Indicates if bootstrap process has completed successfully"
 )
 bootstrap_phase = models.CharField(
-    max_length=50, 
+    max_length=50,
     blank=True,
     help_text="Current phase of the bootstrap process"
 )
@@ -12291,7 +12291,7 @@ Add this to your `Store` model's `save()` method:
 def save(self, *args, **kwargs):
     is_new = self.pk is None
     super().save(*args, **kwargs)
-    
+
     if is_new:
         # Import here to avoid circular imports
         from .services import StoreBootstrapService
@@ -12329,7 +12329,7 @@ logger = logging.getLogger(__name__)
 
 class StoreBootstrapService:
     """Store bootstrap service"""
-    
+
     @staticmethod
     @transaction.atomic
     def bootstrap_store(store):
@@ -12338,34 +12338,34 @@ class StoreBootstrapService:
         """
         try:
             logger.info(f"Starting bootstrap for store: {store.slug}")
-            
+
             # Phase 1: Core store creation (already done)
             StoreBootstrapService._phase1_complete(store)
-            
+
             # Phase 2: Content type initialization
-            
+
             # Mark as complete
             store.bootstrap_completed = True
             store.bootstrap_phase = 'completed'
             store.save(update_fields=['bootstrap_completed', 'bootstrap_phase'])
-            
+
         except Exception as e:
             store.bootstrap_error = str(e)
             store.save(update_fields=['bootstrap_error'])
             logger.error(f"Bootstrap failed for store {store.slug}: {e}")
             raise
-    
+
     @staticmethod
     def _bootstrap_phase_2(store, actor):
         """
         Initialize content types and default pages
-        
+
         Args:
             store: The Store instance
             actor: The User who initiated the bootstrap
         """
         logger.info(f"Starting phase 2 for store: {store.slug}")
-        
+
         # Create required post types
         post_types = [
             {
@@ -12390,7 +12390,7 @@ class StoreBootstrapService:
                 'is_deletable': False
             }
         ]
-        
+
         for post_type_data in post_types:
             PostType.objects.get_or_create(
                 store=store,
@@ -12403,25 +12403,25 @@ class StoreBootstrapService:
                     'created_by': actor  # Use the actor as creator
                 }
             )
-        
+
         # Create default pages
         StoreBootstrapService._create_default_pages(store)
-        
+
         store.bootstrap_phase = 'phase2_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 2 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _bootstrap_phase_3(store, actor):
         """
         Initialize roles and permissions
-        
+
         Args:
             store: The Store instance
             actor: The User who will be assigned as store owner
         """
         logger.info(f"Starting phase 3 for store: {store.slug}")
-        
+
         # Create default roles
         roles = [
             {
@@ -12460,9 +12460,9 @@ class StoreBootstrapService:
                 'permissions': ['content.read']
             }
         ]
-        
+
         owner_role = None
-        
+
         for role_data in roles:
             role, created = Role.objects.get_or_create(
                 store=store,
@@ -12474,13 +12474,13 @@ class StoreBootstrapService:
                     'created_by': actor  # Track who created the role
                 }
             )
-            
+
             if created and role_data.get('permissions'):
                 role.permissions.set(role_data['permissions'])
-            
+
             if role.slug == 'owner':
                 owner_role = role
-        
+
         # Assign owner role to the actor
         if owner_role:
             StoreMember.objects.get_or_create(
@@ -12496,16 +12496,16 @@ class StoreBootstrapService:
             user=store.owner,
             defaults={'role': owner_role}
         )
-        
+
         store.bootstrap_phase = 'phase3_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 3 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _create_role_permissions(store, role):
         """Create permissions for a role"""
         from apps.accounts.models import Permission
-        
+
         # Define permission sets based on role
         permission_sets = {
             'owner': ['*'],  # All permissions
@@ -12514,23 +12514,23 @@ class StoreBootstrapService:
             'staff': ['content.read', 'ecommerce.read'],
             'viewer': ['content.read']
         }
-        
+
         permissions = permission_sets.get(role.slug, [])
-        
+
         for perm in permissions:
             Permission.objects.get_or_create(
                 store=store,
                 code=perm,
                 defaults={'description': f'{perm} permission'}
             )
-            
+
             role.permissions.add(Permission.objects.get(store=store, code=perm))
-    
+
     @staticmethod
     def _phase4_configuration(store):
         """Phase 4: Default configuration"""
         from apps.metafields.services import MetaFieldService
-        
+
         # Set default store configuration
         default_config = {
             'currency': 'USD',
@@ -12541,7 +12541,7 @@ class StoreBootstrapService:
             'tax_rate': '0.00',
             'shipping_free_threshold': '0'
         }
-        
+
         for key, value in default_config.items():
             MetaFieldService.set_metafield_value(
                 store,
@@ -12549,23 +12549,23 @@ class StoreBootstrapService:
                 value,
                 namespace='config'
             )
-        
+
         store.bootstrap_phase = 'phase4_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 4 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase5_theme(store):
         """Phase 5: Theme initialization"""
         from apps.themes.models import Theme, ColorScheme, Typography
-        
+
         # Create default theme
         theme, created = Theme.objects.get_or_create(
             store=store,
             name='Default Theme',
             defaults={'is_active': True}
         )
-        
+
         if created:
             # Create default color scheme
             ColorScheme.objects.create(
@@ -12581,7 +12581,7 @@ class StoreBootstrapService:
                 },
                 is_default=True
             )
-            
+
             # Create default typography
             Typography.objects.create(
                 store=store,
@@ -12593,16 +12593,16 @@ class StoreBootstrapService:
                     'heading': 'Georgia, serif'
                 }
             )
-        
+
         store.bootstrap_phase = 'phase5_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 5 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase6_search_index(store):
         """Phase 6: Search index creation"""
         from apps.search.models import SearchIndex
-        
+
         # Create search index for store
         SearchIndex.objects.get_or_create(
             store=store,
@@ -12622,32 +12622,32 @@ class StoreBootstrapService:
                 'is_active': True
             }
         )
-        
+
         # Warm search index
         from apps.search.services import SearchService
         SearchService.rebuild_index(store)
-        
+
         store.bootstrap_phase = 'phase6_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 6 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase7_cache_warming(store):
         """Phase 7: Cache warming"""
         from apps.cache.services import CacheWarmupService
-        
+
         # Warm cache for store
         CacheWarmupService.warm_store_cache(store)
-        
+
         store.bootstrap_phase = 'phase7_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 7 complete for store: {store.slug}")
-    
+
     @staticmethod
     def _phase8_notifications(store):
         """Phase 8: Notification setup"""
         from apps.notifications.models import NotificationPreference, NotificationTemplate
-        
+
         # Create default notification templates
         templates = [
             {
@@ -12665,20 +12665,20 @@ class StoreBootstrapService:
                 'email_body_template': 'Thank you for registering!'
             }
         ]
-        
+
         for template_data in templates:
             NotificationTemplate.objects.get_or_create(
                 store=store,
                 notification_type=template_data['notification_type'],
                 defaults=template_data
             )
-        
+
         # Create default notification preferences for owner
         notification_types = [
             'order.created', 'order.shipped', 'order.delivered',
             'user.registered', 'form.submitted', 'system.alert'
         ]
-        
+
         for notification_type in notification_types:
             NotificationPreference.objects.get_or_create(
                 store=store,
@@ -12689,7 +12689,7 @@ class StoreBootstrapService:
                     'digest_enabled': False
                 }
             )
-        
+
         store.bootstrap_phase = 'phase8_complete'
         store.save(update_fields=['bootstrap_phase'])
         logger.info(f"Phase 8 complete for store: {store.slug}")
@@ -12718,14 +12718,14 @@ def retry_bootstrap(store):
     if store.bootstrap_completed:
         logger.warning(f"Store {store.slug} already bootstrapped")
         return False
-    
+
     # Clear error
     store.bootstrap_error = ''
     store.save(update_fields=['bootstrap_error'])
-    
+
     # Retry bootstrap
     StoreBootstrapService.bootstrap_store(store)
-    
+
     return True
 ```
 
@@ -12776,7 +12776,7 @@ User = get_user_model()
 class StoreBootstrapTest(TestCase):
     """
     Test the store bootstrap process
-    
+
     Note: We create a test user here because tests run in isolation.
     In production, the user would come from the request.
     """
@@ -12786,69 +12786,69 @@ class StoreBootstrapTest(TestCase):
             email='test@example.com',
             password='password'
         )
-        
+
         # Create a store owned by the test user
         self.store = Store.objects.create(
             name='Test Store',
             slug='test-store',
             owner=self.user
         )
-    
+
     def test_complete_bootstrap_flow(self):
         """Test the complete bootstrap flow"""
         # Execute bootstrap
         StoreBootstrapService.bootstrap_store(store=self.store, actor=self.user)
-        
+
         # Refresh store from DB
         self.store.refresh_from_db()
-        
+
         # Verify bootstrap completed
         self.assertTrue(self.store.bootstrap_completed)
         self.assertEqual(self.store.bootstrap_phase, 'completed')
-        
+
         # Verify post types were created
         from apps.posts.models import PostType
         self.assertTrue(PostType.objects.filter(store=self.store).exists())
-        
+
         # Verify roles were created
         from apps.accounts.models import Role
         self.assertTrue(Role.objects.filter(store=self.store).exists())
-        
+
         # Verify owner role was assigned to the actor
         from apps.accounts.models import StoreMember
         member = StoreMember.objects.get(store=self.store, user=self.user)
         self.assertEqual(member.role.slug, 'owner')
-    
+
     def test_bootstrap_with_existing_owner(self):
         """Test bootstrap when owner already exists"""
         # First bootstrap
         StoreBootstrapService.bootstrap_store(store=self.store, actor=self.user)
-        
+
         # Should not create duplicate owner
         from apps.accounts.models import StoreMember
         owners = StoreMember.objects.filter(
-            store=self.store, 
+            store=self.store,
             role__slug='owner'
         )
         self.assertEqual(owners.count(), 1)
-    
+
     def test_bootstrap_error_handling(self):
         """Test error handling during bootstrap"""
         # Force an error by making store name invalid
         self.store.name = ''
         self.store.save(update_fields=['name'])
-        
+
         with self.assertRaises(ValueError):
             StoreBootstrapService.bootstrap_store(store=self.store, actor=self.user)
-            
+
         # Verify error state was recorded
         self.store.refresh_from_db()
         self.assertIsNotNone(self.store.bootstrap_error)
         self.assertFalse(self.store.bootstrap_completed)
-        
+
         # Retry bootstrap
         result = StoreBootstrapService.retry_bootstrap(store)
-        
+
         self.assertTrue(result)
         self.assertTrue(store.bootstrap_completed)
 ```
@@ -12924,17 +12924,17 @@ class StoreBootstrapTest(TestCase):
 - **v1.0** - Initial version with complete bootstrap lifecycle
 
 <!-- ===============================================================================
- END STORE-BOOTSTRAP.MD 
+ END STORE-BOOTSTRAP.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START STORES.MD 
+ START STORES.MD
  ================================================================================= -->
 # Stores App Rules - DFCMS Compatible
 
-Follow core.md and accounts.md strictly.  
-All models must use explicit store ForeignKey. Owner references accounts.models.User.  
+Follow core.md and accounts.md strictly.
+All models must use explicit store ForeignKey. Owner references accounts.models.User.
 Use standard ViewSet with store filtering.
 
 ## 1. Directory Structure (V2-Only Clean Implementation)
@@ -12984,14 +12984,14 @@ User = get_user_model()
 
 class Store(models.Model):
     """Store model following DFCMS patterns with explicit store scoping"""
-    
+
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('active', 'Active'),
         ('inactive', 'Inactive'),
         ('suspended', 'Suspended'),
     ]
-    
+
     TYPE_CHOICES = [
         ('ecommerce', 'E-commerce'),
         ('blog', 'Blog'),
@@ -12999,49 +12999,49 @@ class Store(models.Model):
         ('corporate', 'Corporate'),
         ('other', 'Other'),
     ]
-    
+
     # Core fields (from DFCMS)
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     description = models.TextField(blank=True)
-    
+
     # Ownership (DFCMS compatibility)
     owner = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE, 
+        User,
+        on_delete=models.CASCADE,
         related_name='owned_stores'
     )
-    
+
     # Access & Security (from DFCMS)
     access_code = models.CharField(max_length=6, unique=True, editable=False)
     verification_token = models.CharField(max_length=255, unique=True, blank=True, null=True)
-    
+
     # Status & Type
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     store_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='ecommerce')
-    
+
     # Enhanced Features
     domain = models.URLField(blank=True, null=True, unique=True)
     logo = models.ImageField(upload_to='stores/logos/', blank=True, null=True)
     favicon = models.ImageField(upload_to='stores/favicons/', blank=True, null=True)
-    
+
     # Dynamic Settings (JSON field for configs)
     settings = models.JSONField(default=dict, blank=True)
-    
+
     # SEO Fields
     meta_title = models.CharField(max_length=255, blank=True)
     meta_description = models.TextField(blank=True)
     meta_keywords = models.CharField(max_length=500, blank=True)
-    
+
     # Analytics
     google_analytics_id = models.CharField(max_length=50, blank=True)
     facebook_pixel_id = models.CharField(max_length=50, blank=True)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_accessed = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         db_table = 'stores_store'
         ordering = ['-created_at']
@@ -13052,22 +13052,22 @@ class Store(models.Model):
             models.Index(fields=['domain']),
             models.Index(fields=['created_at']),
         ]
-    
+
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         # Auto-generate slug if not provided
         if not self.slug:
             self.slug = slugify(self.name)
-        
+
         # Generate access code and verification token for new stores
         if not self.pk:
             self.access_code = self._generate_access_code()
             self.verification_token = secrets.token_urlsafe(32)
-        
+
         super().save(*args, **kwargs)
-    
+
     def _generate_access_code(self):
         """Generate unique 6-digit access code"""
         while True:
@@ -13080,36 +13080,36 @@ class Store(models.Model):
 ```python
 class StoreSettings(models.Model):
     """Store-specific settings with explicit store relationship"""
-    
+
     store = models.OneToOneField(
-        'Store', 
-        on_delete=models.CASCADE, 
+        'Store',
+        on_delete=models.CASCADE,
         related_name='store_settings'
     )
-    
+
     # General Settings
     site_name = models.CharField(max_length=255, default='My Store')
     site_description = models.TextField(blank=True)
     contact_email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
-    
+
     # Address
     address = models.TextField(blank=True)
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
-    
+
     # Currency & Locale
     currency = models.CharField(max_length=3, default='USD')
     timezone = models.CharField(max_length=50, default='UTC')
     language = models.CharField(max_length=10, default='en')
-    
+
     # E-commerce Settings
     tax_rate = models.DecimalField(max_digits=5, decimal_places=4, default=0)
     shipping_enabled = models.BooleanField(default=True)
     free_shipping_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+
     # Media References
     logo = models.ForeignKey(
         'media.MediaFile',
@@ -13127,16 +13127,16 @@ class StoreSettings(models.Model):
         related_name='store_favicons',
         help_text="Store favicon image"
     )
-    
+
     # Advanced Settings (JSON for flexibility)
     custom_settings = models.JSONField(default=dict, blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'stores_settings'
-    
+
     def __str__(self):
         return f"{self.store.name} Settings"
 ```
@@ -13153,7 +13153,7 @@ from apps.logs.tasks import log_event_async
 
 class StoreService:
     """Store business logic following DFCMS patterns"""
-    
+
     @staticmethod
     @transaction.atomic
     def create_store(owner, store_data):
@@ -13167,14 +13167,14 @@ class StoreService:
                 description=store_data.get('description', ''),
                 store_type=store_data.get('store_type', 'ecommerce')
             )
-            
+
             # Create default settings
             StoreSettings.objects.create(
                 store=store,
                 site_name=store.name,
                 contact_email=owner.email
             )
-            
+
             # Log store creation
             log_event_async.delay({
                 'event_type': 'CONTENT_CREATE',
@@ -13185,9 +13185,9 @@ class StoreService:
                 'entity_id': store.id,
                 'metadata': {'store_data': store_data}
             })
-            
+
             return store
-            
+
         except Exception as e:
             log_event_async.delay({
                 'event_type': 'SYSTEM_ERROR',
@@ -13197,7 +13197,7 @@ class StoreService:
                 'metadata': {'error': str(e), 'store_data': store_data}
             })
             raise
-    
+
     @staticmethod
     def update_store(store, update_data, user=None):
         """Update store with logging"""
@@ -13207,13 +13207,13 @@ class StoreService:
                 'status': store.status,
                 'description': store.description
             }
-            
+
             for field, value in update_data.items():
                 if hasattr(store, field):
                     setattr(store, field, value)
-            
+
             store.save()
-            
+
             # Log update
             log_event_async.delay({
                 'event_type': 'CONTENT_UPDATE',
@@ -13227,9 +13227,9 @@ class StoreService:
                     'new_data': update_data
                 }
             })
-            
+
             return store
-            
+
         except Exception as e:
             log_event_async.delay({
                 'event_type': 'SYSTEM_ERROR',
@@ -13240,7 +13240,7 @@ class StoreService:
                 'metadata': {'error': str(e), 'update_data': update_data}
             })
             raise
-    
+
     @staticmethod
     def verify_store(store, token):
         """Verify store email"""
@@ -13248,7 +13248,7 @@ class StoreService:
             store.status = 'active'
             store.verification_token = None
             store.save()
-            
+
             log_event_async.delay({
                 'event_type': 'CONTENT_UPDATE',
                 'message': f"Store verified: {store.name}",
@@ -13257,38 +13257,38 @@ class StoreService:
                 'entity_id': store.id,
                 'metadata': {'verification': True}
             })
-            
+
             return True
         return False
-    
+
     @staticmethod
     def get_store_analytics(store, days=30):
         """Get store analytics data from logs"""
         from datetime import timedelta
         from django.utils import timezone
         from apps.logs.models import LogEntry
-        
+
         since = timezone.now() - timedelta(days=days)
-        
+
         # Get analytics from logs app
         page_views = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).count()
-        
+
         unique_visitors = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).values('session_id').distinct().count()
-        
+
         security_events = LogEntry.objects.filter(
             store=store,
             is_suspicious=True,
             created_at__gte=since
         ).count()
-        
+
         return {
             'page_views': page_views,
             'unique_visitors': unique_visitors,
@@ -13313,22 +13313,22 @@ from ..services import StoreService
 
 class StorePublicViewSet(BaseViewSet):
     """Public store API - no authentication required"""
-    
+
     permission_classes = [AllowAny]
     queryset = Store.objects.filter(status='active')
     serializer_class = StorePublicSerializer
-    
+
     def get_queryset(self):
         """Filter by domain or subdomain"""
         queryset = super().get_queryset()
-        
+
         # Filter by domain if provided
         domain = self.request.GET.get('domain')
         if domain:
             queryset = queryset.filter(domain=domain)
-        
+
         return queryset
-    
+
     @extend_schema(
         summary="Get store by slug",
         description="Get public store details by slug",
@@ -13337,7 +13337,7 @@ class StorePublicViewSet(BaseViewSet):
     def retrieve(self, request, *args, **kwargs):
         """Get store details"""
         return super().retrieve(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="List active stores",
         description="List all active stores",
@@ -13363,15 +13363,15 @@ from ..services import StoreService
 
 class StoreViewSet(StoreScopedViewSet):
     """Store management API for dashboard"""
-    
+
     permission_classes = [IsAuthenticated, IsStoreOwner]
     queryset = Store.objects.all()
     serializer_class = StoreSerializer
-    
+
     def get_queryset(self):
         """Filter by current user's stores"""
         return super().get_queryset().filter(owner=self.request.user)
-    
+
     @extend_schema(
         summary="Create store",
         description="Create new store",
@@ -13383,17 +13383,17 @@ class StoreViewSet(StoreScopedViewSet):
         """Create new store"""
         serializer = StoreCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         store = StoreService.create_store(
             owner=request.user,
             store_data=serializer.validated_data
         )
-        
+
         return Response(
             StoreSerializer(store).data,
             status=status.HTTP_201_CREATED
         )
-    
+
     @extend_schema(
         summary="Update store",
         description="Update store details",
@@ -13407,9 +13407,9 @@ class StoreViewSet(StoreScopedViewSet):
             update_data=request.data,
             user=request.user
         )
-        
+
         return Response(StoreSerializer(updated_store).data)
-    
+
     @extend_schema(
         summary="Store analytics",
         description="Get store analytics data",
@@ -13420,7 +13420,7 @@ class StoreViewSet(StoreScopedViewSet):
         """Get store analytics"""
         store = self.get_object()
         days = int(request.GET.get('days', 30))
-        
+
         analytics = StoreService.get_store_analytics(store, days)
         return Response(analytics)
 ```
@@ -13436,7 +13436,7 @@ from apps.stores.models import Store, StoreSettings, StoreTheme
 
 class StorePublicSerializer(BaseSerializer):
     """Public store information"""
-    
+
     class Meta:
         model = Store
         fields = [
@@ -13451,7 +13451,7 @@ class StoreSerializer(BaseSerializer):
     owner_email = serializers.EmailField(source='owner.email', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     store_type_display = serializers.CharField(source='get_store_type_display', read_only=True)
-    
+
     class Meta:
         model = Store
         fields = '__all__'
@@ -13459,11 +13459,11 @@ class StoreSerializer(BaseSerializer):
 
 class StoreCreateSerializer(BaseSerializer):
     """Store creation serializer"""
-    
+
     class Meta:
         model = Store
         fields = ['name', 'slug', 'description', 'store_type']
-    
+
     def validate_slug(self, value):
         """Validate slug uniqueness"""
         if Store.objects.filter(slug=value).exists():
@@ -13472,14 +13472,14 @@ class StoreCreateSerializer(BaseSerializer):
 
 class StoreSettingsSerializer(BaseSerializer):
     """Store settings serializer"""
-    
+
     class Meta:
         model = StoreSettings
         fields = '__all__'
 
 class StoreThemeSerializer(BaseSerializer):
     """Store theme serializer"""
-    
+
     class Meta:
         model = StoreTheme
         fields = '__all__'
@@ -13496,14 +13496,14 @@ from apps.stores.models import Store
 
 class Command(BaseCommand):
     help = 'Migrate old stores from DFCMS structure'
-    
+
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Show what would be migrated')
         parser.add_argument('--batch-size', type=int, default=1000, help='Batch size for migration')
-    
+
     def handle(self, *args, **options):
         from apps.activity_logs.models import ActivityLog  # Old DFCMS
-        
+
         # Migrate stores logic here
         self.stdout.write(self.style.SUCCESS("Store migration completed"))
 ```
@@ -13526,7 +13526,7 @@ def log_store_change(sender, instance, created, **kwargs):
     else:
         event_type = 'CONTENT_UPDATE'
         message = f"Store updated: {instance.name}"
-    
+
     log_event_async.delay({
         'event_type': event_type,
         'message': message,
@@ -13577,12 +13577,12 @@ def log_store_deletion(sender, instance, **kwargs):
 **Review suggested changes carefully before applying.**
 
 <!-- ===============================================================================
- END STORES.MD 
+ END STORES.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START THEMES.MD 
+ START THEMES.MD
  ================================================================================= -->
 # Themes App Rules v1.0
 
@@ -13634,7 +13634,7 @@ class Theme(TenantModel):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-is_active', 'name']
         unique_together = [['store', 'name']]
@@ -13652,16 +13652,16 @@ class ColorScheme(models.Model):
     name = models.CharField(max_length=100)
     key = models.SlugField(max_length=100)
     is_default = models.BooleanField(default=False)
-    
+
     # Light mode colors
     colors = models.JSONField(default=dict, help_text="Light mode colors", blank=True)
-    
+
     # Dark mode colors (optional)
     dark_colors = models.JSONField(default=dict, blank=True, help_text="Dark mode colors")
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['theme', 'key']]
         ordering = ['name']
@@ -13681,65 +13681,65 @@ class ColorScheme(models.Model):
             'foreground': '#111827' if mode == 'light' else '#f3f4f6',
             'muted': '#6b7280' if mode == 'light' else '#9ca3af',
             'muted_foreground': '#374151' if mode == 'light' else '#d1d5db',
-            
+
             # Primary colors
             'primary': '#3b82f6',
             'primary_foreground': '#ffffff',
             'primary_hover': '#2563eb',
-            
+
             # Secondary colors
             'secondary': '#f3f4f6' if mode == 'light' else '#1f2937',
             'secondary_foreground': '#111827' if mode == 'light' else '#f9fafb',
             'secondary_hover': '#e5e7eb' if mode == 'light' else '#374151',
-            
+
             # Accent colors
             'accent': '#f59e0b',
             'accent_foreground': '#ffffff',
             'accent_hover': '#d97706',
-            
+
             # Destructive colors
             'destructive': '#ef4444',
             'destructive_foreground': '#ffffff',
             'destructive_hover': '#dc2626',
-            
+
             # Success colors
             'success': '#10b981',
             'success_foreground': '#ffffff',
             'success_hover': '#059669',
-            
+
             # Warning colors
             'warning': '#f59e0b',
             'warning_foreground': '#ffffff',
             'warning_hover': '#d97706',
-            
+
             # Info colors
             'info': '#3b82f6',
             'info_foreground': '#ffffff',
             'info_hover': '#2563eb',
-            
+
             # Border colors
             'border': '#e5e7eb' if mode == 'light' else '#374151',
             'input': '#d1d5db' if mode == 'light' else '#4b5563',
             'ring': '#93c5fd',
-            
+
             # Card colors
             'card': '#ffffff' if mode == 'light' else '#1f2937',
             'card_foreground': '#111827' if mode == 'light' else '#f9fafb',
-            
+
             # Popover colors
             'popover': '#ffffff' if mode == 'light' else '#1f2937',
             'popover_foreground': '#111827' if mode == 'light' else '#f9fafb',
-            
+
             # Tooltip colors
             'tooltip': '#111827' if mode == 'light' else '#f3f4f6',
             'tooltip_foreground': '#f9fafb' if mode == 'light' else '#111827',
-            
+
             # Overlay colors
             'overlay': 'rgba(0, 0, 0, 0.5)',
-            
+
             # Shadow colors
             'shadow': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-            
+
             # Button variants
             'button_primary': {
                 'background': '#3b82f6',
@@ -13772,23 +13772,23 @@ class ColorScheme(models.Model):
                 'border': 'transparent',
                 'underline': True,
             },
-            
+
             # Form elements
             'input_background': '#ffffff' if mode == 'light' else '#1f2937',
             'input_foreground': '#111827' if mode == 'light' else '#f9fafb',
             'input_placeholder': '#9ca3af',
             'input_border': '#d1d5db',
             'input_ring': '#93c5fd',
-            
+
             # Checkbox/radio
             'checkbox_background': '#ffffff' if mode == 'light' else '#1f2937',
             'checkbox_foreground': '#3b82f6',
             'checkbox_border': '#d1d5db',
-            
+
             # Toggle
             'toggle_background': '#e5e7eb' if mode == 'light' else '#374151',
             'toggle_foreground': '#3b82f6',
-            
+
             # Badge variants
             'badge_primary': {
                 'background': '#dbeafe',
@@ -13808,7 +13808,7 @@ class ColorScheme(models.Model):
                 'border': '#e5e7eb' if mode == 'light' else '#374151',
             },
         }
-        
+
         return base
 ```
 
@@ -13821,7 +13821,7 @@ class Typography(models.Model):
     """
     theme = models.OneToOneField(Theme, on_delete=models.CASCADE, related_name='typography')
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
-    
+
     # Base font settings
     base_font_size = models.PositiveSmallIntegerField(
         default=16,
@@ -13836,7 +13836,7 @@ class Typography(models.Model):
             ('auto', 'System Default')
         ]
     )
-    
+
     # Font families
     font_primary = models.CharField(
         max_length=255,
@@ -13858,14 +13858,14 @@ class Typography(models.Model):
         default="'JetBrains Mono', 'Fira Code', monospace",
         help_text="Monospace font family"
     )
-    
+
     # Font weights
     font_weight_light = models.PositiveIntegerField(default=300)
     font_weight_normal = models.PositiveIntegerField(default=400)
     font_weight_medium = models.PositiveIntegerField(default=500)
     font_weight_semibold = models.PositiveIntegerField(default=600)
     font_weight_bold = models.PositiveIntegerField(default=700)
-    
+
     # Line heights
     line_height_none = models.DecimalField(max_digits=3, decimal_places=2, default=1.0)
     line_height_tight = models.DecimalField(max_digits=3, decimal_places=2, default=1.25)
@@ -13873,7 +13873,7 @@ class Typography(models.Model):
     line_height_normal = models.DecimalField(max_digits=3, decimal_places=2, default=1.5)
     line_height_relaxed = models.DecimalField(max_digits=3, decimal_places=2, default=1.625)
     line_height_loose = models.DecimalField(max_digits=3, decimal_places=2, default=2.0)
-    
+
     # Letter spacing
     letter_spacing_tighter = models.DecimalField(max_digits=4, decimal_places=3, default=-0.05)
     letter_spacing_tight = models.DecimalField(max_digits=4, decimal_places=3, default=-0.025)
@@ -13881,19 +13881,19 @@ class Typography(models.Model):
     letter_spacing_wide = models.DecimalField(max_digits=4, decimal_places=3, default=0.025)
     letter_spacing_wider = models.DecimalField(max_digits=4, decimal_places=3, default=0.05)
     letter_spacing_widest = models.DecimalField(max_digits=4, decimal_places=3, default=0.1)
-    
+
     # Headings configuration
     headings = models.JSONField(
         default=dict,
         help_text="Advanced heading configurations (h1-h6)"
     )
-    
+
     # Paragraph styles
     paragraph_margin = models.JSONField(
         default=dict,
         help_text="Margin settings for paragraphs"
     )
-    
+
     # Text transforms
     text_transform_headings = models.CharField(
         max_length=20,
@@ -13905,7 +13905,7 @@ class Typography(models.Model):
             ('capitalize', 'Capitalize')
         ]
     )
-    
+
     # Font loading strategy
     font_display = models.CharField(
         max_length=20,
@@ -13919,7 +13919,7 @@ class Typography(models.Model):
         ],
         help_text="Controls how fonts are displayed while loading"
     )
-    
+
     # Text rendering
     text_rendering = models.CharField(
         max_length=50,
@@ -13931,21 +13931,21 @@ class Typography(models.Model):
             ('geometricPrecision', 'Geometric Precision')
         ]
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name_plural = "Typography"
         ordering = ['-created_at']
-    
+
     def save(self, *args, **kwargs):
         if not self.headings:
             self.headings = self.get_default_headings()
         if not self.paragraph_margin:
             self.paragraph_margin = self.get_default_paragraph_margins()
         super().save(*args, **kwargs)
-    
+
     def get_default_headings(self):
         """Generate default heading configurations"""
         return {
@@ -14004,7 +14004,7 @@ class Typography(models.Model):
                 'text_transform': self.text_transform_headings,
             }
         }
-    
+
     def get_default_paragraph_margins(self):
         """Generate default paragraph margins"""
         return {
@@ -14013,7 +14013,7 @@ class Typography(models.Model):
             'first_child': {'margin_top': '0'},
             'last_child': {'margin_bottom': '0'}
         }
-    
+
     def get_font_face_rules(self):
         """Generate @font-face rules for selected fonts"""
         return f"""
@@ -14027,7 +14027,7 @@ class Typography(models.Model):
             font-style: normal;
             font-display: {self.font_display};
         }}
-        
+
         /* Secondary Font */
         @font-face {{
             font-family: 'Secondary Font';
@@ -14039,7 +14039,7 @@ class Typography(models.Model):
             font-display: {self.font_display};
         }}
         """
-    
+
     def get_css_variables(self):
         """Generate CSS variables for typography"""
         return {
@@ -14047,30 +14047,30 @@ class Typography(models.Model):
             '--font-serif': 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
             '--font-mono': self.font_mono,
             '--font-accent': self.font_accent,
-            
+
             '--text-base': f'{self.base_font_size}px',
             '--text-scale-ratio': '1.2',
-            
+
             '--font-weight-light': str(self.font_weight_light),
             '--font-weight-normal': str(self.font_weight_normal),
             '--font-weight-medium': str(self.font_weight_medium),
             '--font-weight-semibold': str(self.font_weight_semibold),
             '--font-weight-bold': str(self.font_weight_bold),
-            
+
             '--line-height-none': str(self.line_height_none),
             '--line-height-tight': str(self.line_height_tight),
             '--line-height-snug': str(self.line_height_snug),
             '--line-height-normal': str(self.line_height_normal),
             '--line-height-relaxed': str(self.line_height_relaxed),
             '--line-height-loose': str(self.line_height_loose),
-            
+
             '--letter-spacing-tighter': f'{self.letter_spacing_tighter}em',
             '--letter-spacing-tight': f'{self.letter_spacing_tight}em',
             '--letter-spacing-normal': f'{self.letter_spacing_normal}em',
             '--letter-spacing-wide': f'{self.letter_spacing_wide}em',
             '--letter-spacing-wider': f'{self.letter_spacing_wider}em',
             '--letter-spacing-widest': f'{self.letter_spacing_widest}em',
-            
+
             '--text-rendering': self.text_rendering,
             '--font-smoothing': self.font_smoothing,
         }
@@ -14087,13 +14087,13 @@ class StyleClass(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100)
     description = models.TextField(blank=True)
-    
+
     # Default CSS properties (base styles)
     default_css = models.JSONField(
         default=dict,
         help_text="Default CSS properties for this style class"
     )
-    
+
     # Light/Dark mode overrides
     light_css = models.JSONField(
         default=dict,
@@ -14105,83 +14105,83 @@ class StyleClass(models.Model):
         blank=True,
         help_text="Dark mode CSS overrides (merges with default_css)"
     )
-    
+
     # Version-specific overrides (for different template versions)
     version_css = models.JSONField(
         default=dict,
         blank=True,
         help_text="Version-specific CSS overrides (e.g., {'v1': {...}, 'v2': {...}})"
     )
-    
+
     # Media queries for responsive design
     media_queries = models.JSONField(
         default=dict,
         blank=True,
         help_text="Responsive styles (e.g., {'sm': {...}, 'md': {...}, 'lg': {...}})"
     )
-    
+
     # Pseudo-class styles
     pseudo_classes = models.JSONField(
         default=dict,
         blank=True,
         help_text="Pseudo-class styles (e.g., {'hover': {...}, 'focus': {...}, 'active': {...}})"
     )
-    
+
     # Animation properties
     animations = models.JSONField(
         default=dict,
         blank=True,
         help_text="Animation properties (e.g., {'transition': 'all 0.3s ease', 'animation': 'fadeIn 0.5s'})"
     )
-    
+
     # Custom CSS (raw CSS for complex styles)
     custom_css = models.TextField(
         blank=True,
         help_text="Raw CSS for complex styles that can't be expressed in JSON"
     )
-    
+
     # Version-specific custom CSS
     version_custom_css = models.JSONField(
         default=dict,
         blank=True,
         help_text="Version-specific raw CSS (e.g., {'v1': '...', 'v2': '...'})"
     )
-    
+
     # CSS variables for this class
     css_variables = models.JSONField(
         default=dict,
         blank=True,
         help_text="CSS variables specific to this class"
     )
-    
+
     is_active = models.BooleanField(default=True)
     is_system = models.BooleanField(default=False, help_text="System style classes cannot be deleted")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['theme', 'slug']]
         ordering = ['name']
-    
+
     def get_css_for_version(self, version='default', mode='light'):
         """
         Get CSS properties for a specific version and mode
         """
         # Start with default CSS
         css = self.default_css.copy()
-        
+
         # Apply mode-specific overrides
         if mode == 'dark' and self.dark_css:
             css.update(self.dark_css)
         elif mode == 'light' and self.light_css:
             css.update(self.light_css)
-        
+
         # Apply version-specific overrides
         if version != 'default' and self.version_css.get(version):
             css.update(self.version_css[version])
-        
+
         return css
-    
+
     def get_custom_css_for_version(self, version='default'):
         """
         Get custom CSS for a specific version
@@ -14189,7 +14189,7 @@ class StyleClass(models.Model):
         if version != 'default' and self.version_custom_css.get(version):
             return self.version_custom_css[version]
         return self.custom_css
-    
+
     def get_media_query_css(self, version='default', mode='light'):
         """
         Get media query CSS for responsive design
@@ -14204,63 +14204,63 @@ class StyleClass(models.Model):
                 css.update(self.version_css[version])
             result[breakpoint] = css
         return result
-    
+
     def get_pseudo_class_css(self, pseudo_class, version='default', mode='light'):
         """
         Get pseudo-class CSS (hover, focus, active, etc.)
         """
         css = self.pseudo_classes.get(pseudo_class, {}).copy()
-        
+
         # Apply mode-specific overrides
         if mode == 'dark' and self.dark_css:
             css.update(self.dark_css)
         elif mode == 'light' and self.light_css:
             css.update(self.light_css)
-        
+
         # Apply version-specific overrides
         if version != 'default' and self.version_css.get(version):
             css.update(self.version_css[version])
-        
+
         return css
-    
+
     def generate_css_class(self, version='default', mode='light'):
         """
         Generate complete CSS class with all properties
         """
         css_rules = []
-        
+
         # Main class
         main_css = self.get_css_for_version(version, mode)
         if main_css:
             main_props = '; '.join([f"{k}: {v}" for k, v in main_css.items()])
             css_rules.append(f".{self.slug} {{ {main_props}; }}")
-        
+
         # Media queries
         media_css = self.get_media_query_css(version, mode)
         for breakpoint, styles in media_css.items():
             if styles:
                 props = '; '.join([f"{k}: {v}" for k, v in styles.items()])
                 css_rules.append(f"@media (min-width: {breakpoint}) {{ .{self.slug} {{ {props}; }} }}")
-        
+
         # Pseudo-classes
         for pseudo in ['hover', 'focus', 'active', 'disabled']:
             pseudo_css = self.get_pseudo_class_css(pseudo, version, mode)
             if pseudo_css:
                 props = '; '.join([f"{k}: {v}" for k, v in pseudo_css.items()])
                 css_rules.append(f".{self.slug}:{pseudo} {{ {props}; }}")
-        
+
         # Custom CSS
         custom_css = self.get_custom_css_for_version(version)
         if custom_css:
             css_rules.append(custom_css)
-        
+
         # CSS variables
         if self.css_variables:
             var_props = '; '.join([f"{k}: {v}" for k, v in self.css_variables.items()])
             css_rules.append(f".{self.slug} {{ {var_props}; }}")
-        
+
         return '\n'.join(css_rules)
-    
+
     def save(self, *args, **kwargs):
         # Auto-generate slug if not provided
         if not self.slug:
@@ -14303,14 +14303,14 @@ class Layout(models.Model):
     is_default = models.BooleanField(default=False)
     is_system = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    
+
     # Content slots (for dynamic content injection)
     content_slots = models.JSONField(
         default=dict,
         blank=True,
         help_text="Defines content slots and their default content"
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -14325,7 +14325,7 @@ class Layout(models.Model):
         # Ensure only one default layout per theme
         if self.is_default and self.theme:
             Layout.objects.filter(
-                theme=self.theme, 
+                theme=self.theme,
                 is_default=True
             ).exclude(pk=self.pk).update(is_default=False)
 
@@ -14343,7 +14343,7 @@ class Template(models.Model):
     """
     theme = models.ForeignKey(Theme, on_delete=models.CASCADE, related_name='templates')
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
-    
+
     TEMPLATE_ROLES = [
         ('body', 'Body'),        # Main content (default)
         ('header', 'Header'),    # Header component
@@ -14351,7 +14351,7 @@ class Template(models.Model):
         ('partial', 'Partial'),  # Reusable partials
         ('section', 'Section'),  # Page sections
     ]
-    
+
     name = models.CharField(max_length=100)
     key = models.SlugField(max_length=100)
     template_role = models.CharField(
@@ -14361,7 +14361,7 @@ class Template(models.Model):
         help_text="Defines the template's role in the layout system"
     )
     description = models.TextField(blank=True)
-    
+
     # Template content (body-only for header/footer roles)
     content = models.TextField(
         help_text="HTML template with variables (Django template syntax)"
@@ -14370,12 +14370,12 @@ class Template(models.Model):
     template_type = models.CharField(max_length=20, choices=TEMPLATE_TYPES)
     key = models.SlugField(max_length=100)
     description = models.TextField(blank=True)
-    
+
     # Template content
     content = models.TextField(
         help_text="HTML template with variables (Django template syntax)"
     )
-    
+
     # Advanced customization tab
     custom_css = models.TextField(
         blank=True,
@@ -14385,7 +14385,7 @@ class Template(models.Model):
         blank=True,
         help_text="Custom JavaScript for this template"
     )
-    
+
     # Version-specific customizations
     version_css = models.JSONField(
         default=dict,
@@ -14397,7 +14397,7 @@ class Template(models.Model):
         blank=True,
         help_text="Version-specific JavaScript (e.g., {'v1': '...', 'v2': '...'})"
     )
-    
+
     # Template metadata
     meta_title = models.CharField(
         max_length=200,
@@ -14413,7 +14413,7 @@ class Template(models.Model):
         blank=True,
         help_text="Default meta keywords for pages using this template"
     )
-    
+
     # Template settings
     is_default = models.BooleanField(
         default=False,
@@ -14424,7 +14424,7 @@ class Template(models.Model):
         default=False,
         help_text="System templates cannot be deleted"
     )
-    
+
     # Layout association (for body templates)
     layout = models.ForeignKey(
         'Layout',
@@ -14434,21 +14434,21 @@ class Template(models.Model):
         help_text="Default layout for this template (body templates only)",
         related_name='templates_using_this_layout'
     )
-    
+
     # Template variables (for documentation)
     variables = models.JSONField(
         default=dict,
         blank=True,
         help_text="Available variables in this template"
     )
-    
+
     # Template dependencies
     requires = models.JSONField(
         default=list,
         blank=True,
         help_text="Required components or templates"
     )
-    
+
     # Preview settings
     preview_image = models.URLField(
         blank=True,
@@ -14459,7 +14459,7 @@ class Template(models.Model):
         blank=True,
         help_text="Sample data for template preview"
     )
-    
+
     # Performance settings
     cache_duration = models.PositiveIntegerField(
         default=300,
@@ -14469,10 +14469,10 @@ class Template(models.Model):
         default=False,
         help_text="Minify HTML output"
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['theme', 'key']]
         ordering = ['template_type', 'name']
@@ -14480,7 +14480,7 @@ class Template(models.Model):
             models.Index(fields=['theme', 'template_type']),
             models.Index(fields=['is_default', 'is_active']),
         ]
-    
+
     def get_css_for_version(self, version='default'):
         """
         Get CSS for a specific version
@@ -14488,7 +14488,7 @@ class Template(models.Model):
         if version != 'default' and self.version_css.get(version):
             return self.version_css[version]
         return self.custom_css
-    
+
     def get_js_for_version(self, version='default'):
         """
         Get JavaScript for a specific version
@@ -14496,7 +14496,7 @@ class Template(models.Model):
         if version != 'default' and self.version_js.get(version):
             return self.version_js[version]
         return self.custom_js
-    
+
     def render_content(self, context=None):
         """
         Render template content with context.
@@ -14504,45 +14504,45 @@ class Template(models.Model):
         """
         from django.template import Template, Context
         from django.template.exceptions import TemplateSyntaxError
-        
+
         content = Template(self.content).render(Context(context or {}))
             'template_name': self.name,
             'template_key': self.key,
         })
-        
+
         # Render the template
         django_template = DjangoTemplate(self.content)
         return django_template.render(DjangoContext(template_context))
-    
+
     def get_variables_list(self):
         """
         Extract variables from template content
         """
         import re
         variables = set()
-        
+
         # Find Django template variables
         pattern = r'\{\{\s*([^}]+)\s*\}\}'
         matches = re.findall(pattern, self.content)
-        
+
         for match in matches:
             # Clean up the variable name
             var = match.strip().split('.')[0].strip()
             if var and not var.startswith('|') and not var.startswith('if'):
                 variables.add(var)
-        
+
         return sorted(list(variables))
-    
+
     def save(self, *args, **kwargs):
         # Auto-generate slug if not provided
         if not self.slug:
             from django.utils.text import slugify
             self.slug = slugify(self.name)
-        
+
         # Extract variables from content
         if not self.variables:
             self.variables = self.get_variables_list()
-        
+
         super().save(*args, **kwargs)
 
 ---
@@ -14750,11 +14750,11 @@ python manage.py migrate themes
        # 1. Page-specific layout
        if page.layout:
            return page.layout
-           
+
        # 2. Template's default layout
        if page.template and page.template.layout:
            return page.template.layout
-           
+
        # 3. Theme's default layout
        return Layout.objects.filter(
            theme=page.theme,
@@ -14767,21 +14767,21 @@ python manage.py migrate themes
    def render_page(page, context):
        """Render a complete page with layout"""
        layout = get_page_layout(page)
-       
+
        # Start with empty HTML
        html = []
-       
+
        # Add header if layout has one
        if layout and layout.header_template:
            html.append(layout.header_template.render_content(context))
-       
+
        # Add main content
        html.append(page.template.render_content(context))
-       
+
        # Add footer if layout has one
        if layout and layout.footer_template:
            html.append(layout.footer_template.render_content(context))
-           
+
        return '\n'.join(html)
    ```
 
@@ -14806,12 +14806,12 @@ python manage.py migrate themes
 Last Updated: January 23, 2026
 
 <!-- ===============================================================================
- END THEMES.MD 
+ END THEMES.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START TRANSLATIONS.MD 
+ START TRANSLATIONS.MD
  ================================================================================= -->
 # Translation System Rules
 
@@ -14893,47 +14893,47 @@ from django.core.cache import caches
 
 class TranslationParser:
     """Parses and translates HTML content"""
-    
+
     def __init__(self, store=None, language_code=None, user=None):
         self.store = store
         self.language_code = language_code or settings.LANGUAGE_CODE
         self.user = user
         self.cache = caches['translations']
-        
+
     def parse_html(self, html_content, cache_key=None):
         """Parse and translate HTML content with caching"""
         if not html_content:
             return html_content
-            
+
         if not cache_key and self.store:
             cache_key = self._generate_cache_key(html_content)
             cached = self.cache.get(cache_key)
             if cached is not None:
                 return cached
-                
+
         soup = BeautifulSoup(html_content, 'html.parser')
         self._process_nodes(soup)
-        
+
         result = str(soup)
         if cache_key:
             self.cache.set(cache_key, result, timeout=3600)
-            
+
         return result
-    
+
     def _process_nodes(self, soup):
         """Process all translatable nodes"""
         for text_node in self._find_translatable_text_nodes(soup):
             self._process_text_node(text_node)
-            
+
         for tag in soup.find_all(attrs=True):
             self._process_attributes(tag)
-    
+
     def _process_text_node(self, text_node):
         """Process a single text node with XSS protection"""
         original = text_node.string.strip()
         if not original or len(original) < 2:
             return
-            
+
         # Sanitize HTML content
         if '<' in original:
             original = bleach.clean(
@@ -14941,15 +14941,15 @@ class TranslationParser:
                 tags=settings.BLEACH_ALLOWED_TAGS,
                 attributes=settings.BLEACH_ALLOWED_ATTRIBUTES
             )
-        
+
         # Get or create translation key
         key = self._get_or_create_key(original)
-        
+
         # Get translation
         translation = self._get_translation(key, original)
         if translation and translation.text != original:
             text_node.replace_with(translation.text)
-    
+
     # ... (other helper methods)
 ```
 
@@ -14963,49 +14963,49 @@ import re
 
 class TranslationMiddleware:
     """Handles request/response translation"""
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
         self.ignore_paths = [
             r'^/admin/', r'^/static/', r'^/media/', r'^/api/',
             r'\.(js|css|jpg|jpeg|png|gif|ico|svg|woff|ttf|eot|webp|mp4|webm|mp3|wav|ogg|json|xml|csv)$'
         ]
-    
+
     def __call__(self, request):
         # Set language from request
         self.set_language(request)
-        
+
         # Process response
         response = self.get_response(request)
-        
+
         # Skip translation for certain paths/content types
         if self.should_skip_translation(request, response):
             return response
-            
+
         # Parse and translate response
         return self.translate_response(request, response)
-    
+
     def set_language(self, request):
         """Set language from request"""
         language = self.get_language_from_request(request)
         translation.activate(language)
         request.LANGUAGE_CODE = translation.get_language()
-    
+
     def get_language_from_request(self, request):
         """Get language with store fallback"""
         # 1. URL parameter
         if 'lang' in request.GET:
             return request.GET['lang']
-            
+
         # 2. Session
         if hasattr(request, 'session') and 'django_language' in request.session:
             return request.session['django_language']
-            
+
         # 3. Store default
         store = getattr(request, 'store', None)
         if store and hasattr(store, 'default_language') and store.default_language:
             return store.default_language.code
-            
+
         # 4. Accept-Language header
         if 'HTTP_ACCEPT_LANGUAGE' in request.META:
             try:
@@ -15014,7 +15014,7 @@ class TranslationMiddleware:
                 )
             except LookupError:
                 pass
-                
+
         # 5. Default from settings
         return settings.LANGUAGE_CODE
 ```
@@ -15034,7 +15034,7 @@ class TranslationKeyAdmin(admin.ModelAdmin):
     list_display = ('key', 'namespace', 'content_type', 'translation_count')
     list_filter = ('namespace', 'content_type', 'plural_form')
     search_fields = ('key', 'description')
-    
+
     def translation_count(self, obj):
         return obj.translations.count()
     translation_count.short_description = 'Translations'
@@ -15044,7 +15044,7 @@ class TranslationAdmin(admin.ModelAdmin):
     list_display = ('key', 'language', 'store', 'preview_text', 'is_auto_translated')
     list_filter = ('language', 'store', 'is_auto_translated')
     search_fields = ('key__key', 'text')
-    
+
     def preview_text(self, obj):
         return obj.text[:100] + ('...' if len(obj.text) > 100 else '')
     preview_text.short_description = 'Text Preview'
@@ -15155,11 +15155,11 @@ class TranslationTests(TestCase):
     def test_html_sanitization(self):
         # Test XSS protection
         pass
-        
+
     def test_plural_forms(self):
         # Test pluralization
         pass
-        
+
     def test_performance(self):
         # Test with large content
         pass
@@ -15192,13 +15192,13 @@ from ..models import TranslationKey
 
 class Command(BaseCommand):
     help = 'Clean up unused translation keys'
-    
+
     def handle(self, *args, **options):
         # Find and delete unused keys
         unused = TranslationKey.objects.annotate(
             trans_count=Count('translations')
         ).filter(trans_count=0)
-        
+
         count = unused.count()
         if count > 0:
             self.stdout.write(f'Deleting {count} unused translation keys...')
@@ -15228,12 +15228,12 @@ class Command(BaseCommand):
 ## Review this final polished backend-only translation plan carefully before applying.
 
 <!-- ===============================================================================
- END TRANSLATIONS.MD 
+ END TRANSLATIONS.MD
  ================================================================================= -->
 
 
 <!-- ===============================================================================
- START WEEBHOOKS.MD 
+ START WEEBHOOKS.MD
  ================================================================================= -->
 # Webhooks App Rules v1.0
 
@@ -15304,40 +15304,40 @@ class Webhook(TenantModel):
     """
     Store-scoped webhook configuration for external integrations
     """
-    
+
     # Core fields
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     # Endpoint configuration
     url = models.URLField(max_length=2048)
     method = models.CharField(max_length=10, choices=[('POST', 'POST'), ('PUT', 'PUT')], default='POST')
-    
+
     # Security
     secret = models.CharField(max_length=255, default=secrets.token_urlsafe, help_text="HMAC signature secret")
     verify_ssl = models.BooleanField(default=True, help_text="Verify SSL certificate")
-    
+
     # Event filtering
     events = models.JSONField(default=list, help_text="List of event types to subscribe to")
     event_filter = models.JSONField(default=dict, help_text="Advanced event filtering rules")
-    
+
     # Headers
     headers = models.JSONField(default=dict, help_text="Custom HTTP headers")
-    
+
     # Status
     is_active = models.BooleanField(default=True)
     last_triggered_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Retry configuration
     max_retries = models.PositiveSmallIntegerField(default=5)
     retry_delay = models.PositiveIntegerField(default=60, help_text="Initial retry delay in seconds")
     retry_backoff_multiplier = models.FloatField(default=2.0, help_text="Exponential backoff multiplier")
-    
+
     # Metadata
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'webhooks_webhook'
         unique_together = [['store', 'url']]
@@ -15346,37 +15346,37 @@ class Webhook(TenantModel):
             models.Index(fields=['last_triggered_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.name} - {self.url}"
-    
+
     def generate_signature(self, payload):
         """Generate HMAC signature for payload"""
         import hmac
         import hashlib
         import json
-        
+
         payload_str = json.dumps(payload, sort_keys=True)
         signature = hmac.new(
             self.secret.encode('utf-8'),
             payload_str.encode('utf-8'),
             hashlib.sha256
         ).hexdigest()
-        
+
         return f"sha256={signature}"
-    
+
     def is_event_subscribed(self, event_type, event_data=None):
         """Check if webhook should be triggered for this event"""
         # Check if event type is in subscribed events
         if event_type not in self.events:
             return False
-        
+
         # Apply advanced filtering if configured
         if self.event_filter:
             return self._apply_event_filter(event_type, event_data)
-        
+
         return True
-    
+
     def _apply_event_filter(self, event_type, event_data):
         """Apply advanced event filtering rules"""
         # Example filter: {"entity_type": "Order", "status": ["completed", "refunded"]}
@@ -15396,7 +15396,7 @@ class WebhookEvent(TenantModel):
     """
     Represents an event that can trigger webhooks
     """
-    
+
     # Core fields
     event_type = models.CharField(max_length=100, unique=True, db_index=True)
     description = models.TextField(blank=True)
@@ -15406,17 +15406,17 @@ class WebhookEvent(TenantModel):
         ('user', 'User'),
         ('system', 'System'),
     ])
-    
+
     # Event schema
     schema = models.JSONField(default=dict, help_text="Event payload schema")
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         db_table = 'webhooks_event'
         ordering = ['category', 'event_type']
-    
+
     def __str__(self):
         return f"{self.event_type} ({self.category})"
 ```
@@ -15427,17 +15427,17 @@ class WebhookDelivery(TenantModel):
     """
     Tracks individual webhook delivery attempts
     """
-    
+
     # Relationships
     webhook = models.ForeignKey(Webhook, on_delete=models.CASCADE, related_name='deliveries')
-    
+
     # Event details
     event_type = models.CharField(max_length=100)
     event_id = models.CharField(max_length=100, blank=True)
-    
+
     # Payload
     payload = models.JSONField(default=dict)
-    
+
     # Delivery details
     status = models.CharField(max_length=20, choices=[
         ('pending', 'Pending'),
@@ -15445,25 +15445,25 @@ class WebhookDelivery(TenantModel):
         ('failed', 'Failed'),
         ('retrying', 'Retrying'),
     ], default='pending')
-    
+
     # Response details
     response_status = models.PositiveIntegerField(null=True, blank=True)
     response_body = models.TextField(blank=True)
     response_headers = models.JSONField(default=dict, blank=True)
-    
+
     # Retry tracking
     attempt_number = models.PositiveSmallIntegerField(default=1)
     next_retry_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Timing
     triggered_at = models.DateTimeField(auto_now_add=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Error details
     error_message = models.TextField(blank=True)
     error_code = models.CharField(max_length=50, blank=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'webhooks_delivery'
         indexes = [
@@ -15473,7 +15473,7 @@ class WebhookDelivery(TenantModel):
             models.Index(fields=['next_retry_at']),
         ]
         ordering = ['-triggered_at']
-    
+
     def __str__(self):
         return f"Delivery #{self.id} - {self.event_type} ({self.status})"
 ```
@@ -15501,14 +15501,14 @@ class WebhookViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Webhook.objects.all()
     serializer_class = WebhookSerializer
     filterset_fields = ['is_active']
     search_fields = ['name', 'url', 'description']
     ordering_fields = ['created_at', 'name', 'last_triggered_at']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Test Webhook",
         description="Send test payload to webhook endpoint",
@@ -15518,7 +15518,7 @@ class WebhookViewSet(TenantViewSet):
     def test(self, request, pk=None):
         """Send test event to webhook"""
         webhook = self.get_object()
-        
+
         from services.webhook import WebhookService
         delivery = WebhookService.trigger_webhook(
             webhook=webhook,
@@ -15526,10 +15526,10 @@ class WebhookViewSet(TenantViewSet):
             event_data={'test': True, 'timestamp': timezone.now().isoformat()},
             store=webhook.store
         )
-        
+
         serializer = WebhookDeliverySerializer(delivery)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Regenerate Secret",
         description="Generate new webhook secret",
@@ -15541,7 +15541,7 @@ class WebhookViewSet(TenantViewSet):
         webhook = self.get_object()
         webhook.secret = secrets.token_urlsafe()
         webhook.save(update_fields=['secret'])
-        
+
         serializer = self.get_serializer(webhook)
         return Response(serializer.data, status=status.HTTP_200_OK)
 ```
@@ -15554,7 +15554,7 @@ class WebhookDeliveryViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    
+
     queryset = WebhookDelivery.objects.all()
     serializer_class = WebhookDeliverySerializer
     filterset_fields = ['webhook', 'status', 'event_type']
@@ -15581,7 +15581,7 @@ logger = logging.getLogger(__name__)
 
 class WebhookService:
     """Shared webhook management service"""
-    
+
     @staticmethod
     @transaction.atomic
     def trigger_webhook(webhook, event_type, event_data, store):
@@ -15591,7 +15591,7 @@ class WebhookService:
         # Check if webhook is subscribed to this event
         if not webhook.is_event_subscribed(event_type, event_data):
             return None
-        
+
         # Create delivery record
         delivery = WebhookDelivery.objects.create(
             webhook=webhook,
@@ -15601,24 +15601,24 @@ class WebhookService:
             status='pending',
             attempt_number=1
         )
-        
+
         # Update webhook last triggered timestamp
         webhook.last_triggered_at = timezone.now()
         webhook.save(update_fields=['last_triggered_at'])
-        
+
         # Trigger async delivery
         from .tasks import deliver_webhook
         deliver_webhook.delay(delivery.id)
-        
+
         return delivery
-    
+
     @staticmethod
     def deliver_webhook_sync(delivery):
         """
         Synchronous webhook delivery
         """
         webhook = delivery.webhook
-        
+
         # Prepare request
         headers = {
             'Content-Type': 'application/json',
@@ -15628,10 +15628,10 @@ class WebhookService:
             'X-Store-ID': str(webhook.store.id),
             **webhook.headers
         }
-        
+
         # Measure delivery time
         start_time = timezone.now()
-        
+
         try:
             response = requests.request(
                 method=webhook.method,
@@ -15641,17 +15641,17 @@ class WebhookService:
                 verify=webhook.verify_ssl,
                 timeout=30
             )
-            
+
             # Calculate duration
             duration_ms = int((timezone.now() - start_time).total_seconds() * 1000)
-            
+
             # Update delivery
             delivery.response_status = response.status_code
             delivery.response_body = response.text[:10000]  # Limit response body size
             delivery.response_headers = dict(response.headers)
             delivery.delivered_at = timezone.now()
             delivery.duration_ms = duration_ms
-            
+
             # Determine status
             if 200 <= response.status_code < 300:
                 delivery.status = 'success'
@@ -15659,68 +15659,68 @@ class WebhookService:
                 delivery.status = 'failed'
                 delivery.error_message = f"HTTP {response.status_code}"
                 delivery.error_code = 'HTTP_ERROR'
-            
+
             delivery.save(update_fields=[
                 'response_status', 'response_body', 'response_headers',
                 'delivered_at', 'duration_ms', 'status', 'error_message', 'error_code'
             ])
-            
+
             # Log delivery
             logger.info(
                 f"Webhook #{delivery.id} delivered to {webhook.url} "
                 f"- Status: {response.status_code} - Duration: {duration_ms}ms"
             )
-            
+
         except requests.exceptions.Timeout:
             delivery.status = 'failed'
             delivery.error_message = 'Request timeout'
             delivery.error_code = 'TIMEOUT'
             delivery.save(update_fields=['status', 'error_message', 'error_code'])
             logger.error(f"Webhook #{delivery.id} timeout")
-            
+
         except requests.exceptions.SSLError as e:
             delivery.status = 'failed'
             delivery.error_message = f'SSL error: {str(e)}'
             delivery.error_code = 'SSL_ERROR'
             delivery.save(update_fields=['status', 'error_message', 'error_code'])
             logger.error(f"Webhook #{delivery.id} SSL error: {e}")
-            
+
         except requests.exceptions.RequestException as e:
             delivery.status = 'failed'
             delivery.error_message = str(e)
             delivery.error_code = 'REQUEST_ERROR'
             delivery.save(update_fields=['status', 'error_message', 'error_code'])
             logger.error(f"Webhook #{delivery.id} request error: {e}")
-        
+
         # Schedule retry if failed and retries remaining
         if delivery.status == 'failed' and delivery.attempt_number < webhook.max_retries:
             WebhookService.schedule_retry(delivery)
-        
+
         return delivery
-    
+
     @staticmethod
     def schedule_retry(delivery):
         """
         Schedule webhook delivery retry with exponential backoff
         """
         webhook = delivery.webhook
-        
+
         # Calculate retry delay with exponential backoff
         retry_delay = webhook.retry_delay * (webhook.retry_backoff_multiplier ** (delivery.attempt_number - 1))
-        
+
         # Update delivery
         delivery.status = 'retrying'
         delivery.attempt_number += 1
         delivery.next_retry_at = timezone.now() + timezone.timedelta(seconds=retry_delay)
         delivery.save(update_fields=['status', 'attempt_number', 'next_retry_at'])
-        
+
         # Schedule retry task
         from .tasks import deliver_webhook
         deliver_webhook.apply_async(
             args=[delivery.id],
             eta=delivery.next_retry_at
         )
-        
+
         logger.info(
             f"Webhook #{delivery.id} scheduled for retry #{delivery.attempt_number} "
             f"in {retry_delay}s"
@@ -15747,27 +15747,27 @@ def deliver_webhook(self, delivery_id):
     """
     from .models import WebhookDelivery
     from .services import WebhookService
-    
+
     try:
         delivery = WebhookDelivery.objects.select_related('webhook').get(id=delivery_id)
-        
+
         # Skip if already successful
         if delivery.status == 'success':
             return {'status': 'already_delivered'}
-        
+
         # Deliver webhook
         result = WebhookService.deliver_webhook_sync(delivery)
-        
+
         return {
             'delivery_id': delivery_id,
             'status': result.status,
             'response_status': result.response_status
         }
-        
+
     except WebhookDelivery.DoesNotExist:
         logger.error(f"Webhook delivery #{delivery_id} not found")
         raise
-        
+
     except Exception as exc:
         logger.error(f"Webhook delivery failed: {exc}")
         raise self.retry(exc=exc, countdown=60)
@@ -15779,13 +15779,13 @@ def cleanup_old_deliveries(days=90):
     """
     from django.utils import timezone
     from .models import WebhookDelivery
-    
+
     cutoff = timezone.now() - timezone.timedelta(days=days)
     deleted_count = WebhookDelivery.objects.filter(
         triggered_at__lt=cutoff,
         status='success'
     ).delete()[0]
-    
+
     logger.info(f"Cleaned up {deleted_count} old webhook deliveries")
     return deleted_count
 ```
@@ -15821,7 +15821,7 @@ def verify_webhook_signature(payload, signature, secret):
         payload_str.encode('utf-8'),
         hashlib.sha256
     ).hexdigest()
-    
+
     return hmac.compare_digest(f"sha256={expected_signature}", signature)
 ```
 
@@ -15869,7 +15869,7 @@ class WebhookServiceTest(TestCase):
             url='https://example.com/webhook',
             events=['order.created']
         )
-    
+
     def test_trigger_webhook(self):
         """Test webhook triggering"""
         event_data = {'id': '123', 'status': 'created'}
@@ -15879,11 +15879,11 @@ class WebhookServiceTest(TestCase):
             event_data=event_data,
             store=self.store
         )
-        
+
         self.assertIsNotNone(delivery)
         self.assertEqual(delivery.event_type, 'order.created')
         self.assertEqual(delivery.status, 'pending')
-    
+
     def test_webhook_not_subscribed(self):
         """Test webhook not subscribed to event"""
         delivery = WebhookService.trigger_webhook(
@@ -15892,14 +15892,14 @@ class WebhookServiceTest(TestCase):
             event_data={'id': '456'},
             store=self.store
         )
-        
+
         self.assertIsNone(delivery)
-    
+
     def test_signature_generation(self):
         """Test signature generation"""
         payload = {'test': 'data'}
         signature = self.webhook.generate_signature(payload)
-        
+
         self.assertTrue(signature.startswith('sha256='))
         self.assertEqual(len(signature), 71)  # sha256= + 64 hex chars
 ```
@@ -15944,7 +15944,7 @@ def trigger_order_webhooks(sender, instance, **kwargs):
         store=instance.store,
         is_active=True
     )
-    
+
     event_data = {
         'id': str(instance.id),
         'order_number': instance.order_number,
@@ -15952,7 +15952,7 @@ def trigger_order_webhooks(sender, instance, **kwargs):
         'total': float(instance.total),
         'created_at': instance.created_at.isoformat()
     }
-    
+
     for webhook in webhooks:
         WebhookService.trigger_webhook(
             webhook=webhook,
@@ -16106,14 +16106,14 @@ python manage.py retry_failed_deliveries --webhook-id=1
 - **v1.0** - Initial version with core webhook functionality
 
 <!-- ===============================================================================
- END WEEBHOOKS.MD 
+ END WEEBHOOKS.MD
  ================================================================================= -->
 
 <!-- ===============================================================================
- START ECOMMERCE.MD 
+ START ECOMMERCE.MD
  ================================================================================= -->
 <!-- ===============================================================================
- START ECOMMERCE.MD 
+ START ECOMMERCE.MD
 ================================================================================ -->
 # 🎯 Ecommerce Module Rules
 
@@ -16258,47 +16258,47 @@ class Product(models.Model):
     slug = models.SlugField(max_length=255, unique_for_store=True)
     sku = models.CharField(max_length=100, unique=True)
     upc = models.CharField(max_length=12, blank=True, null=True, unique=True)
-    
+
     # Descriptions
     description = models.TextField(blank=True)
     short_description = models.TextField(max_length=500, blank=True)
-    
+
     # Pricing
     base_price = models.DecimalField(
-        max_digits=10, 
+        max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(0)]
     )
     compare_at_price = models.DecimalField(
-        max_digits=10, 
+        max_digits=10,
         decimal_places=2,
-        null=True, 
+        null=True,
         blank=True,
         validators=[MinValueValidator(0)]
     )
     cost_price = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        null=True, 
+        max_digits=10,
+        decimal_places=2,
+        null=True,
         blank=True
     )
-    
+
     # Inventory
     track_inventory = models.BooleanField(default=True)
     inventory_quantity = models.IntegerField(default=0)
     allow_backorder = models.BooleanField(default=False)
     backorder_quantity = models.IntegerField(default=0, help_text="Quantity available for backorder")
-    
+
     # Shipping
     requires_shipping = models.BooleanField(default=True)
     weight = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        null=True, 
+        max_digits=10,
+        decimal_places=2,
+        null=True,
         blank=True,
         help_text="Weight in grams"
     )
-    
+
     # Status
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -16306,23 +16306,23 @@ class Product(models.Model):
         ('archived', 'Archived'),
     ]
     status = models.CharField(
-        max_length=20, 
-        choices=STATUS_CHOICES, 
+        max_length=20,
+        choices=STATUS_CHOICES,
         default='draft'
     )
     is_featured = models.BooleanField(default=False)
     is_available = models.BooleanField(default=True)
-    
+
     # SEO
     seo_title = models.CharField(max_length=60, blank=True)
     seo_description = models.CharField(max_length=160, blank=True)
     seo_keywords = models.CharField(max_length=255, blank=True)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     published_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -16343,10 +16343,10 @@ class Product(models.Model):
                 name='unique_store_slug'
             )
         ]
-    
+
     def __str__(self):
         return self.title
-    
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title)
@@ -16358,17 +16358,17 @@ class Product(models.Model):
             if queryset.exists():
                 self.slug = f"{self.slug}-{queryset.count() + 1}"
         super().save(*args, **kwargs)
-    
+
     @property
     def is_in_stock(self):
         if not self.track_inventory:
             return True
         return self.inventory_quantity > 0
-    
+
     @property
     def can_backorder(self):
         return self.allow_backorder and self.backorder_quantity > 0
-        
+
     @property
     def inventory_status(self):
         """Get current inventory status"""
@@ -16381,30 +16381,30 @@ class Product(models.Model):
         if self.allow_backorder and self.backorder_quantity > 0:
             return 'available_for_backorder'
         return 'out_of_stock'
-        
+
     def get_absolute_url(self):
         from django.urls import reverse
         return reverse('product-detail', kwargs={'slug': self.slug})
-    
+
     def get_price(self):
         """Get the current price, considering sales/discounts"""
         # Implementation for getting price with discounts
         return self.base_price
-    
+
     def get_availability(self):
         """
         Get product availability status
-        
+
         Note: This method is kept for backward compatibility.
         Consider using the inventory_status property instead.
         """
         return self.inventory_status
-    
+
     def update_inventory(self, quantity, action='decrease'):
         """Update inventory levels"""
         if not self.track_inventory:
             return True
-            
+
         if action == 'decrease':
             new_quantity = self.inventory_quantity - quantity
             if new_quantity < 0 and not self.allow_backorder:
@@ -16416,10 +16416,10 @@ class Product(models.Model):
             self.inventory_quantity += quantity
         elif action == 'set':
             self.inventory_quantity = quantity
-            
+
         self.save()
         return True
-    
+
     # Media relationships
     primary_image = models.ForeignKey(
         'media.MediaFile',
@@ -16428,7 +16428,7 @@ class Product(models.Model):
         blank=True,
         related_name='primary_products'
     )
-    
+
     # Relations
     categories = models.ManyToManyField(
         'Category',
@@ -16445,7 +16445,7 @@ class Product(models.Model):
         related_name='products',
         blank=True
     )
-    
+
     # Digital product specific
     digital_file = models.FileField(
         upload_to='digital_products/%Y/%m/',
@@ -16460,13 +16460,13 @@ class Product(models.Model):
         default=30,
         help_text="Number of days the download link is valid"
     )
-    
+
     # Inventory alerts
     low_stock_threshold = models.PositiveIntegerField(
         default=5,
         help_text="When to trigger low stock alerts"
     )
-    
+
     # Advanced options
     requires_shipping_address = models.BooleanField(default=True)
     is_giftcard = models.BooleanField(default=False)
@@ -16475,7 +16475,7 @@ class Product(models.Model):
         blank=True,
         help_text="Number of days until gift card expires"
     )
-    
+
     # Type of product
     TYPE_CHOICES = [
         ('physical', 'Physical'),
@@ -16488,7 +16488,7 @@ class Product(models.Model):
         choices=TYPE_CHOICES,
         default='physical'
     )
-    
+
     # Tax
     tax_class = models.ForeignKey(
         'TaxClass',
@@ -16497,7 +16497,7 @@ class Product(models.Model):
         blank=True
     )
     seo_description = models.CharField(max_length=500, blank=True)
-    
+
     # Media relationships
     featured_image = models.ForeignKey(
         'media.MediaFile',
@@ -16506,14 +16506,14 @@ class Product(models.Model):
         blank=True,
         related_name='featured_products'
     )
-    
+
     # Category relationships
     categories = models.ManyToManyField(
         'ProductCategory',
         blank=True,
         related_name='products'
     )
-    
+
     class Meta:
         db_table = 'ecommerce_product'
         unique_together = [['store', 'slug'], ['store', 'sku']]
@@ -16524,10 +16524,10 @@ class Product(models.Model):
             models.Index(fields=['created_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return self.title
-    
+
     def get_current_price(self):
         """Get current price from variants or base price"""
         variant = self.variants.first()
@@ -16539,32 +16539,32 @@ class ProductVariant(TenantModel):
     """
     Product variant with store scoping
     """
-    
+
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants')
     title = models.CharField(max_length=255)
     sku = models.CharField(max_length=100)
     barcode = models.CharField(max_length=50, blank=True)
-    
+
     # Pricing
     price = models.DecimalField(max_digits=10, decimal_places=2)
     compare_at_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
+
     # Inventory
     inventory_quantity = models.IntegerField(default=0)
     inventory_policy = models.CharField(max_length=20, choices=INVENTORY_POLICY_CHOICES, default='deny')
-    
+
     # Physical attributes
     weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
+
     # Variant options
     option1 = models.CharField(max_length=100, blank=True)
     option2 = models.CharField(max_length=100, blank=True)
     option3 = models.CharField(max_length=100, blank=True)
-    
+
     # Position for ordering
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         db_table = 'ecommerce_product_variant'
         unique_together = [['store', 'sku'], ['product', 'sku']]
@@ -16582,14 +16582,14 @@ class ProductCategory(TenantModel):
     """
     Store-scoped product category with hierarchical structure
     """
-    
+
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     # Hierarchical structure
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
-    
+
     # Media
     image = models.ForeignKey(
         'media.MediaFile',
@@ -16598,15 +16598,15 @@ class ProductCategory(TenantModel):
         blank=True,
         related_name='category_images'
     )
-    
+
     # SEO fields
     seo_title = models.CharField(max_length=255, blank=True)
     seo_description = models.CharField(max_length=500, blank=True)
-    
+
     # Position and status
     position = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = 'ecommerce_product_category'
         unique_together = [['store', 'slug']]
@@ -16617,7 +16617,7 @@ class ProductCategory(TenantModel):
             models.Index(fields=['store', 'is_active']),
         ]
         ordering = ['position']
-    
+
     def clean(self):
         if self.parent and self.parent.parent == self:
             raise ValidationError("Cannot create circular category reference")
@@ -16635,7 +16635,7 @@ class Cart(models.Model):
     currency = models.CharField(max_length=3, default='USD')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['store', 'session_key']
         indexes = [
@@ -16643,21 +16643,21 @@ class Cart(models.Model):
             models.Index(fields=['store', 'session_key']),
             models.Index(fields=['status']),
         ]
-    
+
     def get_item_count(self):
         return self.items.aggregate(total=models.Sum('quantity'))['total'] or 0
-    
+
     def get_subtotal(self):
         return sum(item.get_total() for item in self.items.all())
-    
+
     def get_tax(self):
         # Tax calculation logic
         return Decimal('0.00')
-    
+
     def get_shipping(self):
         # Shipping calculation logic
         return Decimal('0.00')
-    
+
     def get_total(self):
         return self.get_subtotal() + self.get_tax() + self.get_shipping()
 ```
@@ -16673,22 +16673,22 @@ class CartItem(models.Model):
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['cart', 'product', 'variant']
         indexes = [
             models.Index(fields=['cart', 'product']),
             models.Index(fields=['cart', 'variant']),
         ]
-    
+
     def clean(self):
         if self.variant and self.variant.product != self.product:
             raise ValidationError("Variant must belong to the specified product")
-    
+
     def save(self, *args, **kwargs):
         self.total_price = self.unit_price * self.quantity
         super().save(*args, **kwargs)
-    
+
     def get_total(self):
         return self.total_price
 ```
@@ -16711,19 +16711,19 @@ class Order(models.Model):
     shipping = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2)
-    
+
     # Address fields
     billing_address = models.JSONField(default=dict)
     shipping_address = models.JSONField(default=dict)
-    
+
     # Additional fields
     notes = models.TextField(blank=True)
     customer_notes = models.TextField(blank=True)
     tags = models.JSONField(default=list)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'status']),
@@ -16731,27 +16731,27 @@ class Order(models.Model):
             models.Index(fields=['order_number']),
             models.Index(fields=['created_at']),
         ]
-    
+
     def save(self, *args, **kwargs):
         if not self.order_number:
             self.order_number = self.generate_order_number()
         super().save(*args, **kwargs)
-    
+
     def generate_order_number(self):
         timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
         random_str = ''.join(random.choices(string.digits, k=4))
         return f"ORD-{timestamp}-{random_str}"
-    
+
     def calculate_totals(self):
         self.subtotal = sum(item.get_total() for item in self.items.all())
         self.tax = self.calculate_tax()
         self.shipping = self.calculate_shipping()
         self.discount = self.calculate_discount()
         self.total = self.subtotal + self.tax + self.shipping - self.discount
-    
+
     def is_paid(self):
         return self.payment_status == 'paid'
-    
+
     def is_fulfilled(self):
         return self.fulfillment_status == 'fulfilled'
 ```
@@ -16768,13 +16768,13 @@ class OrderItem(models.Model):
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['order', 'product']),
             models.Index(fields=['order', 'variant']),
         ]
-    
+
     def get_total(self):
         return self.total_price
 ```
@@ -16791,27 +16791,27 @@ class Customer(models.Model):
     phone = models.CharField(max_length=20, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True)
-    
+
     # Marketing preferences
     email_marketing = models.BooleanField(default=True)
     sms_marketing = models.BooleanField(default=False)
-    
+
     # Statistics
     total_spent = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     order_count = models.IntegerField(default=0)
     last_order_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Addresses
     default_billing_address = models.JSONField(default=dict)
     default_shipping_address = models.JSONField(default=dict)
-    
+
     # Metadata
     tags = models.JSONField(default=list)
     notes = models.TextField(blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['email']),
@@ -16819,10 +16819,10 @@ class Customer(models.Model):
             models.Index(fields=['order_count']),
             models.Index(fields=['last_order_at']),
         ]
-    
+
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}".strip()
-    
+
     def update_statistics(self):
         orders = Order.objects.filter(customer=self)
         self.order_count = orders.count()
@@ -16842,7 +16842,7 @@ class OptionType(models.Model):
     name = models.CharField(max_length=50)
     display_name = models.CharField(max_length=50)
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['position']
         unique_together = ['store', 'name']
@@ -16856,7 +16856,7 @@ class OptionValue(models.Model):
     name = models.CharField(max_length=100)
     presentation = models.CharField(max_length=100)
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['position']
 
@@ -16873,10 +16873,10 @@ class ProductVariant(models.Model):
     requires_shipping = models.BooleanField(default=True)
     position = models.IntegerField(default=0)
     option_values = models.ManyToManyField(OptionValue, related_name='variants')
-    
+
     class Meta:
         ordering = ['position']
-    
+
     def __str__(self):
         return f"{self.product.title} - {self.sku}"
 ```
@@ -16899,13 +16899,13 @@ class InventoryItem(models.Model):
     available = models.IntegerField(default=0)  # quantity - committed
     last_counted = models.DateTimeField(null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'sku']),
             models.Index(fields=['store', 'product_variant']),
         ]
-    
+
     def update_available_quantity(self):
         """Update available quantity based on current stock and commitments"""
         self.available = max(0, self.quantity - self.committed)
@@ -16923,7 +16923,7 @@ class StockMovement(models.Model):
         ('found', 'Found'),
         ('lost', 'Lost'),
     ]
-    
+
     inventory_item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE, related_name='movements')
     quantity = models.IntegerField()
     movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)
@@ -16931,7 +16931,7 @@ class StockMovement(models.Model):
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -16955,7 +16955,7 @@ class Collection(models.Model):
     created_by = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['store', 'slug']
         indexes = [
@@ -16972,7 +16972,7 @@ class CollectionCondition(models.Model):
     operator = models.CharField(max_length=20, choices=CONDITION_OPERATOR_CHOICES)
     value = models.JSONField()
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['collection', 'position']),
@@ -16993,7 +16993,7 @@ class CouponCampaign(models.Model):
     created_by = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'is_active']),
@@ -17019,32 +17019,32 @@ class Coupon(models.Model):
     created_by = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'code']),
             models.Index(fields=['store', 'is_active']),
             models.Index(fields=['starts_at', 'ends_at']),
         ]
-    
+
     def is_valid(self, customer=None, cart_total=0):
         now = timezone.now()
-        
+
         if not self.is_active:
             return False, "Coupon is inactive"
-        
+
         if now < self.starts_at:
             return False, "Coupon not yet active"
-        
+
         if now > self.ends_at:
             return False, "Coupon has expired"
-        
+
         if cart_total < self.minimum_order_amount:
             return False, f"Minimum order amount of {self.minimum_order_amount} required"
-        
+
         if self.usage_limit and self.used_count >= self.usage_limit:
             return False, "Coupon usage limit reached"
-        
+
         if customer and self.usage_limit_per_customer:
             customer_usage = Order.objects.filter(
                 customer=customer,
@@ -17052,9 +17052,9 @@ class Coupon(models.Model):
             ).count()
             if customer_usage >= self.usage_limit_per_customer:
                 return False, "Customer usage limit reached"
-        
+
         return True, "Valid"
-    
+
     def apply_discount(self, cart_total):
         if self.type == 'fixed_amount':
             return min(self.value, cart_total)
@@ -17079,32 +17079,32 @@ class Inventory(models.Model):
     location = models.CharField(max_length=100, blank=True)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['store', 'product', 'variant']
         indexes = [
             models.Index(fields=['store', 'product']),
             models.Index(fields=['store', 'variant']),
         ]
-    
+
     def save(self, *args, **kwargs):
         self.available = self.quantity - self.reserved
         super().save(*args, **kwargs)
-    
+
     def reserve(self, quantity):
         if self.available >= quantity:
             self.reserved += quantity
             self.save()
             return True
         return False
-    
+
     def release(self, quantity):
         if self.reserved >= quantity:
             self.reserved -= quantity
             self.save()
             return True
         return False
-    
+
     def deduct(self, quantity):
         if self.reserved >= quantity:
             self.reserved -= quantity
@@ -17124,7 +17124,7 @@ class InventoryTransaction(models.Model):
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['inventory', 'type']),
@@ -17144,7 +17144,7 @@ class PaymentMethod(models.Model):
     config = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'is_active']),
@@ -17162,7 +17162,7 @@ class Payment(models.Model):
     gateway_response = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['order', 'status']),
@@ -17186,11 +17186,11 @@ class EcommerceViewSet(TenantViewSet):
     Base ViewSet for all ecommerce endpoints with store scoping
     Follows main backend rules pattern
     """
-    
+
     def get_queryset(self):
         """Filter queryset by store (inherited from TenantViewSet)"""
         return super().get_queryset()
-    
+
     def perform_create(self, serializer):
         """Set store on create (inherited from TenantViewSet)"""
         return super().perform_create(serializer)
@@ -17212,7 +17212,7 @@ class ProductViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Product.objects.select_related('store').prefetch_related(
         'variants', 'categories', 'images'
     ).all()
@@ -17221,7 +17221,7 @@ class ProductViewSet(TenantViewSet):
     search_fields = ['title', 'description', 'sku']
     ordering_fields = ['title', 'created_at', 'updated_at']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Duplicate Product",
         description="Create a duplicate of existing product",
@@ -17230,19 +17230,19 @@ class ProductViewSet(TenantViewSet):
     def duplicate(self, request, pk=None):
         """Duplicate a product using service layer"""
         product = self.get_object()
-        
+
         from services.product import ProductService
         new_product = ProductService.duplicate_product(product, request.user)
-        
+
         serializer = self.get_serializer(new_product)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
     @action(detail=True, methods=['post'])
     def bulk_update_variants(self, request, pk=None):
         """Bulk update product variants"""
         product = self.get_object()
         variants_data = request.data.get('variants', [])
-        
+
         for variant_data in variants_data:
             variant_id = variant_data.get('id')
             if variant_id:
@@ -17251,21 +17251,21 @@ class ProductViewSet(TenantViewSet):
                     if attr != 'id':
                         setattr(variant, attr, value)
                 variant.save()
-        
+
         return Response({'status': 'updated'})
-    
+
     @action(detail=False, methods=['get'])
     def export(self, request):
         """Export products to CSV"""
         store = self.get_store()
         products = self.get_queryset()
-        
+
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="products.csv"'
-        
+
         writer = csv.writer(response)
         writer.writerow(['Title', 'SKU', 'Price', 'Status', 'Created At'])
-        
+
         for product in products:
             writer.writerow([
                 product.title,
@@ -17274,7 +17274,7 @@ class ProductViewSet(TenantViewSet):
                 product.status,
                 product.created_at
             ])
-        
+
         return response
 ```
 
@@ -17290,11 +17290,11 @@ class ProductVariantViewSet(StoreScopedViewSet):
     search_fields = ['title', 'sku', 'barcode']
     ordering_fields = ['position', 'price', 'created_at']
     ordering = ['position']
-    
+
     def get_queryset(self):
         store = self.get_store()
         return super().get_queryset().filter(product__store=store)
-    
+
     @action(detail=True, methods=['post'])
     def adjust_inventory(self, request, pk=None):
         """Adjust variant inventory"""
@@ -17302,23 +17302,23 @@ class ProductVariantViewSet(StoreScopedViewSet):
         quantity = request.data.get('quantity', 0)
         transaction_type = request.data.get('type', 'adjustment')
         notes = request.data.get('notes', '')
-        
+
         inventory, created = Inventory.objects.get_or_create(
             store=variant.product.store,
             product=variant.product,
             variant=variant,
             defaults={'quantity': 0}
         )
-        
+
         if transaction_type == 'add':
             inventory.quantity += quantity
         elif transaction_type == 'subtract':
             inventory.quantity -= quantity
         else:
             inventory.quantity = quantity
-        
+
         inventory.save()
-        
+
         # Create transaction record
         InventoryTransaction.objects.create(
             inventory=inventory,
@@ -17327,7 +17327,7 @@ class ProductVariantViewSet(StoreScopedViewSet):
             notes=notes,
             created_by=request.user
         )
-        
+
         return Response({'quantity': inventory.quantity})
 ```
 
@@ -17343,13 +17343,13 @@ class ProductCategoryViewSet(StoreScopedViewSet):
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'position', 'created_at']
     ordering = ['position']
-    
+
     @action(detail=False, methods=['get'])
     def tree(self, request):
         """Get category tree structure"""
         store = self.get_store()
         categories = self.get_queryset().filter(store=store, is_active=True)
-        
+
         def build_tree(parent=None):
             children = categories.filter(parent=parent)
             return [
@@ -17361,7 +17361,7 @@ class ProductCategoryViewSet(StoreScopedViewSet):
                 }
                 for cat in children
             ]
-        
+
         tree = build_tree()
         return Response(tree)
 ```
@@ -17381,7 +17381,7 @@ class PublicProductViewSet(TenantViewSet):
     """
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Product.objects.filter(status='published').select_related('store').prefetch_related(
         'variants', 'categories', 'images'
     )
@@ -17390,7 +17390,7 @@ class PublicProductViewSet(TenantViewSet):
     search_fields = ['title', 'description', 'sku']
     ordering_fields = ['title', 'created_at']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="List Public Products",
         description="Get paginated list of published products",
@@ -17414,12 +17414,12 @@ class CustomerCartViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreUser]
     serializer_class = CartSerializer
-    
+
     def get_queryset(self):
         """Get cart for authenticated customer"""
         from services.cart import CartService
         return CartService.get_cart_for_customer(self.request.user, self.request.store)
-    
+
     @extend_schema(
         summary="Get Customer Cart",
         description="Get current customer's shopping cart",
@@ -17431,16 +17431,16 @@ class CustomerCartViewSet(TenantViewSet):
         if not cart:
             from services.cart import CartService
             cart = CartService.create_cart_for_customer(self.request.user, self.request.store)
-        
+
         serializer = self.get_serializer(cart)
         return Response(serializer.data)
-    
+
     def get_store(self):
         """Get store from request"""
         if hasattr(self.request, 'store'):
             return self.request.store
         raise ValidationError("Store not found")
-    
+
     ### 3.5 URL Structure
 
 #### Main Ecommerce URLs
@@ -17493,7 +17493,7 @@ class OrderViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Order.objects.select_related(
         'customer', 'store'
     ).prefetch_related('items', 'payments').all()
@@ -17502,7 +17502,7 @@ class OrderViewSet(TenantViewSet):
     search_fields = ['order_number', 'customer__email']
     ordering_fields = ['created_at', 'total', 'order_number']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Create Order from Cart",
         description="Convert shopping cart to order",
@@ -17513,23 +17513,23 @@ class OrderViewSet(TenantViewSet):
     def create_from_cart(self, request):
         """Create order from cart using service layer"""
         from services.order import OrderService
-        
+
         try:
             order = OrderService.create_order_from_cart(
-                request.user, 
-                request.store, 
+                request.user,
+                request.store,
                 request.data
             )
-            
+
             serializer = self.get_serializer(order)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Update Order Status",
         description="Update order status with validation",
@@ -17541,22 +17541,22 @@ class OrderViewSet(TenantViewSet):
         """Update order status using service layer"""
         order = self.get_object()
         new_status = request.data.get('status')
-        
+
         from services.order import OrderService
         try:
             updated_order = OrderService.update_order_status(
                 order, new_status, request.user
             )
-            
+
             serializer = self.get_serializer(updated_order)
             return Response(serializer.data)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Create Payment",
         description="Process payment for order",
@@ -17567,22 +17567,22 @@ class OrderViewSet(TenantViewSet):
     def create_payment(self, request, pk=None):
         """Create payment for order using service layer"""
         order = self.get_object()
-        
+
         from services.payment import PaymentService
         try:
             payment = PaymentService.process_payment(
                 order, request.data, request.user
             )
-            
+
             serializer = PaymentSerializer(payment)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Generate Invoice",
         description="Generate PDF invoice for order",
@@ -17592,13 +17592,13 @@ class OrderViewSet(TenantViewSet):
     def invoice(self, request, pk=None):
         """Generate order invoice PDF"""
         order = self.get_object()
-        
+
         from services.order import OrderService
         pdf_buffer = OrderService.generate_invoice_pdf(order)
-        
+
         response = HttpResponse(pdf_buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="invoice_{order.order_number}.pdf"'
-        
+
         return response
 ```
 
@@ -17618,14 +17618,14 @@ class CustomerViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Customer.objects.select_related('user').all()
     serializer_class = CustomerSerializer
     filterset_fields = ['email_marketing', 'sms_marketing']
     search_fields = ['first_name', 'last_name', 'email']
     ordering_fields = ['created_at', 'total_spent', 'order_count']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="List Customers",
         description="Get paginated list of store customers",
@@ -17634,7 +17634,7 @@ class CustomerViewSet(TenantViewSet):
     def list(self, request, *args, **kwargs):
         """List customers with filtering and search"""
         return super().list(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Get Customer Orders",
         description="Get orders for specific customer",
@@ -17644,10 +17644,10 @@ class CustomerViewSet(TenantViewSet):
     def orders(self, request, pk=None):
         """Get orders for specific customer"""
         customer = self.get_object()
-        
+
         from services.customer import CustomerService
         orders = CustomerService.get_customer_orders(customer, request.store)
-        
+
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
 ```
@@ -17668,14 +17668,14 @@ class CollectionViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Collection.objects.select_related('image').prefetch_related('conditions').all()
     serializer_class = CollectionSerializer
     filterset_fields = ['is_smart', 'is_active']
     search_fields = ['title', 'description']
     ordering_fields = ['title', 'created_at']
     ordering = ['title']
-    
+
     @extend_schema(
         summary="List Collections",
         description="Get paginated list of store collections",
@@ -17684,7 +17684,7 @@ class CollectionViewSet(TenantViewSet):
     def list(self, request, *args, **kwargs):
         """List collections with filtering and search"""
         return super().list(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Get Collection Products",
         description="Get products in collection",
@@ -17694,13 +17694,13 @@ class CollectionViewSet(TenantViewSet):
     def products(self, request, pk=None):
         """Get products in collection using service layer"""
         collection = self.get_object()
-        
+
         from services.collection import CollectionService
         products = CollectionService.get_products_for_collection(collection)
-        
+
         serializer = ProductSerializer(products, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Add Products to Collection",
         description="Add products to manual collection",
@@ -17711,21 +17711,21 @@ class CollectionViewSet(TenantViewSet):
     def add_products(self, request, pk=None):
         """Add products to manual collection using service layer"""
         collection = self.get_object()
-        
+
         from services.collection import CollectionService
         try:
             CollectionService.add_products_to_collection(
                 collection, request.data.get('product_ids', [])
             )
-            
+
             return Response({'status': 'products_added'})
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Remove Products from Collection",
         description="Remove products from manual collection",
@@ -17736,15 +17736,15 @@ class CollectionViewSet(TenantViewSet):
     def remove_products(self, request, pk=None):
         """Remove products from manual collection using service layer"""
         collection = self.get_object()
-        
+
         from services.collection import CollectionService
         try:
             CollectionService.remove_products_from_collection(
                 collection, request.data.get('product_ids', [])
             )
-            
+
             return Response({'status': 'products_removed'})
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -17767,14 +17767,14 @@ class CouponViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Coupon.objects.select_related('campaign').all()
     serializer_class = CouponSerializer
     filterset_fields = ['type', 'is_active', 'campaign']
     search_fields = ['code', 'name']
     ordering_fields = ['created_at', 'used_count']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Validate Coupon",
         description="Validate coupon code for cart",
@@ -17785,7 +17785,7 @@ class CouponViewSet(TenantViewSet):
     def validate(self, request):
         """Validate coupon code using service layer"""
         from services.coupon import CouponService
-        
+
         try:
             result = CouponService.validate_coupon(
                 request.data.get('code'),
@@ -17793,15 +17793,15 @@ class CouponViewSet(TenantViewSet):
                 request.user,
                 request.store
             )
-            
+
             return Response(result)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @extend_schema(
         summary="Generate Coupon Codes",
         description="Generate multiple coupon codes",
@@ -17812,7 +17812,7 @@ class CouponViewSet(TenantViewSet):
     def generate_codes(self, request, pk=None):
         """Generate multiple coupon codes using service layer"""
         coupon = self.get_object()
-        
+
         from services.coupon import CouponService
         try:
             codes = CouponService.generate_bulk_coupons(
@@ -17821,9 +17821,9 @@ class CouponViewSet(TenantViewSet):
                 request.data.get('prefix', ''),
                 request.user
             )
-            
+
             return Response({'codes': codes})
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -17846,7 +17846,7 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['title', 'description']
     ordering_fields = ['title', 'created_at', 'price']
     ordering = ['-created_at']
-    
+
     def get_queryset(self):
         store = self.get_store()
         return Product.objects.filter(
@@ -17855,21 +17855,21 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
         ).select_related('store').prefetch_related(
             'variants', 'categories', 'images'
         )
-    
+
     def get_store(self):
         """Get store from subdomain or header"""
         host = self.request.get_host()
         subdomain = host.split('.')[0] if '.' in host else None
-        
+
         if subdomain:
             try:
                 return Store.objects.get(subdomain=subdomain, is_active=True)
             except Store.DoesNotExist:
                 return Store.objects.filter(is_default=True, is_active=True).first()
-        
+
         # Fallback to default store
         return Store.objects.filter(is_default=True, is_active=True).first()
-    
+
     @action(detail=True, methods=['get'])
     def variants(self, request, pk=None):
         """Get product variants"""
@@ -17877,12 +17877,12 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
         variants = product.variants.all()
         serializer = PublicProductVariantSerializer(variants, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=True, methods=['get'])
     def related(self, request, pk=None):
         """Get related products"""
         product = self.get_object()
-        
+
         # Get products from same categories
         category_ids = product.categories.values_list('id', flat=True)
         related = Product.objects.filter(
@@ -17890,7 +17890,7 @@ class PublicProductViewSet(viewsets.ReadOnlyModelViewSet):
             status='published',
             categories__in=category_ids
         ).exclude(id=product.id).distinct()[:8]
-        
+
         serializer = self.get_serializer(related, many=True)
         return Response(serializer.data)
 ```
@@ -17996,7 +17996,7 @@ urlpatterns = [
 ```python
 class ProductService:
     """Business logic for product management"""
-    
+
     @staticmethod
     def create_product(store, user, data):
         """Create new product with variants and categories"""
@@ -18018,7 +18018,7 @@ class ProductService:
             seo_description=data.get('seo_description', ''),
             created_by=user
         )
-        
+
         # Create variants
         if 'variants' in data:
             for variant_data in data['variants']:
@@ -18040,11 +18040,11 @@ class ProductService:
                     option2=variant_data.get('option2', ''),
                     option3=variant_data.get('option3', '')
                 )
-        
+
         # Add categories
         if 'category_ids' in data:
             product.categories.set(data['category_ids'])
-        
+
         # Create inventory records
         for variant in product.variants.all():
             Inventory.objects.get_or_create(
@@ -18053,7 +18053,7 @@ class ProductService:
                 variant=variant,
                 defaults={'quantity': variant.inventory_quantity}
             )
-        
+
         # Log creation
         log_event_async(
             user=user,
@@ -18063,21 +18063,21 @@ class ProductService:
             object_id=product.id,
             details={'title': product.title, 'sku': product.sku}
         )
-        
+
         return product
-    
+
     @staticmethod
     def update_product(product, user, data):
         """Update product and related data"""
         old_status = product.status
-        
+
         # Update product fields
         for field, value in data.items():
             if field not in ['variants', 'category_ids']:
                 setattr(product, field, value)
-        
+
         product.save()
-        
+
         # Update variants
         if 'variants' in data:
             for variant_data in data['variants']:
@@ -18094,11 +18094,11 @@ class ProductService:
                         product=product,
                         **variant_data
                     )
-        
+
         # Update categories
         if 'category_ids' in data:
             product.categories.set(data['category_ids'])
-        
+
         # Log status change
         if 'status' in data and old_status != data['status']:
             log_event_async(
@@ -18112,9 +18112,9 @@ class ProductService:
                     'new_status': data['status']
                 }
             )
-        
+
         return product
-    
+
     @staticmethod
     def duplicate_product(product, user):
         """Duplicate product with variants"""
@@ -18136,7 +18136,7 @@ class ProductService:
             seo_description=product.seo_description,
             created_by=user
         )
-        
+
         # Duplicate variants
         for variant in product.variants.all():
             ProductVariant.objects.create(
@@ -18157,10 +18157,10 @@ class ProductService:
                 option2=variant.option2,
                 option3=variant.option3
             )
-        
+
         # Copy categories
         new_product.categories.set(product.categories.all())
-        
+
         # Log duplication
         log_event_async(
             user=user,
@@ -18173,15 +18173,15 @@ class ProductService:
                 'original_title': product.title
             }
         )
-        
+
         return new_product
-    
+
     @staticmethod
     def delete_product(product, user):
         """Soft delete product"""
         product.status = 'deleted'
         product.save()
-        
+
         # Log deletion
         log_event_async(
             user=user,
@@ -18199,7 +18199,7 @@ class ProductService:
 ```python
 class CartService:
     """Business logic for shopping cart management"""
-    
+
     @staticmethod
     def get_cart(store, user=None, session_key=None):
         """Get or create cart for user or session"""
@@ -18218,9 +18218,9 @@ class CartService:
             )
         else:
             cart = None
-        
+
         return cart
-    
+
     @staticmethod
     def add_item(cart, product, variant=None, quantity=1):
         """Add item to cart with inventory check"""
@@ -18236,11 +18236,11 @@ class CartService:
                 product=product,
                 variant__isnull=True
             ).first()
-        
+
         # Check inventory availability
         if inventory and inventory.available < quantity:
             raise ValidationError(f"Only {inventory.available} items available")
-        
+
         # Get or create cart item
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
@@ -18251,23 +18251,23 @@ class CartService:
                 'unit_price': variant.price if variant else product.variants.first().price
             }
         )
-        
+
         if not created:
             new_quantity = cart_item.quantity + quantity
-            
+
             # Check inventory again for additional quantity
             if inventory and inventory.available < new_quantity:
                 raise ValidationError(f"Only {inventory.available} items available")
-            
+
             cart_item.quantity = new_quantity
             cart_item.save()
-        
+
         # Reserve inventory
         if inventory:
             inventory.reserve(cart_item.quantity)
-        
+
         return cart_item
-    
+
     @staticmethod
     def update_item_quantity(cart_item, quantity):
         """Update cart item quantity with inventory check"""
@@ -18278,33 +18278,33 @@ class CartService:
                 product=cart_item.product,
                 variant=cart_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.release(cart_item.quantity)
-            
+
             cart_item.delete()
             return True
-        
+
         # Check inventory availability
         inventory = Inventory.objects.filter(
             store=cart_item.cart.store,
             product=cart_item.product,
             variant=cart_item.variant
         ).first()
-        
+
         if inventory and inventory.available < quantity:
             raise ValidationError(f"Only {inventory.available} items available")
-        
+
         # Update quantity and adjust reservation
         if inventory:
             inventory.release(cart_item.quantity)
             inventory.reserve(quantity)
-        
+
         cart_item.quantity = quantity
         cart_item.save()
-        
+
         return cart_item
-    
+
     @staticmethod
     def remove_item(cart_item):
         """Remove item from cart and release inventory"""
@@ -18313,12 +18313,12 @@ class CartService:
             product=cart_item.product,
             variant=cart_item.variant
         ).first()
-        
+
         if inventory:
             inventory.release(cart_item.quantity)
-        
+
         cart_item.delete()
-    
+
     @staticmethod
     def clear_cart(cart):
         """Clear all items from cart and release inventory"""
@@ -18328,18 +18328,18 @@ class CartService:
                 product=item.product,
                 variant=item.variant
             ).first()
-            
+
             if inventory:
                 inventory.release(item.quantity)
-        
+
         cart.items.all().delete()
-    
+
     @staticmethod
     def convert_to_order(cart, billing_address, shipping_address, customer_notes=''):
         """Convert cart to order"""
         if not cart.items.exists():
             raise ValidationError("Cannot create order from empty cart")
-        
+
         # Create order
         order = Order.objects.create(
             store=cart.store,
@@ -18350,7 +18350,7 @@ class CartService:
             customer_notes=customer_notes,
             currency=cart.currency
         )
-        
+
         # Create order items
         for cart_item in cart.items.all():
             OrderItem.objects.create(
@@ -18363,11 +18363,11 @@ class CartService:
                 unit_price=cart_item.unit_price,
                 total_price=cart_item.get_total()
             )
-        
+
         # Calculate totals
         order.calculate_totals()
         order.save()
-        
+
         # Reserve inventory for order
         for cart_item in cart.items.all():
             inventory = Inventory.objects.filter(
@@ -18375,14 +18375,14 @@ class CartService:
                 product=cart_item.product,
                 variant=cart_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.reserve(cart_item.quantity)
-        
+
         # Update cart status
         cart.status = 'converted'
         cart.save()
-        
+
         return order
 ```
 
@@ -18392,19 +18392,19 @@ class CartService:
 ```python
 class OrderService:
     """Business logic for order management"""
-    
+
     @staticmethod
     def create_order_from_cart(cart, billing_address, shipping_address, customer_notes=''):
         """Create order from cart"""
         return CartService.convert_to_order(
             cart, billing_address, shipping_address, customer_notes
         )
-    
+
     @staticmethod
     def update_order_status(order, new_status, user=None):
         """Update order status with validation"""
         old_status = order.status
-        
+
         # Validate status transition
         valid_transitions = {
             'pending': ['confirmed', 'cancelled'],
@@ -18414,19 +18414,19 @@ class OrderService:
             'delivered': [],
             'cancelled': []
         }
-        
+
         if new_status not in valid_transitions.get(old_status, []):
             raise ValidationError(f"Cannot transition from {old_status} to {new_status}")
-        
+
         order.status = new_status
         order.save()
-        
+
         # Handle inventory based on status
         if new_status == 'cancelled':
             OrderService.release_inventory(order)
         elif new_status == 'shipped':
             OrderService.deduct_inventory(order)
-        
+
         # Log status change
         log_event_async(
             user=user,
@@ -18440,13 +18440,13 @@ class OrderService:
                 'order_number': order.order_number
             }
         )
-        
+
         # Send notifications
         if new_status in ['confirmed', 'shipped', 'delivered', 'cancelled']:
             send_order_status_email.delay(order.id, new_status)
-        
+
         return order
-    
+
     @staticmethod
     def release_inventory(order):
         """Release reserved inventory for cancelled order"""
@@ -18456,10 +18456,10 @@ class OrderService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.release(order_item.quantity)
-    
+
     @staticmethod
     def deduct_inventory(order):
         """Deduct inventory for shipped order"""
@@ -18469,10 +18469,10 @@ class OrderService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.deduct(order_item.quantity)
-    
+
     @staticmethod
     def process_payment(order, payment_method, payment_data):
         """Process payment for order"""
@@ -18481,7 +18481,7 @@ class OrderService:
             payment_method=payment_method,
             amount=order.total
         )
-        
+
         # Process based on payment method
         if payment_method.type == 'stripe':
             result = process_stripe_payment(payment, payment_data)
@@ -18491,12 +18491,12 @@ class OrderService:
             result = {'status': 'pending'}
         else:
             result = {'status': 'failed', 'error': 'Unsupported payment method'}
-        
+
         payment.status = result.get('status', 'failed')
         payment.transaction_id = result.get('transaction_id', '')
         payment.gateway_response = result
         payment.save()
-        
+
         # Update order payment status
         if payment.status == 'completed':
             order.payment_status = 'paid'
@@ -18504,7 +18504,7 @@ class OrderService:
         elif payment.status == 'failed':
             order.payment_status = 'failed'
             order.save()
-        
+
         # Log payment
         log_event_async(
             user=None,
@@ -18519,9 +18519,9 @@ class OrderService:
                 'method': payment_method.type
             }
         )
-        
+
         return payment
-    
+
     @staticmethod
     def calculate_shipping(order, shipping_method=None):
         """Calculate shipping cost for order"""
@@ -18531,10 +18531,10 @@ class OrderService:
                 store=order.store,
                 is_active=True
             ).first()
-        
+
         if not shipping_method:
             return Decimal('0.00')
-        
+
         # Calculate based on shipping method rules
         if shipping_method.type == 'flat_rate':
             return shipping_method.rate
@@ -18545,9 +18545,9 @@ class OrderService:
             return total_weight * shipping_method.rate_per_weight
         elif shipping_method.type == 'price_based':
             return order.subtotal * (shipping_method.rate_percentage / 100)
-        
+
         return Decimal('0.00')
-    
+
     @staticmethod
     def calculate_tax(order):
         """Calculate tax for order"""
@@ -18556,18 +18556,18 @@ class OrderService:
             store=order.store,
             is_active=True
         )
-        
+
         total_tax = Decimal('0.00')
-        
+
         for tax_rate in tax_rates:
             if tax_rate.applies_to_shipping:
                 taxable_amount = order.subtotal + order.shipping
             else:
                 taxable_amount = order.subtotal
-            
+
             tax_amount = taxable_amount * (tax_rate.rate / 100)
             total_tax += tax_amount
-        
+
         return total_tax
 ```
 
@@ -18577,7 +18577,7 @@ class OrderService:
 ```python
 class CustomerService:
     """Business logic for customer management"""
-    
+
     @staticmethod
     def create_customer(user, data):
         """Create customer profile for user"""
@@ -18594,7 +18594,7 @@ class CustomerService:
             default_billing_address=data.get('billing_address', {}),
             default_shipping_address=data.get('shipping_address', {})
         )
-        
+
         # Log customer creation
         log_event_async(
             user=user,
@@ -18604,19 +18604,19 @@ class CustomerService:
             object_id=customer.id,
             details={'email': customer.email}
         )
-        
+
         return customer
-    
+
     @staticmethod
     def update_customer(customer, data):
         """Update customer profile"""
         old_email = customer.email
-        
+
         for field, value in data.items():
             setattr(customer, field, value)
-        
+
         customer.save()
-        
+
         # Log email change
         if 'email' in data and old_email != data['email']:
             log_event_async(
@@ -18627,28 +18627,28 @@ class CustomerService:
                 object_id=customer.id,
                 details={'old_email': old_email, 'new_email': customer.email}
             )
-        
+
         return customer
-    
+
     @staticmethod
     def merge_customers(target_customer, source_customer):
         """Merge source customer into target customer"""
         # Merge orders
         Order.objects.filter(customer=source_customer).update(customer=target_customer)
-        
+
         # Merge carts
         Cart.objects.filter(customer=source_customer).update(customer=target_customer)
-        
+
         # Merge addresses
         if not target_customer.default_billing_address:
             target_customer.default_billing_address = source_customer.default_billing_address
-        
+
         if not target_customer.default_shipping_address:
             target_customer.default_shipping_address = source_customer.default_shipping_address
-        
+
         # Update statistics
         target_customer.update_statistics()
-        
+
         # Log merge
         log_event_async(
             user=target_customer.user,
@@ -18661,12 +18661,12 @@ class CustomerService:
                 'source_email': source_customer.email
             }
         )
-        
+
         # Delete source customer
         source_customer.delete()
-        
+
         return target_customer
-    
+
     @staticmethod
     def update_customer_statistics(customer):
         """Update customer order statistics"""
@@ -18686,7 +18686,7 @@ class CustomerService:
 ```python
 class CollectionService:
     """Business logic for collection management"""
-    
+
     @staticmethod
     def create_collection(store, user, data):
         """Create new collection"""
@@ -18700,12 +18700,12 @@ class CollectionService:
             sort_order=data.get('sort_order', 'manual'),
             created_by=user
         )
-        
+
         # Add image if provided
         if 'image_id' in data:
             collection.image_id = data['image_id']
             collection.save()
-        
+
         # Add conditions for smart collections
         if collection.is_smart and 'conditions' in data:
             for condition_data in data['conditions']:
@@ -18716,7 +18716,7 @@ class CollectionService:
                     value=condition_data['value'],
                     position=condition_data.get('position', 0)
                 )
-        
+
         # Add products for manual collections
         if not collection.is_smart and 'product_ids' in data:
             products = Product.objects.filter(
@@ -18724,7 +18724,7 @@ class CollectionService:
                 store=store
             )
             collection.products.add(*products)
-        
+
         # Log creation
         log_event_async(
             user=user,
@@ -18734,14 +18734,14 @@ class CollectionService:
             object_id=collection.id,
             details={'title': collection.title, 'is_smart': collection.is_smart}
         )
-        
+
         return collection
-    
+
     @staticmethod
     def get_smart_products(collection):
         """Get products for smart collection based on conditions"""
         queryset = Product.objects.filter(store=collection.store, status='published')
-        
+
         for condition in collection.conditions.all():
             if condition.field == 'title':
                 if condition.operator == 'contains':
@@ -18750,7 +18750,7 @@ class CollectionService:
                     queryset = queryset.filter(title__iexact=condition.value)
                 elif condition.operator == 'starts_with':
                     queryset = queryset.filter(title__istartswith=condition.value)
-            
+
             elif condition.field == 'price':
                 if condition.operator == 'greater_than':
                     queryset = queryset.filter(variants__price__gt=condition.value)
@@ -18761,13 +18761,13 @@ class CollectionService:
                         variants__price__gte=condition.value[0],
                         variants__price__lte=condition.value[1]
                     )
-            
+
             elif condition.field == 'category':
                 queryset = queryset.filter(categories__id=condition.value)
-            
+
             elif condition.field == 'tag':
                 queryset = queryset.filter(tags__contains=condition.value)
-        
+
         # Apply sorting
         if collection.sort_order == 'price_low_high':
             queryset = queryset.order_by('variants__price')
@@ -18777,20 +18777,20 @@ class CollectionService:
             queryset = queryset.order_by('-created_at')
         elif collection.sort_order == 'title':
             queryset = queryset.order_by('title')
-        
+
         return queryset.distinct()
-    
+
     @staticmethod
     def update_collection(collection, data):
         """Update collection"""
         old_is_smart = collection.is_smart
-        
+
         for field, value in data.items():
             if field not in ['conditions', 'product_ids']:
                 setattr(collection, field, value)
-        
+
         collection.save()
-        
+
         # Update conditions for smart collections
         if collection.is_smart and 'conditions' in data:
             collection.conditions.all().delete()
@@ -18799,11 +18799,11 @@ class CollectionService:
                     collection=collection,
                     **condition_data
                 )
-        
+
         # Update products for manual collections
         if not collection.is_smart and 'product_ids' in data:
             collection.products.set(data['product_ids'])
-        
+
         return collection
 ```
 
@@ -18813,7 +18813,7 @@ class CollectionService:
 ```python
 class CouponService:
     """Business logic for coupon management"""
-    
+
     @staticmethod
     def create_coupon(store, user, data):
         """Create new coupon"""
@@ -18831,7 +18831,7 @@ class CouponService:
             is_active=data.get('is_active', True),
             created_by=user
         )
-        
+
         # Log creation
         log_event_async(
             user=user,
@@ -18845,37 +18845,37 @@ class CouponService:
                 'value': str(coupon.value)
             }
         )
-        
+
         return coupon
-    
+
     @staticmethod
     def validate_coupon(coupon, customer=None, cart_total=0):
         """Validate coupon for use"""
         return coupon.is_valid(customer, cart_total)
-    
+
     @staticmethod
     def apply_coupon(coupon, order, customer=None):
         """Apply coupon to order"""
         is_valid, message = coupon.is_valid(customer, order.subtotal)
-        
+
         if not is_valid:
             raise ValidationError(message)
-        
+
         # Calculate discount
         discount_amount = coupon.apply_discount(order.subtotal)
-        
+
         # Update order discount
         order.discount = discount_amount
         order.calculate_totals()
         order.save()
-        
+
         # Add coupon to order
         order.coupons.add(coupon)
-        
+
         # Increment usage count
         coupon.used_count += 1
         coupon.save()
-        
+
         # Log coupon usage
         log_event_async(
             user=customer.user if customer else None,
@@ -18889,16 +18889,16 @@ class CouponService:
                 'discount_amount': str(discount_amount)
             }
         )
-        
+
         return discount_amount
-    
+
     @staticmethod
     def generate_bulk_coupons(store, user, template_data, count):
         """Generate multiple coupons from template"""
         coupons = []
         prefix = template_data.get('prefix', '')
         base_code = template_data['code']
-        
+
         for i in range(count):
             code = f"{prefix}{base_code}_{i+1}"
             coupon = Coupon.objects.create(
@@ -18916,7 +18916,7 @@ class CouponService:
                 created_by=user
             )
             coupons.append(coupon)
-        
+
         # Log bulk generation
         log_event_async(
             user=user,
@@ -18929,7 +18929,7 @@ class CouponService:
                 'prefix': prefix
             }
         )
-        
+
         return coupons
 ```
 
@@ -18939,7 +18939,7 @@ class CouponService:
 ```python
 class InventoryService:
     """Business logic for inventory management"""
-    
+
     @staticmethod
     def adjust_inventory(store, product, variant, quantity, transaction_type, user=None, notes=''):
         """Adjust inventory levels"""
@@ -18949,9 +18949,9 @@ class InventoryService:
             variant=variant,
             defaults={'quantity': 0}
         )
-        
+
         old_quantity = inventory.quantity
-        
+
         if transaction_type == 'add':
             inventory.quantity += quantity
         elif transaction_type == 'subtract':
@@ -18960,9 +18960,9 @@ class InventoryService:
             inventory.quantity = quantity
         else:
             raise ValidationError("Invalid transaction type")
-        
+
         inventory.save()
-        
+
         # Create transaction record
         InventoryTransaction.objects.create(
             inventory=inventory,
@@ -18971,7 +18971,7 @@ class InventoryService:
             notes=notes,
             created_by=user
         )
-        
+
         # Log inventory change
         log_event_async(
             user=user,
@@ -18988,9 +18988,9 @@ class InventoryService:
                 'quantity_change': quantity
             }
         )
-        
+
         return inventory
-    
+
     @staticmethod
     def reserve_inventory(order):
         """Reserve inventory for order"""
@@ -19000,13 +19000,13 @@ class InventoryService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 if not inventory.reserve(order_item.quantity):
                     raise ValidationError(
                         f"Insufficient inventory for {order_item.product.title}"
                     )
-    
+
     @staticmethod
     def release_inventory(order):
         """Release reserved inventory for cancelled order"""
@@ -19016,10 +19016,10 @@ class InventoryService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.release(order_item.quantity)
-    
+
     @staticmethod
     def deduct_inventory(order):
         """Deduct inventory for shipped order"""
@@ -19029,13 +19029,13 @@ class InventoryService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 if not inventory.deduct(order_item.quantity):
                     raise ValidationError(
                         f"Insufficient inventory for {order_item.product.title}"
                     )
-    
+
     @staticmethod
     def get_low_stock_alerts(store, threshold=10):
         """Get products with low inventory"""
@@ -19043,9 +19043,9 @@ class InventoryService:
             store=store,
             available__lte=threshold
         ).select_related('product', 'variant')
-        
+
         return inventories
-    
+
     @staticmethod
     def sync_variant_inventory(variant):
         """Sync inventory between variant and inventory records"""
@@ -19054,7 +19054,7 @@ class InventoryService:
             product=variant.product,
             variant=variant
         ).first()
-        
+
         if inventory:
             variant.inventory_quantity = inventory.quantity
             variant.save()
@@ -19085,20 +19085,20 @@ class Product(models.Model):
         blank=True,
         related_name='featured_products'
     )
-    
+
     def get_all_images(self):
         """Get all product images including variants"""
         image_ids = []
-        
+
         # Product images
         product_images = self.images.all()
         image_ids.extend([img.id for img in product_images])
-        
+
         # Variant images
         for variant in self.variants.all():
             variant_images = variant.images.all()
             image_ids.extend([img.id for img in variant_images])
-        
+
         return MediaFile.objects.filter(id__in=image_ids)
 
 class ProductImage(models.Model):
@@ -19106,7 +19106,7 @@ class ProductImage(models.Model):
     image = models.ForeignKey('media.MediaFile', on_delete=models.CASCADE)
     alt_text = models.CharField(max_length=255, blank=True)
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['position']
 ```
@@ -19116,14 +19116,14 @@ class ProductImage(models.Model):
 # In media/models.py - add reverse relationships
 class MediaFile(models.Model):
     # ... existing fields
-    
+
     # Ecommerce relationships
     featured_products = GenericRelation(
         Product,
         object_id_field='featured_image_id',
         related_query_name='featured_image_files'
     )
-    
+
     def get_ecommerce_usage(self):
         """Get all ecommerce usage of this media file"""
         usage = {
@@ -19144,15 +19144,15 @@ class MediaFile(models.Model):
 class Customer(models.Model):
     user = models.OneToOneField(GlobalUser, on_delete=models.CASCADE)
     # ... other fields
-    
+
     def get_user_permissions(self):
         """Get user's ecommerce permissions"""
         return self.user.get_all_permissions()
-    
+
     def can_access_store(self, store):
         """Check if customer can access store"""
         return store.is_active and (
-            store.is_public or 
+            store.is_public or
             self.user.stores.filter(id=store.id).exists()
         )
 ```
@@ -19170,16 +19170,16 @@ class AccountService:
             first_name=user_data.get('first_name', ''),
             last_name=user_data.get('last_name', '')
         )
-        
+
         customer = CustomerService.create_customer(user, user_data)
-        
+
         # Add to store if specified
         if store:
             user.stores.add(store)
-        
+
         # Send welcome email
         send_welcome_email.delay(user.id)
-        
+
         return user, customer
 ```
 
@@ -19190,13 +19190,13 @@ class AccountService:
 # Store model with ecommerce settings
 class Store(models.Model):
     # ... existing fields
-    
+
     # Ecommerce settings
     currency = models.CharField(max_length=3, default='USD')
     tax_included = models.BooleanField(default=False)
     allow_guest_checkout = models.BooleanField(default=True)
     require_account_for_purchase = models.BooleanField(default=False)
-    
+
     # Default settings
     default_shipping_method = models.ForeignKey(
         'ecommerce.ShippingMethod',
@@ -19205,13 +19205,13 @@ class Store(models.Model):
         blank=True,
         related_name='default_stores'
     )
-    
+
     default_tax_rate = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2, 
+        max_digits=5,
+        decimal_places=2,
         default=0
     )
-    
+
     def get_ecommerce_settings(self):
         """Get store ecommerce configuration"""
         return {
@@ -19229,10 +19229,10 @@ class Store(models.Model):
 # Base mixin for store-scoped models
 class StoreScopedModel(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    
+
     class Meta:
         abstract = True
-    
+
     def clean(self):
         """Validate store access"""
         if not self.store.is_active:
@@ -19261,7 +19261,7 @@ from logs.services import log_event_async
 def log_product_change(sender, instance, created, **kwargs):
     """Log product changes"""
     action = 'product_created' if created else 'product_updated'
-    
+
     log_event_async(
         user=getattr(instance, 'created_by', None),
         store=instance.store,
@@ -19318,9 +19318,9 @@ class OrderService:
     def update_order_status(order, new_status, user=None):
         """Update order status with logging"""
         old_status = order.status
-        
+
         # ... business logic ...
-        
+
         # Log the status change
         log_event_async(
             user=user,
@@ -19334,7 +19334,7 @@ class OrderService:
                 'new_status': new_status
             }
         )
-        
+
         return order
 ```
 
@@ -19347,25 +19347,25 @@ from translations.fields import TranslatableField
 
 class Product(StoreScopedModel):
     # ... other fields
-    
+
     # Translatable fields
     title = TranslatableField()
     description = TranslatableField()
     short_description = TranslatableField()
     seo_title = TranslatableField()
     seo_description = TranslatableField()
-    
+
     def get_translated_title(self, language_code=None):
         """Get translated title"""
         return self.get_translation('title', language_code)
-    
+
     def get_translated_description(self, language_code=None):
         """Get translated description"""
         return self.get_translation('description', language_code)
 
 class ProductCategory(StoreScopedModel):
     # ... other fields
-    
+
     # Translatable fields
     name = TranslatableField()
     description = TranslatableField()
@@ -19387,7 +19387,7 @@ class ProductService:
             # ... non-translatable fields ...
             created_by=user
         )
-        
+
         # Set translations
         if language_code:
             TranslationService.set_translation(
@@ -19397,7 +19397,7 @@ class ProductService:
                 language_code=language_code,
                 value=data['title']
             )
-            
+
             if 'description' in data:
                 TranslationService.set_translation(
                     object_type='product',
@@ -19406,16 +19406,16 @@ class ProductService:
                     language_code=language_code,
                     value=data['description']
                 )
-        
+
         return product
-    
+
     @staticmethod
     def get_product_with_translations(product, language_code=None):
         """Get product with translated fields"""
         if language_code:
             product.translated_title = product.get_translated_title(language_code)
             product.translated_description = product.get_translated_description(language_code)
-        
+
         return product
 ```
 
@@ -19433,10 +19433,10 @@ from smtp.services import EmailService
 def send_order_confirmation_email(order_id):
     """Send order confirmation email"""
     order = Order.objects.get(id=order_id)
-    
+
     # Get customer's preferred language
     language_code = getattr(order.customer.user, 'language_code', 'en')
-    
+
     # Render email template
     context = {
         'order': order,
@@ -19444,17 +19444,17 @@ def send_order_confirmation_email(order_id):
         'store': order.store,
         'order_items': order.items.all()
     }
-    
+
     html_content = render_to_string(
         f'ecommerce/emails/order_confirmation_{language_code}.html',
         context
     )
-    
+
     text_content = render_to_string(
         f'ecommerce/emails/order_confirmation_{language_code}.txt',
         context
     )
-    
+
     # Send email
     EmailService.send_email(
         store=order.store,
@@ -19468,14 +19468,14 @@ def send_order_confirmation_email(order_id):
 def send_order_status_email(order_id, status):
     """Send order status update email"""
     order = Order.objects.get(id=order_id)
-    
+
     context = {
         'order': order,
         'customer': order.customer,
         'status': status,
         'store': order.store
     }
-    
+
     EmailService.send_email(
         store=order.store,
         template_name='order_status_update',
@@ -19488,17 +19488,17 @@ def send_low_stock_alert_email(store_id, product_ids):
     """Send low stock alert to store admin"""
     store = Store.objects.get(id=store_id)
     products = Product.objects.filter(id__in=product_ids)
-    
+
     context = {
         'store': store,
         'products': products
     }
-    
+
     # Send to store admin
     admin_emails = store.users.filter(
         storemembership__role__in=['admin', 'manager']
     ).values_list('email', flat=True)
-    
+
     EmailService.send_email(
         store=store,
         template_name='low_stock_alert',
@@ -19517,7 +19517,7 @@ class EmailTemplate(models.Model):
     html_content = models.TextField()
     text_content = models.TextField(blank=True)
     language_code = models.CharField(max_length=10, default='en')
-    
+
     class Meta:
         unique_together = ['store', 'name', 'language_code']
 
@@ -19543,11 +19543,11 @@ ECOMMERCE_EMAIL_TEMPLATES = [
 # In ecommerce/managers.py
 class StoreScopedManager(models.Manager):
     """Manager for store-scoped queries"""
-    
+
     def for_store(self, store):
         """Filter by store"""
         return self.filter(store=store)
-    
+
     def for_user(self, user):
         """Filter by user's stores"""
         return self.filter(store__in=user.stores.all())
@@ -19555,7 +19555,7 @@ class StoreScopedManager(models.Manager):
 # Usage in models
 class Product(StoreScopedModel):
     objects = StoreScopedManager()
-    
+
     class Meta:
         base_manager_name = 'objects'
 ```
@@ -19565,22 +19565,22 @@ class Product(StoreScopedModel):
 # In ecommerce/permissions.py
 class StoreScopedPermission:
     """Permission mixin for store-scoped access"""
-    
+
     def has_store_permission(self, request, store):
         """Check if user has permission for store"""
         if not store.is_active:
             return False
-        
+
         if request.user.is_superuser:
             return True
-        
+
         return request.user.stores.filter(id=store.id).exists()
-    
+
     def has_object_permission(self, request, view, obj):
         """Check permission for specific object"""
         if hasattr(obj, 'store'):
             return self.has_store_permission(request, obj.store)
-        
+
         return True
 ```
 
@@ -19591,33 +19591,33 @@ class StoreScopedPermission:
 # In ecommerce/middleware.py
 class StoreContextMiddleware:
     """Middleware to add store context to request"""
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         # Determine store from subdomain, header, or user
         store = self.get_store_from_request(request)
-        
+
         if store:
             request.store = store
             request.store_settings = store.get_ecommerce_settings()
-        
+
         response = self.get_response(request)
         return response
-    
+
     def get_store_from_request(self, request):
         """Get store from various sources"""
         # Try subdomain
         host = request.get_host()
         subdomain = host.split('.')[0] if '.' in host else None
-        
+
         if subdomain:
             try:
                 return Store.objects.get(subdomain=subdomain, is_active=True)
             except Store.DoesNotExist:
                 pass
-        
+
         # Try header
         store_id = request.META.get('HTTP_X_STORE_ID')
         if store_id:
@@ -19625,11 +19625,11 @@ class StoreContextMiddleware:
                 return Store.objects.get(id=store_id, is_active=True)
             except Store.DoesNotExist:
                 pass
-        
+
         # Try user's default store
         if request.user.is_authenticated:
             return request.user.stores.filter(is_active=True).first()
-        
+
         # Try default store
         return Store.objects.filter(is_default=True, is_active=True).first()
 ```
@@ -19639,32 +19639,32 @@ class StoreContextMiddleware:
 # In ecommerce/serializers.py
 class StoreAwareSerializer:
     """Serializer mixin for store-aware responses"""
-    
+
     def to_representation(self, instance):
         """Add store context to response"""
         data = super().to_representation(instance)
-        
+
         if hasattr(instance, 'store'):
             data['store'] = {
                 'id': instance.store.id,
                 'name': instance.store.name,
                 'currency': instance.store.currency
             }
-        
+
         return data
 
 class ProductSerializer(StoreAwareSerializer, serializers.ModelSerializer):
     """Product serializer with store context"""
-    
+
     store_info = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Product
         fields = [
             'id', 'title', 'slug', 'description', 'sku', 'status',
             'featured', 'price', 'store_info', 'created_at', 'updated_at'
         ]
-    
+
     def get_store_info(self, obj):
         return {
             'id': obj.store.id,
@@ -19680,25 +19680,25 @@ class ProductSerializer(StoreAwareSerializer, serializers.ModelSerializer):
 # In ecommerce/events.py
 class EcommerceEvents:
     """Ecommerce event definitions"""
-    
+
     PRODUCT_CREATED = 'product_created'
     PRODUCT_UPDATED = 'product_updated'
     PRODUCT_DELETED = 'product_deleted'
-    
+
     ORDER_CREATED = 'order_created'
     ORDER_UPDATED = 'order_updated'
     ORDER_CANCELLED = 'order_cancelled'
     ORDER_FULFILLED = 'order_fulfilled'
-    
+
     PAYMENT_RECEIVED = 'payment_received'
     PAYMENT_FAILED = 'payment_failed'
-    
+
     CART_ABANDONED = 'cart_abandoned'
     CART_CONVERTED = 'cart_converted'
-    
+
     CUSTOMER_REGISTERED = 'customer_registered'
     CUSTOMER_LOGIN = 'customer_login'
-    
+
     INVENTORY_LOW = 'inventory_low'
     INVENTORY_OUT_OF_STOCK = 'inventory_out_of_stock'
 
@@ -19708,13 +19708,13 @@ def handle_order_created(sender, order, **kwargs):
     """Handle order created event"""
     # Update customer statistics
     order.customer.update_statistics()
-    
+
     # Reserve inventory
     OrderService.reserve_inventory(order)
-    
+
     # Send confirmation email
     send_order_confirmation_email.delay(order.id)
-    
+
     # Log to analytics
     track_analytics_event.delay('order_created', {
         'order_id': order.id,
@@ -19731,7 +19731,7 @@ def handle_order_created(sender, order, **kwargs):
 # In ecommerce/analytics.py
 class EcommerceAnalytics:
     """Analytics tracking for ecommerce events"""
-    
+
     @staticmethod
     def track_product_view(product, user=None):
         """Track product view"""
@@ -19741,7 +19741,7 @@ class EcommerceAnalytics:
             'user_id': user.id if user else None,
             'timestamp': timezone.now().isoformat()
         })
-    
+
     @staticmethod
     def track_cart_action(cart, action, user=None):
         """Track cart actions"""
@@ -19754,7 +19754,7 @@ class EcommerceAnalytics:
             'user_id': user.id if user else None,
             'timestamp': timezone.now().isoformat()
         })
-    
+
     @staticmethod
     def track_purchase(order):
         """Track purchase completion"""
@@ -19786,7 +19786,7 @@ def track_analytics_event(event_name, data):
 # Customer data handling
 class Customer(models.Model):
     # ... fields
-    
+
     def get_personal_data(self):
         """Get all personal data for GDPR export"""
         return {
@@ -19824,7 +19824,7 @@ class Customer(models.Model):
                 for order in Order.objects.filter(customer=self)
             ]
         }
-    
+
     def anonymize_data(self):
         """Anonymize customer data for GDPR right to be forgotten"""
         # Anonymize user data
@@ -19832,7 +19832,7 @@ class Customer(models.Model):
         self.user.first_name = "Deleted"
         self.user.last_name = "User"
         self.user.save()
-        
+
         # Anonymize customer data
         self.email = f"deleted_{self.id}@deleted.com"
         self.first_name = "Deleted"
@@ -19841,7 +19841,7 @@ class Customer(models.Model):
         self.default_billing_address = {}
         self.default_shipping_address = {}
         self.save()
-        
+
         # Log anonymization
         log_event_async(
             user=None,
@@ -19860,18 +19860,18 @@ from django_cryptography.fields import encrypt
 
 class Payment(models.Model):
     # ... fields
-    
+
     # Encrypt sensitive payment data
     gateway_response = encrypt(models.JSONField(default=dict))
     billing_address = encrypt(models.JSONField(default=dict))
-    
+
     class Meta:
         # Ensure encrypted fields are not logged
         exclude_logs = ['gateway_response', 'billing_address']
 
 class Order(models.Model):
     # ... fields
-    
+
     # Encrypt customer addresses
     billing_address = encrypt(models.JSONField(default=dict))
     shipping_address = encrypt(models.JSONField(default=dict))
@@ -19885,30 +19885,30 @@ class Order(models.Model):
 # Strict store-scoped permissions
 class StoreScopedPermission(permissions.BasePermission):
     """Ensure users can only access their own store data"""
-    
+
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        
+
         # Superuser can access all stores
         if request.user.is_superuser:
             return True
-        
+
         # Get store from request
         store = getattr(request, 'store', None)
         if not store:
             return False
-        
+
         # Check user has access to store
         return request.user.stores.filter(id=store.id).exists()
-    
+
     def has_object_permission(self, request, view, obj):
         if not hasattr(obj, 'store'):
             return True
-        
+
         if request.user.is_superuser:
             return True
-        
+
         return obj.store == request.store
 
 # Apply to all ecommerce ViewSets
@@ -19928,18 +19928,18 @@ class StoreMembership(models.Model):
         ('staff', 'Staff'),
         ('viewer', 'Viewer')
     ]
-    
+
     user = models.ForeignKey(GlobalUser, on_delete=models.CASCADE)
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    
+
     class Meta:
         unique_together = ['user', 'store']
 
 # Role-based permissions
 class EcommerceRolePermission:
     """Define permissions for each role"""
-    
+
     PERMISSIONS = {
         'owner': ['*'],  # All permissions
         'admin': [
@@ -19966,14 +19966,14 @@ class EcommerceRolePermission:
             'product.read', 'order.read', 'customer.read', 'coupon.read'
         ]
     }
-    
+
     @classmethod
     def has_permission(cls, user, store, permission):
         """Check if user has specific permission"""
         try:
             membership = StoreMembership.objects.get(user=user, store=store)
             role_permissions = cls.PERMISSIONS.get(membership.role, [])
-            
+
             return '*' in role_permissions or permission in role_permissions
         except StoreMembership.DoesNotExist:
             return False
@@ -19988,40 +19988,40 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
-    
+
     def validate_title(self, value):
         """Validate product title"""
         if not value or len(value.strip()) < 3:
             raise serializers.ValidationError("Product title must be at least 3 characters")
-        
+
         # Check for malicious content
         if any(keyword in value.lower() for keyword in ['script', 'javascript', 'alert']):
             raise serializers.ValidationError("Invalid characters in title")
-        
+
         return value.strip()
-    
+
     def validate_price(self, value):
         """Validate price values"""
         if value < 0:
             raise serializers.ValidationError("Price cannot be negative")
-        
+
         if value > 999999.99:
             raise serializers.ValidationError("Price exceeds maximum allowed amount")
-        
+
         return value
-    
+
     def validate_sku(self, value):
         """Validate SKU format"""
         if not value:
             raise serializers.ValidationError("SKU is required")
-        
+
         # Check SKU format (alphanumeric with hyphens/underscores)
         import re
         if not re.match(r'^[A-Za-z0-9_-]+$', value):
             raise serializers.ValidationError("SKU can only contain letters, numbers, hyphens, and underscores")
-        
+
         return value.upper()
-    
+
     def validate(self, data):
         """Cross-field validation"""
         # Validate variant prices
@@ -20029,10 +20029,10 @@ class ProductSerializer(serializers.ModelSerializer):
             for variant in data['variants']:
                 if variant.get('price', 0) < 0:
                     raise serializers.ValidationError("Variant price cannot be negative")
-                
+
                 if variant.get('compare_at_price') and variant['compare_at_price'] <= variant.get('price', 0):
                     raise serializers.ValidationError("Compare at price must be greater than regular price")
-        
+
         return data
 ```
 
@@ -20042,35 +20042,35 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = '__all__'
-    
+
     def validate_billing_address(self, value):
         """Validate billing address format"""
         required_fields = ['street', 'city', 'country', 'postal_code']
-        
+
         for field in required_fields:
             if field not in value or not value[field]:
                 raise serializers.ValidationError(f"Billing address missing required field: {field}")
-        
+
         # Validate postal code format based on country
         country = value.get('country', '').upper()
         postal_code = value.get('postal_code', '')
-        
+
         if country == 'US' and not re.match(r'^\d{5}(-\d{4})?$', postal_code):
             raise serializers.ValidationError("Invalid US postal code format")
-        
+
         return value
-    
+
     def validate_shipping_address(self, value):
         """Validate shipping address format"""
         return self.validate_billing_address(value)
-    
+
     def validate(self, data):
         """Validate order consistency"""
         # Check if cart belongs to same store
         if 'cart' in data and 'store' in data:
             if data['cart'].store != data['store']:
                 raise serializers.ValidationError("Cart must belong to the same store")
-        
+
         # Validate customer belongs to store
         if 'customer' in data and 'store' in data:
             customer_orders = Order.objects.filter(
@@ -20080,7 +20080,7 @@ class OrderSerializer(serializers.ModelSerializer):
             if not customer_orders.exists() and data['customer'].user.stores.filter(id=data['store'].id).exists():
                 # First order for this customer in this store
                 pass
-        
+
         return data
 ```
 
@@ -20095,7 +20095,7 @@ from rest_framework.views import APIView
 
 class EcommerceRateLimitMixin:
     """Rate limiting mixin for ecommerce APIs"""
-    
+
     RATE_LIMITS = {
         'cart': '100/hour',
         'order': '10/hour',
@@ -20103,11 +20103,11 @@ class EcommerceRateLimitMixin:
         'product_view': '1000/hour',
         'search': '200/hour'
     }
-    
+
     def get_rate_limit(self, view_name):
         """Get rate limit for specific view"""
         return self.RATE_LIMITS.get(view_name, '100/hour')
-    
+
     def check_rate_limit(self, request, view_name):
         """Check if request exceeds rate limit"""
         if not request.user.is_authenticated:
@@ -20116,37 +20116,37 @@ class EcommerceRateLimitMixin:
             limit = str(int(limit.split('/')[0]) // 2) + '/' + limit.split('/')[1]
         else:
             limit = self.get_rate_limit(view_name)
-        
+
         # Parse limit
         max_requests, period = limit.split('/')
         period_seconds = {'hour': 3600, 'minute': 60, 'second': 1}[period]
-        
+
         # Generate cache key
         if request.user.is_authenticated:
             key = f"rate_limit:{view_name}:{request.user.id}"
         else:
             key = f"rate_limit:{view_name}:{request.META.get('REMOTE_ADDR', 'unknown')}"
-        
+
         # Check current count
         count = cache.get(key, 0)
-        
+
         if count >= int(max_requests):
             return False
-        
+
         # Increment counter
         cache.set(key, count + 1, period_seconds)
         return True
-    
+
     def dispatch(self, request, *args, **kwargs):
         """Override dispatch to check rate limits"""
         view_name = self.__class__.__name__.lower().replace('viewset', '')
-        
+
         if not self.check_rate_limit(request, view_name):
             return HttpResponseTooManyRequests(
                 '{"error": "Rate limit exceeded"}',
                 content_type='application/json'
             )
-        
+
         return super().dispatch(request, *args, **kwargs)
 
 # Apply to sensitive endpoints
@@ -20166,17 +20166,17 @@ class OrderViewSet(EcommerceRateLimitMixin, viewsets.ModelViewSet):
 # Payment processing security
 class PaymentService:
     """Secure payment processing service"""
-    
+
     @staticmethod
     def process_payment(order, payment_method, payment_data):
         """Process payment with security measures"""
         # Validate payment method belongs to store
         if payment_method.store != order.store:
             raise ValidationError("Invalid payment method")
-        
+
         # Never store full credit card details
         sensitive_data = ['card_number', 'cvv', 'expiry']
-        
+
         # Log payment attempt without sensitive data
         log_data = {
             'order_id': order.id,
@@ -20184,7 +20184,7 @@ class PaymentService:
             'amount': str(order.total),
             'timestamp': timezone.now().isoformat()
         }
-        
+
         try:
             # Process payment through secure gateway
             if payment_method.type == 'stripe':
@@ -20197,7 +20197,7 @@ class PaymentService:
                 )
             else:
                 raise ValidationError("Unsupported payment method")
-            
+
             # Log successful payment (without sensitive data)
             log_data['status'] = 'success'
             log_data['transaction_id'] = result.get('transaction_id', '')
@@ -20208,9 +20208,9 @@ class PaymentService:
                 object_type='payment',
                 details=log_data
             )
-            
+
             return result
-            
+
         except Exception as e:
             # Log failed payment
             log_data['status'] = 'failed'
@@ -20222,16 +20222,16 @@ class PaymentService:
                 object_type='payment',
                 details=log_data
             )
-            
+
             raise
-    
+
     @staticmethod
     def _process_stripe_payment(payment_method, payment_data, order):
         """Process Stripe payment securely"""
         import stripe
-        
+
         stripe.api_key = payment_method.config.get('secret_key')
-        
+
         # Create payment intent
         intent = stripe.PaymentIntent.create(
             amount=int(order.total * 100),  # Convert to cents
@@ -20240,7 +20240,7 @@ class PaymentService:
             confirmation_method='manual',
             confirm=True
         )
-        
+
         return {
             'status': 'completed' if intent.status == 'succeeded' else 'pending',
             'transaction_id': intent.id,
@@ -20253,59 +20253,59 @@ class PaymentService:
 # Basic fraud detection
 class FraudDetectionService:
     """Fraud detection for ecommerce transactions"""
-    
+
     @staticmethod
     def analyze_order(order):
         """Analyze order for fraud indicators"""
         risk_score = 0
         indicators = []
-        
+
         # Check order value
         if order.total > 1000:
             risk_score += 20
             indicators.append('high_value_order')
-        
+
         # Check shipping vs billing address
         if order.billing_address != order.shipping_address:
             risk_score += 10
             indicators.append('address_mismatch')
-        
+
         # Check customer order history
         if order.customer.order_count == 0:
             risk_score += 15
             indicators.append('first_time_customer')
-        
+
         # Check order frequency
         recent_orders = Order.objects.filter(
             customer=order.customer,
             created_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
-        
+
         if recent_orders > 5:
             risk_score += 25
             indicators.append('high_frequency_orders')
-        
+
         # Check IP address (if available)
         # This would require storing IP addresses with orders
-        
+
         return {
             'risk_score': risk_score,
             'indicators': indicators,
             'is_suspicious': risk_score > 50
         }
-    
+
     @staticmethod
     def flag_suspicious_order(order):
         """Flag suspicious order for review"""
         analysis = FraudDetectionService.analyze_order(order)
-        
+
         if analysis['is_suspicious']:
             order.status = 'flagged'
             order.save()
-            
+
             # Notify admin
             send_fraud_alert_email.delay(order.id, analysis)
-            
+
             # Log fraud detection
             log_event_async(
                 user=None,
@@ -20315,7 +20315,7 @@ class FraudDetectionService:
                 object_id=order.id,
                 details=analysis
             )
-        
+
         return analysis
 ```
 
@@ -20326,7 +20326,7 @@ class FraudDetectionService:
 # Marketing consent tracking
 class CustomerConsent(models.Model):
     """Track customer consent for marketing and data processing"""
-    
+
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     consent_type = models.CharField(max_length=50)  # 'email_marketing', 'sms_marketing', 'data_processing'
     granted = models.BooleanField(default=False)
@@ -20334,13 +20334,13 @@ class CustomerConsent(models.Model):
     revoked_at = models.DateTimeField(null=True, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    
+
     class Meta:
         unique_together = ['customer', 'consent_type']
 
 class ConsentService:
     """Manage customer consent"""
-    
+
     @staticmethod
     def record_consent(customer, consent_type, granted, request=None):
         """Record customer consent"""
@@ -20353,7 +20353,7 @@ class ConsentService:
                 'revoked_at': timezone.now() if not granted else None
             }
         )
-        
+
         if not created:
             consent.granted = granted
             if granted:
@@ -20362,13 +20362,13 @@ class ConsentService:
             else:
                 consent.revoked_at = timezone.now()
             consent.save()
-        
+
         # Record request details if available
         if request:
             consent.ip_address = request.META.get('REMOTE_ADDR')
             consent.user_agent = request.META.get('HTTP_USER_AGENT', '')
             consent.save()
-        
+
         # Log consent change
         log_event_async(
             user=customer.user,
@@ -20381,9 +20381,9 @@ class ConsentService:
                 'ip_address': consent.ip_address
             }
         )
-        
+
         return consent
-    
+
     @staticmethod
     def has_consent(customer, consent_type):
         """Check if customer has granted consent"""
@@ -20404,13 +20404,13 @@ class ConsentService:
 # Security middleware for ecommerce APIs
 class EcommerceSecurityMiddleware:
     """Add security headers to ecommerce responses"""
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
-    
+
     def __call__(self, request):
         response = self.get_response(request)
-        
+
         # Add security headers
         response['X-Content-Type-Options'] = 'nosniff'
         response['X-Frame-Options'] = 'DENY'
@@ -20423,10 +20423,10 @@ class EcommerceSecurityMiddleware:
             "img-src 'self' data: https:; "
             "connect-src 'self' https://api.stripe.com;"
         )
-        
+
         # Remove server information
         response.pop('Server', None)
-        
+
         return response
 ```
 
@@ -20437,7 +20437,7 @@ class EcommerceSecurityMiddleware:
 # Enhanced audit logging for ecommerce
 class EcommerceAuditLog(models.Model):
     """Detailed audit log for ecommerce operations"""
-    
+
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     user = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=100)
@@ -20448,7 +20448,7 @@ class EcommerceAuditLog(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['store', 'action']),
@@ -20478,13 +20478,13 @@ def audit_product_change(sender, instance, created, **kwargs):
         # Track field changes
         old_instance = sender.objects.get(id=instance.id)
         changes = {}
-        
+
         for field in ['title', 'status', 'featured']:
             old_value = getattr(old_instance, field)
             new_value = getattr(instance, field)
             if old_value != new_value:
                 changes[field] = {'old': old_value, 'new': new_value}
-        
+
         if changes:
             EcommerceAuditLog.objects.create(
                 store=instance.store,
@@ -20506,7 +20506,7 @@ from django.utils.html import strip_tags
 
 class SanitizedCharField(models.CharField):
     """CharField that automatically sanitizes input"""
-    
+
     def pre_save(self, model_instance, add):
         value = getattr(model_instance, self.attname)
         if value:
@@ -20517,7 +20517,7 @@ class SanitizedCharField(models.CharField):
 
 class SanitizedTextField(models.TextField):
     """TextField that automatically sanitizes input"""
-    
+
     def pre_save(self, model_instance, add):
         value = getattr(model_instance, self.attname)
         if value:
@@ -20539,14 +20539,14 @@ class Product(models.Model):
 # Use Django ORM properly to prevent SQL injection
 class ProductQuerySet(models.QuerySet):
     """Safe custom queries for products"""
-    
+
     def by_price_range(self, min_price, max_price):
         """Safe price range filtering"""
         return self.filter(
             variants__price__gte=min_price,
             variants__price__lte=max_price
         )
-    
+
     def search_safely(self, query):
         """Safe search implementation"""
         return self.filter(
@@ -20593,7 +20593,7 @@ class ProductModelTest(TestCase):
             slug="test-category",
             created_by=self.user
         )
-    
+
     def test_product_creation(self):
         """Test product creation with required fields"""
         product = Product.objects.create(
@@ -20603,14 +20603,14 @@ class ProductModelTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         assert product.title == "Test Product"
         assert product.slug == "test-product"
         assert product.sku == "TEST-001"
         assert product.status == "draft"
         assert product.store == self.store
         assert product.created_by == self.user
-    
+
     def test_product_slug_uniqueness_per_store(self):
         """Test that product slugs are unique per store"""
         Product.objects.create(
@@ -20620,7 +20620,7 @@ class ProductModelTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         # Should raise ValidationError for duplicate slug
         with pytest.raises(ValidationError):
             Product.objects.create(
@@ -20630,7 +20630,7 @@ class ProductModelTest(TestCase):
                 sku="TEST-002",
                 created_by=self.user
             )
-    
+
     def test_product_can_have_same_slug_in_different_stores(self):
         """Test that same slug can exist in different stores"""
         store2 = Store.objects.create(
@@ -20638,7 +20638,7 @@ class ProductModelTest(TestCase):
             subdomain="test2",
             is_active=True
         )
-        
+
         product1 = Product.objects.create(
             store=self.store,
             title="Test Product",
@@ -20646,7 +20646,7 @@ class ProductModelTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         product2 = Product.objects.create(
             store=store2,
             title="Test Product",
@@ -20654,10 +20654,10 @@ class ProductModelTest(TestCase):
             sku="TEST-002",
             created_by=self.user
         )
-        
+
         assert product1.slug == product2.slug
         assert product1.store != product2.store
-    
+
     def test_product_variant_creation(self):
         """Test product variant creation"""
         product = Product.objects.create(
@@ -20667,7 +20667,7 @@ class ProductModelTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         variant = ProductVariant.objects.create(
             product=product,
             title="Small",
@@ -20675,12 +20675,12 @@ class ProductModelTest(TestCase):
             price=Decimal('19.99'),
             inventory_quantity=10
         )
-        
+
         assert variant.product == product
         assert variant.title == "Small"
         assert variant.price == Decimal('19.99')
         assert variant.inventory_quantity == 10
-    
+
     def test_product_variant_sku_uniqueness(self):
         """Test that variant SKUs are unique"""
         product = Product.objects.create(
@@ -20690,14 +20690,14 @@ class ProductModelTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         ProductVariant.objects.create(
             product=product,
             title="Small",
             sku="TEST-001-S",
             price=Decimal('19.99')
         )
-        
+
         # Should raise ValidationError for duplicate SKU
         with pytest.raises(ValidationError):
             ProductVariant.objects.create(
@@ -20718,7 +20718,7 @@ class ProductCategoryTest(TestCase):
             email="test@example.com",
             password="testpass123"
         )
-    
+
     def test_category_hierarchy(self):
         """Test category parent-child relationships"""
         parent = ProductCategory.objects.create(
@@ -20727,7 +20727,7 @@ class ProductCategoryTest(TestCase):
             slug="parent-category",
             created_by=self.user
         )
-        
+
         child = ProductCategory.objects.create(
             store=self.store,
             name="Child Category",
@@ -20735,10 +20735,10 @@ class ProductCategoryTest(TestCase):
             parent=parent,
             created_by=self.user
         )
-        
+
         assert child.parent == parent
         assert parent.children.first() == child
-    
+
     def test_prevent_circular_reference(self):
         """Test prevention of circular category references"""
         parent = ProductCategory.objects.create(
@@ -20747,7 +20747,7 @@ class ProductCategoryTest(TestCase):
             slug="parent-category",
             created_by=self.user
         )
-        
+
         child = ProductCategory.objects.create(
             store=self.store,
             name="Child Category",
@@ -20755,7 +20755,7 @@ class ProductCategoryTest(TestCase):
             parent=parent,
             created_by=self.user
         )
-        
+
         # Should raise ValidationError when trying to set parent as child's parent
         with pytest.raises(ValidationError):
             parent.parent = child
@@ -20781,7 +20781,7 @@ class OrderModelTest(TestCase):
             last_name="Doe",
             email="test@example.com"
         )
-    
+
     def test_order_number_generation(self):
         """Test automatic order number generation"""
         order = Order.objects.create(
@@ -20792,10 +20792,10 @@ class OrderModelTest(TestCase):
             shipping=Decimal('5.00'),
             total=Decimal('115.00')
         )
-        
+
         assert order.order_number.startswith("ORD-")
         assert len(order.order_number) > 10
-    
+
     def test_order_status_transitions(self):
         """Test valid order status transitions"""
         order = Order.objects.create(
@@ -20807,15 +20807,15 @@ class OrderModelTest(TestCase):
             shipping=Decimal('5.00'),
             total=Decimal('115.00')
         )
-        
+
         # Valid transition
         order.status = 'confirmed'
         order.save()
         assert order.status == 'confirmed'
-        
+
         # Invalid transition should be handled by service layer
         # This would be tested in service tests
-    
+
     def test_order_total_calculation(self):
         """Test order total calculation"""
         order = Order.objects.create(
@@ -20827,7 +20827,7 @@ class OrderModelTest(TestCase):
             discount=Decimal('10.00'),
             total=Decimal('105.00')
         )
-        
+
         assert order.total == order.subtotal + order.tax + order.shipping - order.discount
 ```
 
@@ -20860,10 +20860,10 @@ class ProductViewSetTest(TestCase):
         )
         self.user.stores.add(self.store)
         self.client.force_authenticate(user=self.user)
-        
+
         # Add store to request context
         self.client.defaults['HTTP_X_STORE_ID'] = self.store.id
-    
+
     def test_list_products(self):
         """Test listing products"""
         Product.objects.create(
@@ -20873,7 +20873,7 @@ class ProductViewSetTest(TestCase):
             sku="PROD-001",
             created_by=self.user
         )
-        
+
         Product.objects.create(
             store=self.store,
             title="Product 2",
@@ -20881,12 +20881,12 @@ class ProductViewSetTest(TestCase):
             sku="PROD-002",
             created_by=self.user
         )
-        
+
         response = self.client.get('/api/v2/ecommerce/products/')
-        
+
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']) == 2
-    
+
     def test_create_product(self):
         """Test creating a product"""
         data = {
@@ -20896,27 +20896,27 @@ class ProductViewSetTest(TestCase):
             'description': 'Test description',
             'status': 'published'
         }
-        
+
         response = self.client.post('/api/v2/ecommerce/products/', data)
-        
+
         assert response.status_code == status.HTTP_201_CREATED
         assert Product.objects.count() == 1
         assert Product.objects.first().title == 'New Product'
-    
+
     def test_create_product_requires_store(self):
         """Test that product creation requires store context"""
         self.client.defaults.pop('HTTP_X_STORE_ID', None)
-        
+
         data = {
             'title': 'New Product',
             'slug': 'new-product',
             'sku': 'NEW-001'
         }
-        
+
         response = self.client.post('/api/v2/ecommerce/products/', data)
-        
+
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-    
+
     def test_update_product(self):
         """Test updating a product"""
         product = Product.objects.create(
@@ -20926,22 +20926,22 @@ class ProductViewSetTest(TestCase):
             sku="ORIG-001",
             created_by=self.user
         )
-        
+
         data = {
             'title': 'Updated Title',
             'status': 'published'
         }
-        
+
         response = self.client.patch(
             f'/api/v2/ecommerce/products/{product.id}/',
             data
         )
-        
+
         assert response.status_code == status.HTTP_200_OK
         product.refresh_from_db()
         assert product.title == 'Updated Title'
         assert product.status == 'published'
-    
+
     def test_delete_product(self):
         """Test deleting a product"""
         product = Product.objects.create(
@@ -20951,12 +20951,12 @@ class ProductViewSetTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         response = self.client.delete(f'/api/v2/ecommerce/products/{product.id}/')
-        
+
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert Product.objects.count() == 0
-    
+
     def test_duplicate_product(self):
         """Test duplicating a product"""
         product = Product.objects.create(
@@ -20966,25 +20966,25 @@ class ProductViewSetTest(TestCase):
             sku="ORIG-001",
             created_by=self.user
         )
-        
+
         ProductVariant.objects.create(
             product=product,
             title="Small",
             sku="ORIG-001-S",
             price=Decimal('19.99')
         )
-        
+
         response = self.client.post(
             f'/api/v2/ecommerce/products/{product.id}/duplicate/'
         )
-        
+
         assert response.status_code == status.HTTP_201_CREATED
         assert Product.objects.count() == 2
-        
+
         duplicated = Product.objects.last()
         assert duplicated.title == "Original Product (Copy)"
         assert duplicated.variants.count() == 1
-    
+
     def test_store_isolation(self):
         """Test that users can only access their own store's products"""
         other_store = Store.objects.create(
@@ -20992,7 +20992,7 @@ class ProductViewSetTest(TestCase):
             subdomain="other",
             is_active=True
         )
-        
+
         # Create product in other store
         Product.objects.create(
             store=other_store,
@@ -21001,7 +21001,7 @@ class ProductViewSetTest(TestCase):
             sku="OTHER-001",
             created_by=self.user
         )
-        
+
         # Create product in user's store
         Product.objects.create(
             store=self.store,
@@ -21010,9 +21010,9 @@ class ProductViewSetTest(TestCase):
             sku="MY-001",
             created_by=self.user
         )
-        
+
         response = self.client.get('/api/v2/ecommerce/products/')
-        
+
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']) == 1
         assert response.data['results'][0]['title'] == 'My Product'
@@ -21040,7 +21040,7 @@ class CartViewSetTest(TestCase):
         )
         self.client.force_authenticate(user=self.user)
         self.client.defaults['HTTP_X_STORE_ID'] = self.store.id
-        
+
         # Create test product
         self.product = Product.objects.create(
             store=self.store,
@@ -21049,7 +21049,7 @@ class CartViewSetTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         self.variant = ProductVariant.objects.create(
             product=self.product,
             title="Small",
@@ -21057,7 +21057,7 @@ class CartViewSetTest(TestCase):
             price=Decimal('19.99'),
             inventory_quantity=10
         )
-    
+
     def test_add_item_to_cart(self):
         """Test adding item to cart"""
         data = {
@@ -21065,18 +21065,18 @@ class CartViewSetTest(TestCase):
             'variant_id': self.variant.id,
             'quantity': 2
         }
-        
+
         response = self.client.post('/api/v2/ecommerce/cart/add_item/', data)
-        
+
         assert response.status_code == status.HTTP_201_CREATED
         assert Cart.objects.count() == 1
         assert CartItem.objects.count() == 1
-        
+
         cart_item = CartItem.objects.first()
         assert cart_item.quantity == 2
         assert cart_item.product == self.product
         assert cart_item.variant == self.variant
-    
+
     def test_update_cart_item_quantity(self):
         """Test updating cart item quantity"""
         # Add item first
@@ -21091,18 +21091,18 @@ class CartViewSetTest(TestCase):
             quantity=1,
             unit_price=self.variant.price
         )
-        
+
         data = {
             'item_id': cart_item.id,
             'quantity': 3
         }
-        
+
         response = self.client.put('/api/v2/ecommerce/cart/update_item/', data)
-        
+
         assert response.status_code == status.HTTP_200_OK
         cart_item.refresh_from_db()
         assert cart_item.quantity == 3
-    
+
     def test_remove_item_from_cart(self):
         """Test removing item from cart"""
         cart = Cart.objects.create(
@@ -21116,13 +21116,13 @@ class CartViewSetTest(TestCase):
             quantity=1,
             unit_price=self.variant.price
         )
-        
+
         data = {'item_id': cart_item.id}
         response = self.client.delete('/api/v2/ecommerce/cart/remove_item/', data)
-        
+
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert CartItem.objects.count() == 0
-    
+
     def test_cart_summary(self):
         """Test getting cart summary"""
         cart = Cart.objects.create(
@@ -21136,9 +21136,9 @@ class CartViewSetTest(TestCase):
             quantity=2,
             unit_price=self.variant.price
         )
-        
+
         response = self.client.get('/api/v2/ecommerce/cart/summary/')
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data['item_count'] == 2
@@ -21169,7 +21169,7 @@ class ProductServiceTest(TestCase):
             email="test@example.com",
             password="testpass123"
         )
-    
+
     def test_create_product_with_variants(self):
         """Test creating product with variants"""
         data = {
@@ -21193,13 +21193,13 @@ class ProductServiceTest(TestCase):
                 }
             ]
         }
-        
+
         product = ProductService.create_product(self.store, self.user, data)
-        
+
         assert product.title == 'Test Product'
         assert product.variants.count() == 2
         assert product.variants.first().price == Decimal('19.99')
-    
+
     def test_duplicate_product(self):
         """Test duplicating a product"""
         # Create original product
@@ -21210,22 +21210,22 @@ class ProductServiceTest(TestCase):
             sku="ORIG-001",
             created_by=self.user
         )
-        
+
         ProductVariant.objects.create(
             product=original,
             title="Small",
             sku="ORIG-001-S",
             price=Decimal('19.99')
         )
-        
+
         # Duplicate product
         duplicate = ProductService.duplicate_product(original, self.user)
-        
+
         assert duplicate.title == "Original Product (Copy)"
         assert duplicate.slug.startswith("original-product-copy-")
         assert duplicate.variants.count() == 1
         assert duplicate.variants.first().sku == "ORIG-001-S-COPY"
-    
+
     def test_update_product_status_logs_change(self):
         """Test that status changes are logged"""
         product = Product.objects.create(
@@ -21236,10 +21236,10 @@ class ProductServiceTest(TestCase):
             status='draft',
             created_by=self.user
         )
-        
+
         # Update status
         ProductService.update_product(product, self.user, {'status': 'published'})
-        
+
         # Check that log was created (this would require mocking log_event_async)
         product.refresh_from_db()
         assert product.status == 'published'
@@ -21264,7 +21264,7 @@ class CartServiceTest(TestCase):
             last_name="Doe",
             email="test@example.com"
         )
-        
+
         self.product = Product.objects.create(
             store=self.store,
             title="Test Product",
@@ -21272,7 +21272,7 @@ class CartServiceTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         self.variant = ProductVariant.objects.create(
             product=self.product,
             title="Small",
@@ -21280,7 +21280,7 @@ class CartServiceTest(TestCase):
             price=Decimal('19.99'),
             inventory_quantity=10
         )
-        
+
         # Create inventory
         Inventory.objects.create(
             store=self.store,
@@ -21288,21 +21288,21 @@ class CartServiceTest(TestCase):
             variant=self.variant,
             quantity=10
         )
-    
+
     def test_add_item_to_cart_with_inventory_check(self):
         """Test adding item with inventory validation"""
         cart = Cart.objects.create(
             store=self.store,
             customer=self.customer
         )
-        
+
         cart_item = CartService.add_item(
             cart, self.product, self.variant, 5
         )
-        
+
         assert cart_item.quantity == 5
         assert cart_item.unit_price == self.variant.price
-        
+
         # Check inventory was reserved
         inventory = Inventory.objects.get(
             store=self.store,
@@ -21310,26 +21310,26 @@ class CartServiceTest(TestCase):
             variant=self.variant
         )
         assert inventory.reserved == 5
-    
+
     def test_add_item_exceeds_inventory(self):
         """Test that adding items exceeding inventory raises error"""
         cart = Cart.objects.create(
             store=self.store,
             customer=self.customer
         )
-        
+
         with pytest.raises(ValidationError):
             CartService.add_item(
                 cart, self.product, self.variant, 15  # Exceeds inventory
             )
-    
+
     def test_convert_cart_to_order(self):
         """Test converting cart to order"""
         cart = Cart.objects.create(
             store=self.store,
             customer=self.customer
         )
-        
+
         CartItem.objects.create(
             cart=cart,
             product=self.product,
@@ -21337,25 +21337,25 @@ class CartServiceTest(TestCase):
             quantity=2,
             unit_price=self.variant.price
         )
-        
+
         billing_address = {
             'street': '123 Main St',
             'city': 'Test City',
             'country': 'US',
             'postal_code': '12345'
         }
-        
+
         shipping_address = {
             'street': '123 Main St',
             'city': 'Test City',
             'country': 'US',
             'postal_code': '12345'
         }
-        
+
         order = CartService.convert_to_order(
             cart, billing_address, shipping_address
         )
-        
+
         assert order.customer == self.customer
         assert order.items.count() == 1
         assert order.status == 'pending'
@@ -21387,7 +21387,7 @@ class OrderFlowIntegrationTest(TestCase):
         )
         self.client.force_authenticate(user=self.user)
         self.client.defaults['HTTP_X_STORE_ID'] = self.store.id
-        
+
         # Create test product
         self.product = Product.objects.create(
             store=self.store,
@@ -21397,7 +21397,7 @@ class OrderFlowIntegrationTest(TestCase):
             status='published',
             created_by=self.user
         )
-        
+
         self.variant = ProductVariant.objects.create(
             product=self.product,
             title="Small",
@@ -21405,14 +21405,14 @@ class OrderFlowIntegrationTest(TestCase):
             price=Decimal('19.99'),
             inventory_quantity=10
         )
-        
+
         Inventory.objects.create(
             store=self.store,
             product=self.product,
             variant=self.variant,
             quantity=10
         )
-    
+
     def test_complete_order_flow(self):
         """Test complete order flow from cart to payment"""
         # 1. Add item to cart
@@ -21423,12 +21423,12 @@ class OrderFlowIntegrationTest(TestCase):
         }
         response = self.client.post('/api/v2/ecommerce/cart/add_item/', cart_data)
         assert response.status_code == status.HTTP_201_CREATED
-        
+
         # 2. Get cart summary
         response = self.client.get('/api/v2/ecommerce/cart/summary/')
         assert response.status_code == status.HTTP_200_OK
         assert Decimal(response.json()['subtotal']) == Decimal('39.98')
-        
+
         # 3. Create order from cart
         order_data = {
             'billing_address': {
@@ -21446,23 +21446,23 @@ class OrderFlowIntegrationTest(TestCase):
         }
         response = self.client.post('/api/v2/ecommerce/orders/create_from_cart/', order_data)
         assert response.status_code == status.HTTP_201_CREATED
-        
+
         order_id = response.json()['id']
-        
+
         # 4. Check order was created
         response = self.client.get(f'/api/v2/ecommerce/orders/{order_id}/')
         assert response.status_code == status.HTTP_200_OK
         order_data = response.json()
         assert order_data['status'] == 'pending'
         assert order_data['items'][0]['quantity'] == 2
-        
+
         # 5. Update order status
         response = self.client.post(
             f'/api/v2/ecommerce/orders/{order_id}/update_status/',
             {'status': 'confirmed'}
         )
         assert response.status_code == status.HTTP_200_OK
-        
+
         # 6. Check inventory was updated
         inventory = Inventory.objects.get(
             store=self.store,
@@ -21494,7 +21494,7 @@ class PerformanceTest(TestCase):
             email="test@example.com",
             password="testpass123"
         )
-        
+
         # Create test data
         for i in range(100):
             product = Product.objects.create(
@@ -21504,7 +21504,7 @@ class PerformanceTest(TestCase):
                 sku=f"PROD-{i:03d}",
                 created_by=self.user
             )
-            
+
             for j in range(3):
                 ProductVariant.objects.create(
                     product=product,
@@ -21512,44 +21512,44 @@ class PerformanceTest(TestCase):
                     sku=f"PROD-{i:03d}-{j}",
                     price=Decimal(f"{i + j}.99")
                 )
-    
+
     def test_product_list_query_count(self):
         """Test that product list uses optimized queries"""
         with self.assertNumQueries(2):  # Should be 2 queries with select_related/prefetch_related
             products = Product.objects.select_related('store').prefetch_related(
                 'variants'
             ).all()
-            
+
             # Access data to trigger queries
             for product in products:
                 list(product.variants.all())
-    
+
     def test_search_performance(self):
         """Test search query performance"""
         with self.assertNumQueries(1):
             products = Product.objects.filter(
                 title__icontains='Product 1'
             ).select_related('store')
-            
+
             list(products)  # Execute query
-    
+
     @override_settings(DEBUG=True)
     def test_no_n_plus_one_queries(self):
         """Test that no N+1 queries are made"""
         # Reset query count
         connection.queries_log.clear()
-        
+
         # Get products with variants
         products = Product.objects.select_related('store').prefetch_related(
             'variants'
         ).all()[:10]
-        
+
         # Access all data
         for product in products:
             print(product.title)
             for variant in product.variants.all():
                 print(variant.title)
-        
+
         # Should only have 2 queries (products + variants)
         assert len(connection.queries) <= 2
 ```
@@ -21575,11 +21575,11 @@ class SecurityTest(TestCase):
             email="other@example.com",
             password="testpass123"
         )
-        
+
         self.user.stores.add(self.store)
         self.client.force_authenticate(user=self.user)
         self.client.defaults['HTTP_X_STORE_ID'] = self.store.id
-    
+
     def test_store_isolation(self):
         """Test that users cannot access other stores' data"""
         other_store = Store.objects.create(
@@ -21587,7 +21587,7 @@ class SecurityTest(TestCase):
             subdomain="other",
             is_active=True
         )
-        
+
         # Create product in other store
         product = Product.objects.create(
             store=other_store,
@@ -21596,12 +21596,12 @@ class SecurityTest(TestCase):
             sku="OTHER-001",
             created_by=self.other_user
         )
-        
+
         # Try to access other store's product
         response = self.client.get(f'/api/v2/ecommerce/products/{product.id}/')
-        
+
         assert response.status_code == status.HTTP_404_NOT_FOUND
-    
+
     def test_input_sanitization(self):
         """Test that malicious input is sanitized"""
         malicious_data = {
@@ -21610,16 +21610,16 @@ class SecurityTest(TestCase):
             'sku': 'MAL-001',
             'description': '<p>Valid description</p><script>alert("xss")</script>'
         }
-        
+
         response = self.client.post('/api/v2/ecommerce/products/', malicious_data)
-        
+
         assert response.status_code == status.HTTP_201_CREATED
-        
+
         product = Product.objects.get()
         assert '<script>' not in product.title
         assert '<script>' not in product.description
         assert '<p>' in product.description  # Valid HTML should remain
-    
+
     def test_rate_limiting(self):
         """Test API rate limiting"""
         # Make many requests quickly
@@ -21627,7 +21627,7 @@ class SecurityTest(TestCase):
             response = self.client.get('/api/v2/ecommerce/products/')
             if response.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
                 break
-        
+
         assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
 ```
 
@@ -21659,7 +21659,7 @@ DATABASES = {
 class DisableMigrations:
     def __contains__(self, item):
         return True
-    
+
     def __getitem__(self, item):
         return None
 
@@ -21762,7 +21762,7 @@ def product_variant(product):
 - ProductCategory (hierarchical)
 - ProductImage (media integration)
 
-# 2. Order Models  
+# 2. Order Models
 - Order (basic order tracking)
 - OrderItem (order line items)
 - OrderStatus (status tracking)
@@ -21841,7 +21841,7 @@ MIGRATION_COMPLEXITY = {
 
 class MigrationPhase1:
     """Phase 1: Infrastructure and model creation"""
-    
+
     def create_new_models(self):
         """Create new V2 models with store scoping"""
         # Create Product model with store FK
@@ -21850,14 +21850,14 @@ class MigrationPhase1:
         # Create Customer model linked to GlobalUser
         # Create new inventory system
         pass
-    
+
     def setup_store_scoping(self):
         """Add store FK to all models"""
         # Add store field to all models
         # Create indexes for store-based queries
         # Set up store isolation
         pass
-    
+
     def create_migration_utilities(self):
         """Create migration helper functions"""
         # Data validation utilities
@@ -21873,7 +21873,7 @@ class MigrationPhase1:
 
 class MigrationPhase2:
     """Phase 2: Core data migration"""
-    
+
     def migrate_products(self):
         """Migrate products and variants"""
         # 1. Map legacy products to new structure
@@ -21881,13 +21881,13 @@ class MigrationPhase2:
         # 3. Migrate product categories
         # 4. Migrate product images
         # 5. Set up inventory records
-        
+
         legacy_products = LegacyProduct.objects.all()
-        
+
         for legacy_product in legacy_products:
             # Determine store (default to first store or create mapping)
             store = self.get_store_for_legacy_product(legacy_product)
-            
+
             # Create new product
             new_product = Product.objects.create(
                 store=store,
@@ -21900,16 +21900,16 @@ class MigrationPhase2:
                 created_at=legacy_product.created_at,
                 updated_at=legacy_product.updated_at
             )
-            
+
             # Migrate variants
             self.migrate_variants(legacy_product, new_product)
-            
+
             # Migrate categories
             self.migrate_product_categories(legacy_product, new_product)
-            
+
             # Migrate images
             self.migrate_product_images(legacy_product, new_product)
-    
+
     def migrate_variants(self, legacy_product, new_product):
         """Migrate product variants"""
         for legacy_variant in legacy_product.variants.all():
@@ -21927,18 +21927,18 @@ class MigrationPhase2:
                 option2=legacy_variant.option2,
                 option3=legacy_variant.option3
             )
-    
+
     def migrate_orders(self):
         """Migrate orders and order items"""
         legacy_orders = LegacyOrder.objects.all()
-        
+
         for legacy_order in legacy_orders:
             # Get or create customer
             customer = self.get_or_create_customer(legacy_order)
-            
+
             # Determine store
             store = self.get_store_for_legacy_order(legacy_order)
-            
+
             # Create new order
             new_order = Order.objects.create(
                 store=store,
@@ -21959,18 +21959,18 @@ class MigrationPhase2:
                 created_at=legacy_order.created_at,
                 updated_at=legacy_order.updated_at
             )
-            
+
             # Migrate order items
             self.migrate_order_items(legacy_order, new_order)
-    
+
     def migrate_customers(self):
         """Migrate customer data"""
         legacy_customers = LegacyCustomer.objects.all()
-        
+
         for legacy_customer in legacy_customers:
             # Get or create GlobalUser
             user = self.get_or_create_user(legacy_customer)
-            
+
             # Create new customer
             customer = Customer.objects.create(
                 user=user,
@@ -21999,42 +21999,42 @@ class MigrationPhase2:
 
 class MigrationPhase3:
     """Phase 3: Data validation and cleanup"""
-    
+
     def validate_data_integrity(self):
         """Validate migrated data integrity"""
         validation_errors = []
-        
+
         # Validate products
         for product in Product.objects.all():
             if not product.store:
                 validation_errors.append(f"Product {product.id} missing store")
-            
+
             if not product.variants.exists():
                 validation_errors.append(f"Product {product.id} has no variants")
-            
+
             if not product.slug:
                 validation_errors.append(f"Product {product.id} missing slug")
-        
+
         # Validate orders
         for order in Order.objects.all():
             if not order.customer:
                 validation_errors.append(f"Order {order.id} missing customer")
-            
+
             if not order.store:
                 validation_errors.append(f"Order {order.id} missing store")
-            
+
             if not order.items.exists():
                 validation_errors.append(f"Order {order.id} has no items")
-        
+
         return validation_errors
-    
+
     def cleanup_legacy_data(self):
         """Clean up legacy data after successful migration"""
         # Archive legacy tables
         # Create backup
         # Remove unused fields
         pass
-    
+
     def update_references(self):
         """Update system references to new models"""
         # Update foreign key references
@@ -22049,7 +22049,7 @@ class MigrationPhase3:
 ```python
 class StatusMapper:
     """Map legacy status values to new system"""
-    
+
     PRODUCT_STATUS_MAP = {
         'active': 'published',
         'inactive': 'draft',
@@ -22058,7 +22058,7 @@ class StatusMapper:
         'archived': 'archived',
         'deleted': 'deleted'
     }
-    
+
     ORDER_STATUS_MAP = {
         'pending': 'pending',
         'processing': 'processing',
@@ -22067,7 +22067,7 @@ class StatusMapper:
         'cancelled': 'cancelled',
         'refunded': 'refunded'
     }
-    
+
     PAYMENT_STATUS_MAP = {
         'pending': 'pending',
         'paid': 'paid',
@@ -22075,29 +22075,29 @@ class StatusMapper:
         'refunded': 'refunded',
         'partially_refunded': 'partially_refunded'
     }
-    
+
     FULFILLMENT_STATUS_MAP = {
         'unfulfilled': 'unfulfilled',
         'partial': 'partial',
         'fulfilled': 'fulfilled',
         'restocked': 'restocked'
     }
-    
+
     @classmethod
     def map_product_status(cls, legacy_status):
         """Map legacy product status"""
         return cls.PRODUCT_STATUS_MAP.get(legacy_status, 'draft')
-    
+
     @classmethod
     def map_order_status(cls, legacy_status):
         """Map legacy order status"""
         return cls.ORDER_STATUS_MAP.get(legacy_status, 'pending')
-    
+
     @classmethod
     def map_payment_status(cls, legacy_status):
         """Map legacy payment status"""
         return cls.PAYMENT_STATUS_MAP.get(legacy_status, 'pending')
-    
+
     @classmethod
     def map_fulfillment_status(cls, legacy_status):
         """Map legacy fulfillment status"""
@@ -22108,13 +22108,13 @@ class StatusMapper:
 ```python
 class AddressMapper:
     """Migrate address data"""
-    
+
     @staticmethod
     def migrate_address(legacy_address):
         """Migrate legacy address to new format"""
         if not legacy_address:
             return {}
-        
+
         return {
             'first_name': legacy_address.first_name,
             'last_name': legacy_address.last_name,
@@ -22141,7 +22141,7 @@ from progress.bar import Bar
 
 class Command(BaseCommand):
     help = 'Migrate ecommerce data from legacy system'
-    
+
     def add_arguments(self, parser):
         parser.add_argument(
             '--phase',
@@ -22160,12 +22160,12 @@ class Command(BaseCommand):
             default=1000,
             help='Batch size for data processing'
         )
-    
+
     def handle(self, *args, **options):
         phase = options.get('phase')
         dry_run = options.get('dry_run', False)
         batch_size = options.get('batch_size', 1000)
-        
+
         if phase == 1:
             self.run_phase_1(dry_run)
         elif phase == 2:
@@ -22174,83 +22174,83 @@ class Command(BaseCommand):
             self.run_phase_3(dry_run)
         else:
             self.run_full_migration(dry_run, batch_size)
-    
+
     def run_phase_1(self, dry_run):
         """Run phase 1: Infrastructure setup"""
         self.stdout.write("Starting Phase 1: Infrastructure setup")
-        
+
         if dry_run:
             self.stdout.write("DRY RUN: No changes will be made")
-        
+
         # Create new models
         # Set up store scoping
         # Create migration utilities
-        
+
         self.stdout.write(self.style.SUCCESS("Phase 1 completed"))
-    
+
     def run_phase_2(self, dry_run, batch_size):
         """Run phase 2: Data migration"""
         self.stdout.write("Starting Phase 2: Data migration")
-        
+
         if dry_run:
             self.stdout.write("DRY RUN: No changes will be made")
-        
+
         # Migrate products
         self.migrate_products(dry_run, batch_size)
-        
+
         # Migrate customers
         self.migrate_customers(dry_run, batch_size)
-        
+
         # Migrate orders
         self.migrate_orders(dry_run, batch_size)
-        
+
         # Migrate inventory
         self.migrate_inventory(dry_run, batch_size)
-        
+
         self.stdout.write(self.style.SUCCESS("Phase 2 completed"))
-    
+
     def run_phase_3(self, dry_run):
         """Run phase 3: Validation and cleanup"""
         self.stdout.write("Starting Phase 3: Validation and cleanup")
-        
+
         if dry_run:
             self.stdout.write("DRY RUN: No changes will be made")
-        
+
         # Validate data integrity
         errors = self.validate_migration()
-        
+
         if errors:
             self.stdout.write(self.style.ERROR("Validation errors found:"))
             for error in errors:
                 self.stdout.write(f"  - {error}")
         else:
             self.stdout.write(self.style.SUCCESS("No validation errors found"))
-        
+
         if not dry_run and not errors:
             # Cleanup legacy data
             self.cleanup_legacy_data()
-            
+
             # Update references
             self.update_references()
-        
+
         self.stdout.write(self.style.SUCCESS("Phase 3 completed"))
-    
+
     def migrate_products(self, dry_run, batch_size):
         """Migrate products in batches"""
         from ecommerce.migration import ProductMigrator
-        
+
         migrator = ProductMigrator(dry_run=dry_run)
-        
+
         legacy_products = LegacyProduct.objects.all()
         total = legacy_products.count()
-        
+
         bar = Bar('Migrating products', max=total)
-        
+
         for i in range(0, total, batch_size):
             batch = legacy_products[i:i + batch_size]
             migrator.migrate_batch(batch)
             bar.next(len(batch))
-        
+
         bar.finish()
 ```
 
@@ -22260,20 +22260,20 @@ class Command(BaseCommand):
 ```python
 class MigrationRollback:
     """Rollback strategy for failed migration"""
-    
+
     def __init__(self):
         self.backup_created = False
         self.rollback_points = []
-    
+
     def create_backup(self):
         """Create full database backup before migration"""
         # 1. Backup legacy tables
         # 2. Create migration checkpoint
         # 3. Document current state
-        
+
         self.backup_created = True
         return True
-    
+
     def create_rollback_point(self, phase, description):
         """Create rollback point for each phase"""
         rollback_point = {
@@ -22283,37 +22283,37 @@ class MigrationRollback:
             'tables_backed_up': [],
             'data_counts': {}
         }
-        
+
         self.rollback_points.append(rollback_point)
         return rollback_point
-    
+
     def rollback_to_phase(self, target_phase):
         """Rollback to specific phase"""
         if not self.backup_created:
             raise Exception("No backup available for rollback")
-        
+
         # Find rollback point
         rollback_point = None
         for point in reversed(self.rollback_points):
             if point['phase'] <= target_phase:
                 rollback_point = point
                 break
-        
+
         if not rollback_point:
             raise Exception(f"No rollback point found for phase {target_phase}")
-        
+
         # Execute rollback
         self.execute_rollback(rollback_point)
-        
+
         return True
-    
+
     def execute_rollback(self, rollback_point):
         """Execute rollback to specific point"""
         # 1. Drop new tables
         # 2. Restore legacy tables
         # 3. Restore data counts
         # 4. Verify integrity
-        
+
         pass
 ```
 
@@ -22332,85 +22332,85 @@ class MigrationTest(TestCase):
     def setUp(self):
         """Set up test legacy data"""
         self.create_legacy_data()
-    
+
     def create_legacy_data(self):
         """Create test legacy data"""
         # Create legacy products
         # Create legacy customers
         # Create legacy orders
         pass
-    
+
     def test_phase_1_migration(self):
         """Test phase 1 migration"""
         migrator = MigrationPhase1()
         migrator.create_new_models()
         migrator.setup_store_scoping()
-        
+
         # Verify models were created
         assert Product.objects.count() == 0  # Should be empty initially
         assert Order.objects.count() == 0
         assert Customer.objects.count() == 0
-    
+
     def test_phase_2_migration(self):
         """Test phase 2 data migration"""
         # Run phase 1 first
         phase1 = MigrationPhase1()
         phase1.create_new_models()
         phase1.setup_store_scoping()
-        
+
         # Run phase 2
         phase2 = MigrationPhase2()
         phase2.migrate_products()
         phase2.migrate_customers()
         phase2.migrate_orders()
-        
+
         # Verify data was migrated
         assert Product.objects.count() > 0
         assert Customer.objects.count() > 0
         assert Order.objects.count() > 0
-    
+
     def test_data_integrity(self):
         """Test migrated data integrity"""
         # Run full migration
         self.run_full_migration()
-        
+
         # Test product integrity
         for product in Product.objects.all():
             assert product.store is not None
             assert product.slug is not None
             assert product.variants.exists()
-        
+
         # Test order integrity
         for order in Order.objects.all():
             assert order.customer is not None
             assert order.store is not None
             assert order.items.exists()
-    
+
     def test_migration_command(self):
         """Test migration management command"""
         # Test dry run
         call_command('migrate_ecommerce', '--phase=1', '--dry-run')
-        
+
         # Test actual migration
         call_command('migrate_ecommerce', '--phase=1')
-        
+
         # Verify phase 1 completion
         assert Product.objects.count() == 0  # Models created but no data yet
-    
+
     def run_full_migration(self):
         """Run complete migration for testing"""
         phase1 = MigrationPhase1()
         phase1.create_new_models()
         phase1.setup_store_scoping()
-        
+
         phase2 = MigrationPhase2()
         phase2.migrate_products()
         phase2.migrate_customers()
         phase2.migrate_orders()
-        
+
         phase3 = MigrationPhase3()
         errors = phase3.validate_data_integrity()
-        
+
         assert len(errors) == 0, f"Migration validation errors: {errors}"
 ```
 
@@ -22420,57 +22420,57 @@ class MigrationTest(TestCase):
 ```python
 class PerformanceOptimizedMigration:
     """Optimized migration for large datasets"""
-    
+
     def __init__(self, batch_size=1000):
         self.batch_size = batch_size
         self.memory_limit = 1024 * 1024 * 1024  # 1GB
-    
+
     def migrate_large_dataset(self):
         """Migrate large datasets efficiently"""
         # Use bulk_create for faster inserts
         # Use iterator() to reduce memory usage
         # Disable indexes during migration
         # Use transactions for batch operations
-        
+
         with transaction.atomic():
             # Disable constraints temporarily
             self.disable_constraints()
-            
+
             try:
                 # Migrate in batches
                 self.migrate_in_batches()
-                
+
                 # Rebuild indexes
                 self.rebuild_indexes()
-                
+
             finally:
                 # Re-enable constraints
                 self.enable_constraints()
-    
+
     def migrate_in_batches(self):
         """Migrate data in batches to manage memory"""
         queryset = LegacyProduct.objects.all()
-        
+
         batch = []
         for obj in queryset.iterator():
             batch.append(obj)
-            
+
             if len(batch) >= self.batch_size:
                 self.process_batch(batch)
                 batch = []
-        
+
         # Process remaining items
         if batch:
             self.process_batch(batch)
-    
+
     def process_batch(self, batch):
         """Process a batch of objects"""
         # Transform data
         transformed = [self.transform_object(obj) for obj in batch]
-        
+
         # Bulk create
         Product.objects.bulk_create(transformed, batch_size=self.batch_size)
-        
+
         # Clear memory
         del batch
         del transformed
@@ -22482,7 +22482,7 @@ class PerformanceOptimizedMigration:
 ```python
 class MigrationMonitor:
     """Monitor migration progress and performance"""
-    
+
     def __init__(self):
         self.start_time = timezone.now()
         self.metrics = {
@@ -22492,40 +22492,40 @@ class MigrationMonitor:
             'memory_usage': 0,
             'processing_time': 0
         }
-    
+
     def log_progress(self, phase, current, total, message=""):
         """Log migration progress"""
         percentage = (current / total) * 100 if total > 0 else 0
-        
+
         log_message = (
             f"Migration Phase {phase}: {current}/{total} "
             f"({percentage:.1f}%) - {message}"
         )
-        
+
         self.stdout.write(log_message)
-        
+
         # Log to file
         with open('migration.log', 'a') as f:
             f.write(f"{timezone.now()}: {log_message}\n")
-    
+
     def track_performance(self, operation, start_time, end_time):
         """Track operation performance"""
         duration = end_time - start_time
         self.metrics['processing_time'] += duration.total_seconds()
-        
+
         performance_log = (
             f"Operation: {operation}, "
             f"Duration: {duration.total_seconds():.2f}s"
         )
-        
+
         with open('migration_performance.log', 'a') as f:
             f.write(f"{timezone.now()}: {performance_log}\n")
-    
+
     def generate_report(self):
         """Generate migration completion report"""
         end_time = timezone.now()
         total_duration = end_time - self.start_time
-        
+
         report = {
             'start_time': self.start_time,
             'end_time': end_time,
@@ -22533,10 +22533,10 @@ class MigrationMonitor:
             'metrics': self.metrics,
             'success': self.metrics['errors'] == 0
         }
-        
+
         with open('migration_report.json', 'w') as f:
             json.dump(report, f, indent=2, default=str)
-        
+
         return report
 ```
 
@@ -22546,7 +22546,7 @@ class MigrationMonitor:
 ```python
 class PostMigrationTasks:
     """Tasks to complete after migration"""
-    
+
     def verify_data_counts(self):
         """Verify data counts match legacy system"""
         legacy_counts = {
@@ -22554,13 +22554,13 @@ class PostMigrationTasks:
             'customers': LegacyCustomer.objects.count(),
             'orders': LegacyOrder.objects.count()
         }
-        
+
         new_counts = {
             'products': Product.objects.count(),
             'customers': Customer.objects.count(),
             'orders': Order.objects.count()
         }
-        
+
         discrepancies = []
         for entity in legacy_counts:
             if legacy_counts[entity] != new_counts[entity]:
@@ -22568,21 +22568,21 @@ class PostMigrationTasks:
                     f"{entity}: legacy={legacy_counts[entity]}, "
                     f"new={new_counts[entity]}"
                 )
-        
+
         return discrepancies
-    
+
     def update_sequences(self):
         """Update database sequences"""
         # Update primary key sequences
         # Update auto-increment values
         pass
-    
+
     def create_indexes(self):
         """Create performance indexes"""
         # Create composite indexes
         # Create full-text search indexes
         pass
-    
+
     def update_caches(self):
         """Update application caches"""
         # Clear Redis caches
@@ -22640,7 +22640,7 @@ class StatusChoices:
     SHIPPED = 'shipped'
     DELIVERED = 'delivered'
     CANCELLED = 'cancelled'
-    
+
     DRAFT = 'draft'
     PUBLISHED = 'published'
     ARCHIVED = 'archived'
@@ -22702,7 +22702,7 @@ def get_product_list(request):
         'images',
         'categories'
     ).all()
-    
+
     # Single query with all related data
     return products
 
@@ -22722,7 +22722,7 @@ class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     status = models.CharField(max_length=20)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['customer', 'status']),
@@ -22748,10 +22748,10 @@ class Cart(models.Model):
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     shipping = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+
     def get_total(self):
         return self.total
-    
+
     def recalculate_totals(self):
         self.subtotal = sum(item.get_total() for item in self.items.all())
         self.tax = self.calculate_tax()
@@ -22769,13 +22769,13 @@ class Cart(models.Model):
 # 1. Product Service
 class ProductService:
     """Centralized product business logic"""
-    
+
     @staticmethod
     def create_product(store, user, data):
         """Create product with validation and logging"""
         # Validate data
         ProductService.validate_product_data(data)
-        
+
         # Create product
         product = Product.objects.create(
             store=store,
@@ -22784,14 +22784,14 @@ class ProductService:
             sku=data['sku'],
             created_by=user
         )
-        
+
         # Create variants
         if 'variants' in data:
             ProductService.create_variants(product, data['variants'])
-        
+
         # Setup inventory
         ProductService.setup_inventory(product)
-        
+
         # Log creation
         log_event_async(
             user=user,
@@ -22800,9 +22800,9 @@ class ProductService:
             object_type='product',
             object_id=product.id
         )
-        
+
         return product
-    
+
     @staticmethod
     def update_product_inventory(product, variant, quantity_change, reason):
         """Update inventory with audit trail"""
@@ -22811,11 +22811,11 @@ class ProductService:
             product=product,
             variant=variant
         )[0]
-        
+
         old_quantity = inventory.quantity
         inventory.quantity += quantity_change
         inventory.save()
-        
+
         # Create transaction record
         InventoryTransaction.objects.create(
             inventory=inventory,
@@ -22823,7 +22823,7 @@ class ProductService:
             quantity=quantity_change,
             notes=reason
         )
-        
+
         # Log change
         log_event_async(
             user=None,
@@ -22842,7 +22842,7 @@ class ProductService:
 # 2. Order Service
 class OrderService:
     """Centralized order business logic"""
-    
+
     @staticmethod
     def process_order_payment(order, payment_method, payment_data):
         """Process payment with fraud detection"""
@@ -22852,30 +22852,30 @@ class OrderService:
             order.status = 'flagged'
             order.save()
             raise ValidationError("Order flagged for review")
-        
+
         # Process payment
         payment = PaymentService.process_payment(
             order, payment_method, payment_data
         )
-        
+
         # Update order status
         if payment.status == 'completed':
             order.payment_status = 'paid'
             order.status = 'confirmed'
             order.save()
-            
+
             # Send confirmation
             EmailService.send_order_confirmation(order)
-            
+
             # Update customer stats
             order.customer.update_statistics()
-        
+
         return payment
 
 # 3. Cart Service
 class CartService:
     """Centralized cart business logic"""
-    
+
     @staticmethod
     def add_item_with_validation(cart, product, variant, quantity):
         """Add item with inventory validation"""
@@ -22885,10 +22885,10 @@ class CartService:
             product=product,
             variant=variant
         ).first()
-        
+
         if not inventory or inventory.available < quantity:
             raise ValidationError("Insufficient inventory")
-        
+
         # Add or update cart item
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
@@ -22896,16 +22896,16 @@ class CartService:
             variant=variant,
             defaults={'quantity': quantity}
         )
-        
+
         if not created:
             cart_item.quantity += quantity
-        
+
         # Reserve inventory
         inventory.reserve(cart_item.quantity)
-        
+
         # Recalculate cart totals
         cart.recalculate_totals()
-        
+
         return cart_item
 ```
 
@@ -22918,15 +22918,15 @@ class EcommerceEvents:
     PRODUCT_CREATED = 'product.created'
     PRODUCT_UPDATED = 'product.updated'
     PRODUCT_DELETED = 'product.deleted'
-    
+
     ORDER_CREATED = 'order.created'
     ORDER_CONFIRMED = 'order.confirmed'
     ORDER_SHIPPED = 'order.shipped'
     ORDER_CANCELLED = 'order.cancelled'
-    
+
     PAYMENT_COMPLETED = 'payment.completed'
     PAYMENT_FAILED = 'payment.failed'
-    
+
     INVENTORY_LOW = 'inventory.low'
     INVENTORY_OUT_OF_STOCK = 'inventory.out_of_stock'
 
@@ -22936,7 +22936,7 @@ class EventDispatcher:
     def dispatch(event_name, data):
         """Dispatch event to all registered handlers"""
         handlers = EventHandler.get_handlers(event_name)
-        
+
         for handler in handlers:
             try:
                 handler.handle(data)
@@ -22950,17 +22950,17 @@ class InventoryEventHandler:
     def handle_order_created(data):
         """Handle order created event"""
         order = data['order']
-        
+
         # Reserve inventory
         for item in order.items.all():
             inventory = Inventory.objects.filter(
                 product=item.product,
                 variant=item.variant
             ).first()
-            
+
             if inventory:
                 inventory.reserve(item.quantity)
-                
+
                 # Check for low stock
                 if inventory.available <= 5:
                     EventDispatcher.dispatch(
@@ -22974,7 +22974,7 @@ class EmailEventHandler:
         """Send order confirmation email"""
         order = data['order']
         send_order_confirmation_email.delay(order.id)
-    
+
     @staticmethod
     def handle_inventory_low(data):
         """Send low stock alert"""
@@ -23006,12 +23006,12 @@ class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     sku = models.CharField(max_length=100, unique=True)
-    
+
     # Pricing
     price = models.DecimalField(max_digits=10, decimal_places=2)
     compare_at_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
+
     # Inventory
     inventory_quantity = models.IntegerField(default=0)
     inventory_policy = models.CharField(
@@ -23023,26 +23023,26 @@ class ProductVariant(models.Model):
         ],
         default='deny'
     )
-    
+
     # Physical attributes
     weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     length = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     width = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     height = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
+
     # Variant options (structured)
     option1 = models.CharField(max_length=100, blank=True)
     option2 = models.CharField(max_length=100, blank=True)
     option3 = models.CharField(max_length=100, blank=True)
-    
+
     # Position for ordering
     position = models.IntegerField(default=0)
-    
+
     # Metadata
     barcode = models.CharField(max_length=50, blank=True)
     requires_shipping = models.BooleanField(default=True)
     taxable = models.BooleanField(default=True)
-    
+
     class Meta:
         ordering = ['position']
         indexes = [
@@ -23057,7 +23057,7 @@ class VariantOption(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variant_options')
     name = models.CharField(max_length=50)  # e.g., "Size", "Color"
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         unique_together = ['product', 'name']
         ordering = ['position']
@@ -23067,7 +23067,7 @@ class VariantOptionValue(models.Model):
     option = models.ForeignKey(VariantOption, on_delete=models.CASCADE, related_name='values')
     value = models.CharField(max_length=100)  # e.g., "Small", "Red"
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         unique_together = ['option', 'value']
         ordering = ['position']
@@ -23084,11 +23084,11 @@ class Collection(models.Model):
     slug = models.SlugField(max_length=255)
     description = models.TextField(blank=True)
     image = models.ForeignKey('media.MediaFile', on_delete=models.SET_NULL, null=True, blank=True)
-    
+
     # Smart collection settings
     is_smart = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    
+
     # Sorting
     sort_order = models.CharField(
         max_length=20,
@@ -23102,19 +23102,19 @@ class Collection(models.Model):
         ],
         default='manual'
     )
-    
+
     # Metadata
     created_by = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['store', 'slug']
 
 class CollectionCondition(models.Model):
     """Rules for smart collections"""
     collection = models.ForeignKey(Collection, on_delete=models.CASCADE, related_name='conditions')
-    
+
     # Condition definition
     field = models.CharField(
         max_length=50,
@@ -23130,7 +23130,7 @@ class CollectionCondition(models.Model):
             ('category', 'Category')
         ]
     )
-    
+
     operator = models.CharField(
         max_length=20,
         choices=[
@@ -23147,10 +23147,10 @@ class CollectionCondition(models.Model):
             ('not_in', 'Not in list')
         ]
     )
-    
+
     value = models.JSONField()  # Flexible value storage
     position = models.IntegerField(default=0)
-    
+
     class Meta:
         ordering = ['position']
 
@@ -23161,31 +23161,31 @@ class SmartCollectionService:
         """Get products matching smart collection rules"""
         if not collection.is_smart:
             return collection.products.all()
-        
+
         queryset = Product.objects.filter(store=collection.store, status='published')
-        
+
         for condition in collection.conditions.all():
             queryset = SmartCollectionService.apply_condition(queryset, condition)
-        
+
         # Apply sorting
         queryset = SmartCollectionService.apply_sorting(queryset, collection.sort_order)
-        
+
         return queryset.distinct()
-    
+
     @staticmethod
     def apply_condition(queryset, condition):
         """Apply single condition to queryset"""
         field = condition.field
         operator = condition.operator
         value = condition.value
-        
+
         if field == 'title':
             if operator == 'contains':
                 return queryset.filter(title__icontains=value)
             elif operator == 'equals':
                 return queryset.filter(title__iexact=value)
             # ... other operators
-        
+
         elif field == 'price':
             if operator == 'greater_than':
                 return queryset.filter(variants__price__gt=value)
@@ -23196,13 +23196,13 @@ class SmartCollectionService:
                     variants__price__gte=value[0],
                     variants__price__lte=value[1]
                 )
-        
+
         elif field == 'category':
             if operator == 'equals':
                 return queryset.filter(categories__id=value)
             elif operator == 'in':
                 return queryset.filter(categories__id__in=value)
-        
+
         return queryset
 ```
 
@@ -23216,7 +23216,7 @@ class DiscountRule(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     # Rule configuration
     rule_type = models.CharField(
         max_length=20,
@@ -23229,10 +23229,10 @@ class DiscountRule(models.Model):
             ('bundle', 'Bundle Discount')
         ]
     )
-    
+
     # Conditions
     conditions = models.JSONField(default=dict)
-    
+
     # Discount calculation
     discount_type = models.CharField(
         max_length=20,
@@ -23243,18 +23243,18 @@ class DiscountRule(models.Model):
             ('free_shipping', 'Free Shipping')
         ]
     )
-    
+
     discount_value = models.DecimalField(max_digits=10, decimal_places=2)
-    
+
     # Limits and restrictions
     usage_limit = models.IntegerField(null=True, blank=True)
     usage_limit_per_customer = models.IntegerField(null=True, blank=True)
     minimum_order_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+
     # Timing
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
-    
+
     # Status
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(GlobalUser, on_delete=models.SET_NULL, null=True)
@@ -23263,28 +23263,28 @@ class DiscountRule(models.Model):
 
 class DiscountEngine:
     """Advanced discount calculation engine"""
-    
+
     @staticmethod
     def calculate_discounts(cart, customer=None):
         """Calculate all applicable discounts for cart"""
         discounts = []
         total_discount = Decimal('0.00')
-        
+
         # Get applicable rules
         rules = DiscountEngine.get_applicable_rules(cart.store, cart, customer)
-        
+
         for rule in rules:
             discount = DiscountEngine.calculate_rule_discount(rule, cart, customer)
             if discount['amount'] > 0:
                 discounts.append(discount)
                 total_discount += discount['amount']
-        
+
         return {
             'discounts': discounts,
             'total_discount': total_discount,
             'final_total': cart.get_total() - total_discount
         }
-    
+
     @staticmethod
     def get_applicable_rules(store, cart, customer):
         """Get rules that apply to this cart"""
@@ -23294,30 +23294,30 @@ class DiscountEngine:
             starts_at__lte=timezone.now(),
             ends_at__gte=timezone.now()
         )
-        
+
         applicable_rules = []
-        
+
         for rule in rules:
             if DiscountEngine.rule_applies(rule, cart, customer):
                 applicable_rules.append(rule)
-        
+
         return applicable_rules
-    
+
     @staticmethod
     def rule_applies(rule, cart, customer):
         """Check if rule applies to cart"""
         conditions = rule.conditions
-        
+
         # Check minimum order amount
         if rule.minimum_order_amount > 0:
             if cart.get_subtotal() < rule.minimum_order_amount:
                 return False
-        
+
         # Check usage limits
         if rule.usage_limit:
             if rule.used_count >= rule.usage_limit:
                 return False
-        
+
         if rule.usage_limit_per_customer and customer:
             customer_usage = Order.objects.filter(
                 customer=customer,
@@ -23325,7 +23325,7 @@ class DiscountEngine:
             ).count()
             if customer_usage >= rule.usage_limit_per_customer:
                 return False
-        
+
         # Check specific conditions based on rule type
         if rule.rule_type == 'cart_total':
             return DiscountEngine.check_cart_total_conditions(rule, cart)
@@ -23333,9 +23333,9 @@ class DiscountEngine:
             return DiscountEngine.check_product_conditions(rule, cart)
         elif rule.rule_type == 'customer_specific':
             return DiscountEngine.check_customer_conditions(rule, customer)
-        
+
         return True
-    
+
     @staticmethod
     def calculate_rule_discount(rule, cart, customer):
         """Calculate discount amount for a specific rule"""
@@ -23347,7 +23347,7 @@ class DiscountEngine:
             discount_amount = cart.get_shipping()
         else:
             discount_amount = Decimal('0.00')
-        
+
         return {
             'rule_id': rule.id,
             'rule_name': rule.name,
@@ -23366,13 +23366,13 @@ class DiscountEngine:
 # 1. Offline Cart Support
 class OfflineCartService:
     """Service for offline cart functionality"""
-    
+
     @staticmethod
     def sync_cart_when_online(user, offline_cart_data):
         """Sync offline cart when user comes online"""
         try:
             cart = CartService.get_cart_for_user(user)
-            
+
             for item_data in offline_cart_data['items']:
                 # Merge offline items with online cart
                 CartService.add_item_with_validation(
@@ -23381,16 +23381,16 @@ class OfflineCartService:
                     item_data.get('variant_id'),
                     item_data['quantity']
                 )
-            
+
             return {'status': 'synced', 'cart_id': cart.id}
-        
+
         except Exception as e:
             return {'status': 'error', 'message': str(e)}
 
 # 2. Push Notifications for Order Updates
 class PushNotificationService:
     """Push notifications for order status updates"""
-    
+
     @staticmethod
     def send_order_update_notification(order, status):
         """Send push notification for order update"""
@@ -23411,7 +23411,7 @@ class PushNotificationService:
                     }
                 ]
             }
-            
+
             send_push_notification.delay(
                 order.customer.user.push_notification_token,
                 message
@@ -23420,7 +23420,7 @@ class PushNotificationService:
 # 3. One-Click Reorder
 class ReorderService:
     """Service for quick reordering"""
-    
+
     @staticmethod
     def create_reorder(order, user):
         """Create new order from existing order"""
@@ -23431,7 +23431,7 @@ class ReorderService:
             shipping_address=order.shipping_address,
             status='draft'
         )
-        
+
         # Copy order items
         for item in order.items.all():
             OrderItem.objects.create(
@@ -23444,11 +23444,11 @@ class ReorderService:
                 unit_price=item.product.get_current_price(),
                 total_price=item.product.get_current_price() * item.quantity
             )
-        
+
         # Recalculate totals
         new_order.calculate_totals()
         new_order.save()
-        
+
         return new_order
 ```
 
@@ -23458,7 +23458,7 @@ class ReorderService:
 
 class ProductSearchService:
     """Advanced product search with filters"""
-    
+
     @staticmethod
     def search_products(store, query, filters=None, sort=None):
         """Advanced product search"""
@@ -23466,7 +23466,7 @@ class ProductSearchService:
             store=store,
             status='published'
         )
-        
+
         # Text search
         if query:
             queryset = queryset.filter(
@@ -23476,67 +23476,67 @@ class ProductSearchService:
                 models.Q(variants__sku__icontains=query) |
                 models.Q(tags__contains=query)
             ).distinct()
-        
+
         # Apply filters
         if filters:
             queryset = ProductSearchService.apply_filters(queryset, filters)
-        
+
         # Apply sorting
         if sort:
             queryset = ProductSearchService.apply_sorting(queryset, sort)
-        
+
         return queryset
-    
+
     @staticmethod
     def apply_filters(queryset, filters):
         """Apply search filters"""
         # Category filter
         if 'category' in filters:
             queryset = queryset.filter(categories__slug=filters['category'])
-        
+
         # Price range filter
         if 'price_min' in filters:
             queryset = queryset.filter(variants__price__gte=filters['price_min'])
         if 'price_max' in filters:
             queryset = queryset.filter(variants__price__lte=filters['price_max'])
-        
+
         # In stock filter
         if 'in_stock' in filters and filters['in_stock']:
             queryset = queryset.filter(
                 variants__inventory_quantity__gt=0
             )
-        
+
         # Attributes filter
         if 'attributes' in filters:
             for attr, value in filters['attributes'].items():
                 queryset = queryset.filter(
                     attributes__contains={attr: value}
                 )
-        
+
         return queryset.distinct()
-    
+
     @staticmethod
     def get_search_suggestions(store, query):
         """Get search suggestions for autocomplete"""
         suggestions = []
-        
+
         # Product title suggestions
         title_matches = Product.objects.filter(
             store=store,
             status='published',
             title__icontains=query
         ).values_list('title', flat=True)[:5]
-        
+
         suggestions.extend(title_matches)
-        
+
         # Category suggestions
         category_matches = ProductCategory.objects.filter(
             store=store,
             name__icontains=query
         ).values_list('name', flat=True)[:3]
-        
+
         suggestions.extend(category_matches)
-        
+
         return list(set(suggestions))[:10]
 ```
 
@@ -23548,7 +23548,7 @@ class ProductSearchService:
 
 class EcommerceAnalytics:
     """Advanced ecommerce analytics"""
-    
+
     @staticmethod
     def get_sales_report(store, start_date, end_date):
         """Generate comprehensive sales report"""
@@ -23556,7 +23556,7 @@ class EcommerceAnalytics:
             store=store,
             created_at__range=[start_date, end_date]
         )
-        
+
         report = {
             'summary': {
                 'total_orders': orders.count(),
@@ -23575,16 +23575,16 @@ class EcommerceAnalytics:
             'customer_analysis': EcommerceAnalytics.get_customer_analysis(orders),
             'revenue_by_category': EcommerceAnalytics.get_revenue_by_category(orders)
         }
-        
+
         return report
-    
+
     @staticmethod
     def get_customer_lifetime_value(store):
         """Calculate customer lifetime value"""
         customers = Customer.objects.filter(
             orders__store=store
         ).distinct()
-        
+
         clv_data = []
         for customer in customers:
             orders = Order.objects.filter(customer=customer, store=store)
@@ -23592,11 +23592,11 @@ class EcommerceAnalytics:
             order_count = orders.count()
             first_order = orders.order_by('created_at').first()
             last_order = orders.order_by('-created_at').first()
-            
+
             if first_order and last_order:
                 days_active = (last_order.created_at - first_order.created_at).days
                 avg_order_value = total_spent / order_count if order_count > 0 else 0
-                
+
                 clv_data.append({
                     'customer_id': customer.id,
                     'customer_name': customer.get_full_name(),
@@ -23606,14 +23606,14 @@ class EcommerceAnalytics:
                     'days_active': days_active,
                     'clv_per_day': total_spent / days_active if days_active > 0 else 0
                 })
-        
+
         return sorted(clv_data, key=lambda x: x['total_spent'], reverse=True)
-    
+
     @staticmethod
     def get_inventory_turnover(store):
         """Calculate inventory turnover ratio"""
         inventory = Inventory.objects.filter(store=store)
-        
+
         turnover_data = []
         for item in inventory:
             # Calculate cost of goods sold
@@ -23622,11 +23622,11 @@ class EcommerceAnalytics:
                 variant=item.variant,
                 order__created_at__gte=timezone.now() - timedelta(days=365)
             ).aggregate(total=models.Sum('quantity'))['total'] or 0
-            
+
             # Calculate turnover
             avg_inventory = (item.quantity + sold_quantity) / 2
             turnover_rate = sold_quantity / avg_inventory if avg_inventory > 0 else 0
-            
+
             turnover_data.append({
                 'product': item.product.title,
                 'variant': item.variant.title if item.variant else 'Default',
@@ -23635,7 +23635,7 @@ class EcommerceAnalytics:
                 'turnover_rate': turnover_rate,
                 'days_of_supply': 365 / turnover_rate if turnover_rate > 0 else 999
             })
-        
+
         return sorted(turnover_data, key=lambda x: x['turnover_rate'], reverse=True)
 ```
 
@@ -23647,7 +23647,7 @@ class EcommerceAnalytics:
 
 class EcommerceCache:
     """Ecommerce-specific caching"""
-    
+
     CACHE_KEYS = {
         'product_list': 'product_list:{store_id}:{page}',
         'product_detail': 'product_detail:{product_id}',
@@ -23655,7 +23655,7 @@ class EcommerceCache:
         'cart_totals': 'cart_totals:{cart_id}',
         'search_results': 'search:{store_id}:{query_hash}'
     }
-    
+
     CACHE_TIMEOUTS = {
         'product_list': 300,  # 5 minutes
         'product_detail': 600,  # 10 minutes
@@ -23663,16 +23663,16 @@ class EcommerceCache:
         'cart_totals': 60,  # 1 minute
         'search_results': 180  # 3 minutes
     }
-    
+
     @staticmethod
     def get_product_list(store_id, page=1):
         """Get cached product list"""
         cache_key = EcommerceCache.CACHE_KEYS['product_list'].format(
             store_id=store_id, page=page
         )
-        
+
         products = cache.get(cache_key)
-        
+
         if not products:
             products = Product.objects.filter(
                 store_id=store_id,
@@ -23680,15 +23680,15 @@ class EcommerceCache:
             ).select_related('store').prefetch_related(
                 'variants', 'images', 'categories'
             )
-            
+
             cache.set(
                 cache_key,
                 products,
                 EcommerceCache.CACHE_TIMEOUTS['product_list']
             )
-        
+
         return products
-    
+
     @staticmethod
     def invalidate_product_cache(product):
         """Invalidate product-related caches"""
@@ -23698,7 +23698,7 @@ class EcommerceCache:
                 product_id=product.id
             )
         )
-        
+
         # Invalidate product list
         for page in range(1, 50):  # Invalidate first 50 pages
             cache.delete(
@@ -23706,7 +23706,7 @@ class EcommerceCache:
                     store_id=product.store_id, page=page
                 )
             )
-        
+
         # Invalidate category tree
         cache.delete(
             EcommerceCache.CACHE_KEYS['category_tree'].format(
@@ -23723,79 +23723,79 @@ class EcommerceCache:
 
 class FraudDetectionEngine:
     """Advanced fraud detection"""
-    
+
     @staticmethod
     def analyze_transaction(order, payment_data):
         """Comprehensive fraud analysis"""
         risk_score = 0
         risk_factors = []
-        
+
         # 1. Order value analysis
         if order.total > 1000:
             risk_score += 15
             risk_factors.append('high_value_order')
-        
+
         # 2. Customer behavior analysis
         customer_risk = FraudDetectionEngine.analyze_customer_behavior(order.customer)
         risk_score += customer_risk['score']
         risk_factors.extend(customer_risk['factors'])
-        
+
         # 3. Geographic analysis
         geo_risk = FraudDetectionEngine.analyze_geographic_risk(
             order.billing_address, order.shipping_address
         )
         risk_score += geo_risk['score']
         risk_factors.extend(geo_risk['factors'])
-        
+
         # 4. Payment method analysis
         payment_risk = FraudDetectionEngine.analyze_payment_method(payment_data)
         risk_score += payment_risk['score']
         risk_factors.extend(payment_risk['factors'])
-        
+
         # 5. Device fingerprinting
         device_risk = FraudDetectionEngine.analyze_device_fingerprint(
             payment_data.get('device_fingerprint')
         )
         risk_score += device_risk['score']
         risk_factors.extend(device_risk['factors'])
-        
+
         return {
             'risk_score': risk_score,
             'risk_factors': risk_factors,
             'recommendation': FraudDetectionEngine.get_recommendation(risk_score),
             'requires_review': risk_score > 70
         }
-    
+
     @staticmethod
     def analyze_customer_behavior(customer):
         """Analyze customer behavior patterns"""
         risk_score = 0
         factors = []
-        
+
         # New customer risk
         if customer.order_count == 0:
             risk_score += 20
             factors.append('new_customer')
-        
+
         # Rapid ordering
         recent_orders = Order.objects.filter(
             customer=customer,
             created_at__gte=timezone.now() - timedelta(hours=24)
         ).count()
-        
+
         if recent_orders > 3:
             risk_score += 25
             factors.append('rapid_ordering')
-        
+
         # Unusual order size
         if customer.total_spent > 0:
             avg_order_value = customer.total_spent / customer.order_count
             current_order = Order.objects.filter(customer=customer).last()
-            
+
             if current_order and current_order.total > avg_order_value * 3:
                 risk_score += 15
                 factors.append('unusual_order_size')
-        
+
         return {'score': risk_score, 'factors': factors}
 ```
 
@@ -23853,7 +23853,7 @@ class Product(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = ['store', 'slug']
         indexes = [
@@ -23874,20 +23874,20 @@ class Product(models.Model):
 def calculate_order_totals(order):
     """
     Calculate order totals including subtotal, tax, shipping, and final total.
-    
+
     Args:
         order (Order): The order instance to calculate totals for
-        
+
     Returns:
         dict: Dictionary containing calculated totals:
             - subtotal (Decimal): Sum of all order items
             - tax (Decimal): Calculated tax amount
             - shipping (Decimal): Shipping cost
             - total (Decimal): Final total including all charges
-            
+
     Raises:
         ValidationError: If order items are invalid or missing
-        
+
     Example:
         >>> order = Order.objects.get(id=1)
         >>> totals = calculate_order_totals(order)
@@ -23910,7 +23910,7 @@ class ProductModelTest(TestCase):
     def setUp(self):
         self.store = Store.objects.create(name="Test Store")
         self.user = User.objects.create_user(email="test@example.com")
-    
+
     def test_product_creation_with_valid_data(self):
         """Test creating product with all required fields"""
         product = Product.objects.create(
@@ -23920,11 +23920,11 @@ class ProductModelTest(TestCase):
             sku="TEST-001",
             created_by=self.user
         )
-        
+
         assert product.title == "Test Product"
         assert product.status == "draft"
         assert product.store == self.store
-    
+
     def test_product_slug_uniqueness_per_store(self):
         """Test that product slugs are unique within each store"""
         # Test implementation
@@ -23946,7 +23946,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ['status', 'store', 'created_at']
     search_fields = ['title', 'sku', 'description']
     readonly_fields = ['created_at', 'updated_at']
-    
+
     fieldsets = (
         ('Basic Information', {
             'fields': ('title', 'slug', 'sku', 'status')
@@ -24006,7 +24006,7 @@ def calculate_tax(order):
 def calculate_tax(order):
     """
     Calculate tax based on order shipping address and items.
-    
+
     TODO: Implement specific tax calculation logic based on:
     - Shipping address jurisdiction
     - Product taxability
@@ -24036,7 +24036,7 @@ def process_payment(order, payment_data):
 def process_payment(order, payment_data):
     """
     Process payment using secure payment gateway.
-    
+
     SECURITY NOTES:
     - Never store raw card data
     - Use tokenization for payment methods
@@ -24095,7 +24095,7 @@ def sync_with_shipping_carrier(order):
 def sync_with_shipping_carrier(order):
     """
     Sync order with shipping carrier API.
-    
+
     TODO: Implement specific carrier integration:
     - Add API endpoint configuration
     - Implement authentication
@@ -24150,14 +24150,14 @@ class Inventory(models.Model):
 class ProductSerializer(serializers.ModelSerializer):
     variants = ProductVariantSerializer(many=True, read_only=True)
     inventory_count = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Product
         fields = [
             'id', 'title', 'slug', 'sku', 'description', 'status',
             'variants', 'inventory_count', 'created_at'
         ]
-    
+
     def get_inventory_count(self, obj):
         return sum(variant.inventory_quantity for variant in obj.variants.all())
 
@@ -24176,14 +24176,14 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     variants = ProductVariantSerializer(many=True, read_only=True)
     inventory_count = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = Product
         fields = [
             'id', 'title', 'slug', 'sku', 'description', 'status',
             'variants', 'inventory_count', 'created_at'
         ]
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Optimize query with prefetch_related
@@ -24191,7 +24191,7 @@ class ProductSerializer(serializers.ModelSerializer):
             self.instance = Product.objects.prefetch_related('variants').get(
                 id=self.instance.id
             )
-    
+
     def get_inventory_count(self, obj):
         # Use annotated field for better performance
         return getattr(obj, '_inventory_count', 0)
@@ -24238,17 +24238,17 @@ def process_order(order):
 def reserve_inventory(variant, quantity):
     """
     Reserve inventory for a product variant.
-    
+
     Args:
         variant (ProductVariant): The product variant to reserve inventory for
         quantity (int): The quantity to reserve
-        
+
     Returns:
         bool: True if reservation successful, False otherwise
-        
+
     Raises:
         ValidationError: If quantity is invalid or insufficient inventory
-        
+
     Example:
         >>> variant = ProductVariant.objects.get(sku="SHIRT-RED-M")
         >>> success = reserve_inventory(variant, 2)
@@ -24257,11 +24257,11 @@ def reserve_inventory(variant, quantity):
     """
     if quantity <= 0:
         raise ValidationError("Quantity must be positive")
-    
+
     inventory = Inventory.objects.filter(variant=variant).first()
     if not inventory or inventory.available < quantity:
         return False
-    
+
     inventory.reserved += quantity
     inventory.save()
     return True
@@ -24278,11 +24278,11 @@ def create_product_from_api(request_data):
     for field in required_fields:
         if field not in request_data:
             raise ValidationError(f"Missing required field: {field}")
-    
+
     # Sanitize input
     title = bleach.clean(request_data['title'], tags=[], strip=True)
     sku = re.sub(r'[^A-Za-z0-9_-]', '', request_data['sku'])
-    
+
     # Validate data types
     try:
         price = Decimal(str(request_data['price']))
@@ -24300,7 +24300,7 @@ Product.objects.filter(title__icontains=user_input)
 def log_payment_attempt(payment_data):
     # ❌ BAD: Logs sensitive card data
     logger.info(f"Payment attempt: {payment_data}")
-    
+
     # ✅ GOOD: Only logs non-sensitive data
     logger.info(f"Payment attempt: {payment_data['order_id']}, amount: {payment_data['amount']}")
 ```
@@ -24315,7 +24315,7 @@ def get_orders_with_customers():
     orders = Order.objects.all()
     for order in orders:
         print(order.customer.email)  # Separate query for each order
-    
+
     # ✅ GOOD: Single query with related data
     orders = Order.objects.select_related('customer').all()
     for order in orders:
@@ -24326,7 +24326,7 @@ class Order(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     status = models.CharField(max_length=20)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         indexes = [
             models.Index(fields=['customer', 'status']),  # For customer order queries
@@ -24340,7 +24340,7 @@ def update_product_prices(price_updates):
         product = Product.objects.get(id=product_id)
         product.price = new_price
         product.save()
-    
+
     # ✅ GOOD: Bulk update
     Product.objects.filter(id__in=price_updates.keys()).update(
         price=Case(*[When(id=pk, then=Value(price)) for pk, price in price_updates.items()])
@@ -24382,27 +24382,27 @@ def update_product_prices(price_updates):
 def review_ai_generated_code(code):
     """
     Review AI-generated code before committing.
-    
+
     Args:
         code (str): The AI-generated code to review
-        
+
     Returns:
         dict: Review results with issues and recommendations
     """
     issues = []
-    
+
     # Check for security issues
     if 'eval(' in code or 'exec(' in code:
         issues.append("Potentially unsafe code execution detected")
-    
+
     # Check for missing input validation
     if 'request.data' in code and 'validate' not in code:
         issues.append("Missing input validation")
-    
+
     # Check for N+1 queries
     if '.objects.all()' in code and 'select_related' not in code:
         issues.append("Potential N+1 query problem")
-    
+
     return {
         'issues': issues,
         'approved': len(issues) == 0
@@ -24424,7 +24424,7 @@ def calculate_tax_v1(order):
 def calculate_tax_v2(order):
     """
     Calculate tax based on shipping address and product taxability.
-    
+
     The AI initially suggested a hardcoded tax rate, but business requirements
     showed that tax rates vary by jurisdiction and product type.
     """
@@ -24440,10 +24440,10 @@ def calculate_tax_v2(order):
 
 class AICodeFeedback:
     """Track and learn from AI code generation feedback"""
-    
+
     def __init__(self):
         self.feedback_log = []
-    
+
     def log_feedback(self, prompt, generated_code, issues, corrections):
         """Log feedback for AI improvement"""
         feedback_entry = {
@@ -24454,13 +24454,13 @@ class AICodeFeedback:
             'corrections': corrections,
             'lesson_learned': self.extract_lesson(issues, corrections)
         }
-        
+
         self.feedback_log.append(feedback_entry)
-    
+
     def extract_lesson(self, issues, corrections):
         """Extract learning points from feedback"""
         lessons = []
-        
+
         for issue in issues:
             if 'security' in issue.lower():
                 lessons.append("Always prioritize security in generated code")
@@ -24468,9 +24468,9 @@ class AICodeFeedback:
                 lessons.append("Consider database optimization in generated code")
             elif 'validation' in issue.lower():
                 lessons.append("Include proper input validation")
-        
+
         return lessons
-    
+
     def generate_improvement_summary(self):
         """Generate summary of improvements needed"""
         issue_counts = {}
@@ -24478,7 +24478,7 @@ class AICodeFeedback:
             for issue in entry['issues']:
                 issue_type = issue.split(':')[0]
                 issue_counts[issue_type] = issue_counts.get(issue_type, 0) + 1
-        
+
         return {
             'total_feedback': len(self.feedback_log),
             'common_issues': issue_counts,
@@ -24505,7 +24505,7 @@ class AICodeFeedback:
 def responsible_ai_usage_example():
     """
     Example of using AI responsibly for ecommerce development.
-    
+
     Process:
     1. Use AI to generate boilerplate code and templates
     2. Review and understand all generated code
@@ -24697,8 +24697,5 @@ For questions about ecommerce module development:
 - Includes security and performance considerations
 
 <!-- ===============================================================================
- END ECOMMERCE.MD 
+ END ECOMMERCE.MD
  ================================================================================= -->
-
-
-

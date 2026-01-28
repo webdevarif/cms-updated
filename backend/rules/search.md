@@ -42,45 +42,45 @@ class SearchIndex(TenantModel):
     """
     INFRASTRUCTURE: Store-scoped search index configuration
     """
-    
+
     # Core fields - INFRASTRUCTURE PROVIDES
     name = models.CharField(max_length=255)
     index_name = models.CharField(max_length=255, unique=True, db_index=True)
-    
+
     # Index configuration - INFRASTRUCTURE PROVIDES
     content_types = models.JSONField(
         default=list,
         help_text="List of content types to index: ['Page', 'Post', 'Product']"
     )
-    
+
     # Search configuration - INFRASTRUCTURE PROVIDES
     fields = models.JSONField(
         default=dict,
         help_text="Field mappings and search configuration"
     )
-    
+
     # Facet configuration - INFRASTRUCTURE PROVIDES
     facets = models.JSONField(
         default=list,
         help_text="Facet configuration for filtering"
     )
-    
+
     # Status - INFRASTRUCTURE PROVIDES
     is_active = models.BooleanField(default=True)
     last_reindexed_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'search_index'
         unique_together = [['store', 'name']]
         ordering = ['name']
-    
+
     def __str__(self):
         return f"{self.name} - {self.index_name}"
-    
+
     def get_index_name(self):
         """INFRASTRUCTURE PROVIDES: Full index name with store prefix"""
         return f"{self.store.slug}_{self.index_name}"
@@ -92,10 +92,10 @@ class SearchQuery(TenantModel):
     """
     INFRASTRUCTURE: Track search queries for analytics
     """
-    
+
     # Core fields - INFRASTRUCTURE PROVIDES
     query = models.CharField(max_length=255, db_index=True)
-    
+
     # Search context - INFRASTRUCTURE PROVIDES
     search_type = models.CharField(
         max_length=50,
@@ -105,10 +105,10 @@ class SearchQuery(TenantModel):
             ('all', 'All')
         ]
     )
-    
+
     # Results - INFRASTRUCTURE PROVIDES
     results_count = models.PositiveIntegerField(default=0)
-    
+
     # User tracking - INFRASTRUCTURE PROVIDES
     user = models.ForeignKey(
         'accounts.UserAccount',
@@ -117,16 +117,16 @@ class SearchQuery(TenantModel):
         blank=True
     )
     session_id = models.CharField(max_length=100, blank=True)
-    
+
     # Filters applied - INFRASTRUCTURE PROVIDES
     filters = models.JSONField(default=dict)
-    
+
     # Timing - INFRASTRUCTURE PROVIDES
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'search_query'
         indexes = [
@@ -135,7 +135,7 @@ class SearchQuery(TenantModel):
             models.Index(fields=['search_type']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.query} - {self.results_count} results"
 ```
@@ -153,7 +153,7 @@ logger = logging.getLogger(__name__)
 
 class SearchService:
     """Infrastructure search management service"""
-    
+
     @staticmethod
     def search(store, query, search_type='all', filters=None, page=1, page_size=20):
         """
@@ -162,15 +162,15 @@ class SearchService:
         """
         from elasticsearch_dsl import Search, A
         import time
-        
+
         start_time = time.time()
-        
+
         # Get search index - INFRASTRUCTURE PROVIDES
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return {
                 'total': 0,
@@ -179,37 +179,37 @@ class SearchService:
                 'page': page,
                 'page_size': page_size
             }
-        
+
         # Build Elasticsearch query - INFRASTRUCTURE PROVIDES
         s = Search(index=index.get_index_name())
-        
+
         # Add query - INFRASTRUCTURE PROVIDES
         if query:
             s = s.query('multi_match', query=query, fields=['title^2', 'content', 'description'])
-        
+
         # Add filters - INFRASTRUCTURE PROVIDES
         if filters:
             for key, value in filters.items():
                 if value:
                     s = s.filter('term', **{key: value})
-        
+
         # Add store filter - INFRASTRUCTURE PROVIDES
         s = s.filter('term', store_id=str(store.id))
-        
+
         # Add aggregations for facets - INFRASTRUCTURE PROVIDES
         for facet in index.facets:
             s.aggs.bucket(facet['field'], 'terms', field=facet['field'], size=10)
-        
+
         # Pagination - INFRASTRUCTURE PROVIDES
         start = (page - 1) * page_size
         s = s[start:start + page_size]
-        
+
         # Execute search - INFRASTRUCTURE PROVIDES
         response = s.execute()
-        
+
         # Calculate duration - INFRASTRUCTURE PROVIDES
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         # Build results - INFRASTRUCTURE PROVIDES
         results = []
         for hit in response.hits:
@@ -221,7 +221,7 @@ class SearchService:
                 'url': hit.get('url'),
                 'score': hit.meta.score
             })
-        
+
         # Build facets - INFRASTRUCTURE PROVIDES
         facets = {}
         for facet in index.facets:
@@ -232,7 +232,7 @@ class SearchService:
                     {'value': bucket.key, 'count': bucket.doc_count}
                     for bucket in buckets
                 ]
-        
+
         return {
             'total': response.hits.total.value,
             'results': results,
@@ -241,7 +241,7 @@ class SearchService:
             'page_size': page_size,
             'duration_ms': duration_ms
         }
-    
+
     @staticmethod
     def get_facets(store, search_type='all'):
         """
@@ -251,27 +251,27 @@ class SearchService:
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return []
-        
+
         return index.facets
-    
+
     @staticmethod
     def get_suggestions(store, query):
         """
         INFRASTRUCTURE PROVIDES: Search suggestions
         """
         from elasticsearch_dsl import Search
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return []
-        
+
         # Build suggestion query - INFRASTRUCTURE PROVIDES
         s = Search(index=index.get_index_name())
         s = s.suggest(
@@ -282,9 +282,9 @@ class SearchService:
                 'size': 10
             }
         )
-        
+
         response = s.execute()
-        
+
         suggestions = []
         if response.suggest.title_suggest:
             for suggestion in response.suggest.title_suggest[0].options:
@@ -292,9 +292,9 @@ class SearchService:
                     'text': suggestion.text,
                     'score': suggestion.score
                 })
-        
+
         return suggestions
-    
+
     @staticmethod
     def index_document(store, document_type, document_id, data):
         """
@@ -302,19 +302,19 @@ class SearchService:
         APPLICATION MUST: Provide valid document data and types
         """
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Add store ID to document - INFRASTRUCTURE PROVIDES
         data['store_id'] = str(store.id)
         data['type'] = document_type
-        
+
         # Index document - INFRASTRUCTURE PROVIDES
         es = Elasticsearch()
         es.index(
@@ -322,10 +322,10 @@ class SearchService:
             id=document_id,
             body=data
         )
-        
+
         logger.info(f"Indexed {document_type} #{document_id}")
         return True
-    
+
     @staticmethod
     def delete_document(store, document_id):
         """
@@ -333,25 +333,25 @@ class SearchService:
         APPLICATION MUST: Provide valid document ID
         """
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Delete document - INFRASTRUCTURE PROVIDES
         es = Elasticsearch()
         es.delete(
             index=index.get_index_name(),
             id=document_id
         )
-        
+
         logger.info(f"Deleted document #{document_id}")
         return True
-    
+
     @staticmethod
     def rebuild_index(store):
         """
@@ -359,23 +359,23 @@ class SearchService:
         APPLICATION MUST: Trigger rebuild appropriately
         """
         from elasticsearch import Elasticsearch
-        
+
         index = SearchIndex.objects.filter(
             store=store,
             is_active=True
         ).first()
-        
+
         if not index:
             return False
-        
+
         # Delete and recreate index - INFRASTRUCTURE PROVIDES
         es = Elasticsearch()
         index_name = index.get_index_name()
-        
+
         # Delete existing index
         if es.indices.exists(index=index_name):
             es.indices.delete(index=index_name)
-        
+
         # Create index with mappings - INFRASTRUCTURE PROVIDES
         mappings = {
             'properties': {
@@ -388,20 +388,20 @@ class SearchService:
                 'created_at': {'type': 'date'}
             }
         }
-        
+
         es.indices.create(index=index_name, body={'mappings': mappings})
-        
+
         # Reindex all content - INFRASTRUCTURE PROVIDES
         for content_type in index.content_types:
             SearchService._index_content_type(store, content_type)
-        
+
         # Update last reindexed timestamp - INFRASTRUCTURE PROVIDES
         index.last_reindexed_at = timezone.now()
         index.save(update_fields=['last_reindexed_at'])
-        
+
         logger.info(f"Rebuilt search index for store {store.slug}")
         return True
-    
+
     @staticmethod
     def track_search(store, query, search_type, results_count, filters=None, user=None, duration_ms=None):
         """
@@ -462,7 +462,7 @@ class SearchServiceTest(TestCase):
             fields={'title': 'text', 'content': 'text'},
             facets=[{'field': 'type', 'label': 'Type'}]
         )
-    
+
     def test_search(self):
         """Test search functionality"""
         results = SearchService.search(
@@ -470,10 +470,10 @@ class SearchServiceTest(TestCase):
             query='test',
             search_type='content'
         )
-        
+
         self.assertIn('results', results)
         self.assertIn('facets', results)
-    
+
     def test_index_document(self):
         """Test document indexing"""
         data = {
@@ -482,14 +482,14 @@ class SearchServiceTest(TestCase):
             'description': 'Test description',
             'url': '/test-page'
         }
-        
+
         result = SearchService.index_document(
             store=self.store,
             document_type='Page',
             document_id='1',
             data=data
         )
-        
+
         self.assertTrue(result)
 ```
 
@@ -534,7 +534,7 @@ class ExampleService:
             query=query,
             filters=filters
         )
-    
+
     @staticmethod
     def index_content(store, content):
         """APPLICATION MUST: Prepare data and use infrastructure"""
@@ -545,7 +545,7 @@ class ExampleService:
             'url': content.get_absolute_url(),
             'created_at': content.created_at.isoformat()
         }
-        
+
         return SearchService.index_document(
             store=store,
             document_type=content.__class__.__name__,
@@ -572,6 +572,6 @@ python manage.py index_content --store=my-store --type=Page
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2026-01-26  
+**Version**: 1.0
+**Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

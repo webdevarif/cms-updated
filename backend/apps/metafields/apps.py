@@ -3,7 +3,7 @@ from django.apps import AppConfig
 
 
 class MetafieldsConfig(AppConfig):
-    label = 'metafields'
+    label = "metafields"
     """AppConfig for the shared metafields app."""
 
     default_auto_field = "django.db.models.BigAutoField"

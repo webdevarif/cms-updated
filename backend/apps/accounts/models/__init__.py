@@ -1,10 +1,10 @@
 """
 Models package for accounts app.
 """
-from .user import User
-from .store_user import StoreUser
-from .role import Role
-from .preferences import UserPreferences
 from .activity import UserActivity
+from .preferences import UserPreferences
+from .role import Role
+from .store_user import StoreUser
+from .user import User
 
-__all__ = ['User', 'StoreUser', 'Role', 'UserPreferences', 'UserActivity']
+__all__ = ["User", "StoreUser", "Role", "UserPreferences", "UserActivity"]

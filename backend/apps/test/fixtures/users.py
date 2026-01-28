@@ -11,17 +11,11 @@ User = get_user_model()
 def admin_user():
     """Create admin user fixture"""
     return User.objects.create_user(
-        email='admin@example.com',
-        password='testpass123',
-        is_staff=True,
-        is_superuser=True
+        email="admin@example.com", password="testpass123", is_staff=True, is_superuser=True
     )
 
 
 @pytest.fixture
 def regular_user():
     """Create regular user fixture"""
-    return User.objects.create_user(
-        email='user@example.com',
-        password='testpass123'
-    )
+    return User.objects.create_user(email="user@example.com", password="testpass123")

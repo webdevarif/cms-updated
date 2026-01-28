@@ -2,7 +2,6 @@
 Forms models.
 """
 from .forms import FormTemplate
-from .submissions import FormSubmission
-from .templates import EmailTemplate
+from .submissions import FormSubmission, FormSubmissionData
 
-__all__ = ['FormTemplate', 'FormSubmission', 'EmailTemplate']
+__all__ = ["FormTemplate", "FormSubmission", "FormSubmissionData"]

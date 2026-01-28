@@ -76,36 +76,36 @@ class FormTemplate(TenantModel):
     Store-scoped form template for dynamic form builder
     Similar to Shopify's forms with Fluent Form features
     """
-    
+
     # Core fields
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     # Form Identification (6-digit unique ID)
     form_id = models.CharField(
-        max_length=6, 
-        unique=True, 
+        max_length=6,
+        unique=True,
         db_index=True,
         help_text="6-digit unique form identifier for HTML forms"
     )
-    
+
     # Configuration
     fields = models.JSONField(default=dict, help_text="Dynamic form fields configuration")
     settings = models.JSONField(default=dict, help_text="Form settings and options")
-    
+
     # Status and visibility
     status = models.CharField(max_length=20, choices=FORM_STATUS_CHOICES, default='draft')
     is_active = models.BooleanField(default=True)
-    
+
     # Submission handling
     save_to_database = models.BooleanField(default=True)
     send_email_notifications = models.BooleanField(default=True)
-    
+
     # SEO and meta
     seo_title = models.CharField(max_length=255, blank=True)
     seo_description = models.CharField(max_length=500, blank=True)
-    
+
     class Meta:
         db_table = 'forms_form_template'
         unique_together = [['store', 'slug']]
@@ -116,16 +116,16 @@ class FormTemplate(TenantModel):
             models.Index(fields=['form_id']),  # Add index for form_id lookups
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.title} (ID: {self.form_id})"
-    
+
     def save(self, *args, **kwargs):
         """Generate 6-digit form_id if not exists"""
         if not self.form_id:
             self.form_id = self.generate_unique_form_id()
         super().save(*args, **kwargs)
-    
+
     @staticmethod
     def generate_unique_form_id():
         """Generate unique 6-digit form ID"""
@@ -133,25 +133,25 @@ class FormTemplate(TenantModel):
             # Generate 6-digit alphanumeric ID
             chars = string.ascii_uppercase + string.digits
             form_id = ''.join(random.choices(chars, k=6))
-            
+
             # Check uniqueness
             if not FormTemplate.objects.filter(form_id=form_id).exists():
                 return form_id
-    
+
     def get_field_by_name(self, field_name):
         """Get field configuration by name"""
         return self.fields.get(field_name)
-    
+
     def validate_submission_data(self, data):
         """Validate submitted data against field configuration"""
         errors = {}
-        
+
         for field_name, field_config in self.fields.items():
             if field_config.get('required', False) and not data.get(field_name):
                 errors[field_name] = f"{field_config.get('label', field_name)} is required"
-        
+
         return errors
-    
+
     def get_html_form_attributes(self):
         """Get HTML form attributes for frontend"""
         return {
@@ -170,25 +170,25 @@ class FormSubmission(TenantModel):
     """
     Stores submitted form data with tracking
     """
-    
+
     # Relationships
     form_template = models.ForeignKey(FormTemplate, on_delete=models.CASCADE, related_name='submissions')
-    
+
     # Submission data
     data = models.JSONField(default=dict, help_text="Submitted form data")
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    
+
     # Status tracking
     status = models.CharField(max_length=20, choices=SUBMISSION_STATUS_CHOICES, default='pending')
     email_sent = models.BooleanField(default=False)
     email_opened = models.BooleanField(default=False)
-    
+
     # Timestamps
     submitted_at = models.DateTimeField(auto_now_add=True)
     email_sent_at = models.DateTimeField(null=True, blank=True)
     opened_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         db_table = 'forms_form_submission'
         indexes = [
@@ -197,10 +197,10 @@ class FormSubmission(TenantModel):
             models.Index(fields=['email_sent']),
         ]
         ordering = ['-submitted_at']
-    
+
     def __str__(self):
         return f"Submission for {self.form_template.title} (ID: {self.form_template.form_id})"
-    
+
     def send_notification_emails(self):
         """Trigger async email sending"""
         from services.form import FormService
@@ -214,25 +214,25 @@ class EmailTemplate(TenantModel):
     """
     Email templates for form notifications
     """
-    
+
     # Core fields
     title = models.CharField(max_length=255)
     subject = models.CharField(max_length=255)
     body_html = models.TextField()
     body_text = models.TextField(blank=True)
-    
+
     # Configuration
     headers = models.JSONField(default=dict, help_text="Custom email headers")
     variables = models.JSONField(default=dict, help_text="Template variables documentation")
-    
+
     # Recipients
     recipient_type = models.CharField(max_length=20, choices=RECIPIENT_CHOICES, default='admin')
     recipient_email = models.EmailField(blank=True, help_text="Custom recipient email")
     auto_detect_recipient = models.BooleanField(default=True, help_text="Auto-detect from form fields")
-    
+
     # Status
     is_active = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = 'forms_email_template'
         indexes = [
@@ -240,22 +240,22 @@ class EmailTemplate(TenantModel):
             models.Index(fields=['is_active']),
         ]
         ordering = ['title']
-    
+
     def render_with_context(self, context):
         """Render template with submission data"""
         from django.template import Template, Context
         from django.template.loader import render_to_string
-        
+
         # Simple variable replacement
         html_content = self.body_html
         text_content = self.body_text
-        
+
         for key, value in context.items():
             placeholder = f"{{ {key} }}"
             html_content = html_content.replace(placeholder, str(value))
             if text_content:
                 text_content = text_content.replace(placeholder, str(value))
-        
+
         return {
             'html': html_content,
             'text': text_content,
@@ -284,19 +284,19 @@ class PublicFormViewSet(TenantViewSet):
     """
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = FormTemplate.objects.filter(status='published', is_active=True)
     serializer_class = PublicFormTemplateSerializer
     search_fields = ['title', 'description']
     ordering = ['title']
-    
+
     def get_object(self):
         """Override to lookup by form_id instead of pk"""
         form_id = self.kwargs.get('pk')
         if form_id:
             return get_object_or_404(self.get_queryset(), form_id=form_id)
         return super().get_object()
-    
+
     @extend_schema(
         summary="Get Form by ID",
         description="Get form configuration by 6-digit form ID",
@@ -307,7 +307,7 @@ class PublicFormViewSet(TenantViewSet):
         form_template = self.get_object()
         serializer = self.get_serializer(form_template)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Submit Form",
         description="Submit form data using 6-digit form ID",
@@ -318,16 +318,16 @@ class PublicFormViewSet(TenantViewSet):
     def submit(self, request, pk=None):
         """Submit form data using service layer"""
         form_template = self.get_object()
-        
+
         from services.form import FormService
         try:
             submission = FormService.submit_form(
                 form_template, request.data, request
             )
-            
+
             serializer = FormSubmissionSerializer(submission)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -348,14 +348,14 @@ class DashboardFormViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = FormTemplate.objects.all()
     serializer_class = FormTemplateSerializer
     filterset_fields = ['status', 'is_active']
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'title']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Duplicate Form",
         description="Create duplicate of existing form",
@@ -365,10 +365,10 @@ class DashboardFormViewSet(TenantViewSet):
     def duplicate(self, request, pk=None):
         """Duplicate form template using service layer"""
         form_template = self.get_object()
-        
+
         from services.form import FormService
         new_form = FormService.duplicate_form(form_template, request.user)
-        
+
         serializer = self.get_serializer(new_form)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 ```
@@ -391,7 +391,7 @@ logger = logging.getLogger(__name__)
 
 class FormService:
     """Shared form management service"""
-    
+
     @staticmethod
     @transaction.atomic
     def submit_form(form_template, data, request):
@@ -400,7 +400,7 @@ class FormService:
         errors = form_template.validate_submission_data(data)
         if errors:
             raise ValidationError(errors)
-        
+
         # Create submission
         submission = FormSubmission.objects.create(
             form_template=form_template,
@@ -409,7 +409,7 @@ class FormService:
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
             status='pending'
         )
-        
+
         # Log submission
         log_event_async(
             user=request.user if request.user.is_authenticated else None,
@@ -422,28 +422,28 @@ class FormService:
                 'submission_id': submission.id
             }
         )
-        
+
         # Trigger email notifications
         if form_template.send_email_notifications:
             FormService.send_form_notifications.delay(submission.id)
-        
+
         return submission
-    
+
     @staticmethod
     def duplicate_form(form_template, user):
         """Duplicate form template with new slug"""
         from django.utils.text import slugify
-        
+
         new_title = f"{form_template.title} (Copy)"
         new_slug = slugify(new_title)
-        
+
         # Ensure unique slug
         counter = 1
         original_slug = new_slug
         while FormTemplate.objects.filter(store=form_template.store, slug=new_slug).exists():
             new_slug = f"{original_slug}-{counter}"
             counter += 1
-        
+
         new_form = FormTemplate.objects.create(
             store=form_template.store,
             title=new_title,
@@ -454,7 +454,7 @@ class FormService:
             status='draft',
             created_by=user
         )
-        
+
         # Duplicate email templates
         for email_template in form_template.email_templates.all():
             EmailTemplate.objects.create(
@@ -470,7 +470,7 @@ class FormService:
                 recipient_email=email_template.recipient_email,
                 auto_detect_recipient=email_template.auto_detect_recipient
             )
-        
+
         log_event_async(
             user=user,
             store=new_form.store,
@@ -482,7 +482,7 @@ class FormService:
                 'new_form_title': new_form.title
             }
         )
-        
+
         return new_form
 ```
 
@@ -509,13 +509,13 @@ def send_form_notifications(self, submission_id):
     try:
         from .models import FormSubmission
         from services.smtp import SMTPService
-        
+
         submission = FormSubmission.objects.select_related('form_template').get(id=submission_id)
         form_template = submission.form_template
-        
+
         # Get email templates
         email_templates = form_template.email_templates.filter(is_active=True)
-        
+
         for email_template in email_templates:
             # Prepare context
             context = {
@@ -524,15 +524,15 @@ def send_form_notifications(self, submission_id):
                 'submitted_at': submission.submitted_at,
                 'submission_id': submission.id
             }
-            
+
             # Render template
             rendered = email_template.render_with_context(context)
-            
+
             # Determine recipients
             recipients = FormService.get_email_recipients(
                 email_template, submission.data, form_template.store
             )
-            
+
             # Send via SMTP service
             SMTPService.send_template_email(
                 template_name='form_notification',
@@ -543,13 +543,13 @@ def send_form_notifications(self, submission_id):
                 headers=email_template.headers,
                 store=form_template.store
             )
-        
+
         # Update submission status
         submission.email_sent = True
         submission.email_sent_at = timezone.now()
         submission.status = 'sent'
         submission.save(update_fields=['email_sent', 'email_sent_at', 'status'])
-        
+
     except Exception as exc:
         logger.error(f"Failed to send form notifications: {exc}")
         # Update submission status
@@ -613,7 +613,7 @@ def send_form_notifications(self, submission_id):
 
 ### **Required Coverage**
 - **Models**: 95% code coverage
-- **Views**: 90% code coverage  
+- **Views**: 90% code coverage
 - **Services**: 100% code coverage
 - **Integration**: Critical path testing
 
@@ -645,27 +645,27 @@ class FormServiceTest(TestCase):
                 }
             }
         )
-    
+
     def test_submit_form_valid_data(self):
         """Test form submission with valid data"""
         data = {
             'email': 'test@example.com',
             'message': 'Test message'
         }
-        
+
         submission = FormService.submit_form(self.form_template, data, self.request)
-        
+
         self.assertEqual(submission.form_template, self.form_template)
         self.assertEqual(submission.data, data)
         self.assertEqual(submission.status, 'pending')
-    
+
     def test_submit_form_invalid_data(self):
         """Test form submission with invalid data"""
         data = {
             'email': '',  # Required field missing
             'message': 'Test message'
         }
-        
+
         with self.assertRaises(ValidationError):
             FormService.submit_form(self.form_template, data, self.request)
 ```
@@ -767,18 +767,18 @@ The 6-digit `form_id` makes it easy to identify and submit forms:
 <form action="/v2/api/public/forms/ABC123/submit/" method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
     <input type="hidden" name="form_id" value="ABC123" data-form-id="ABC123">
-    
+
     <!-- Dynamic fields from form_template.fields JSON -->
     <div class="form-field">
         <label for="email">Email Address *</label>
         <input type="email" id="email" name="email" required>
     </div>
-    
+
     <div class="form-field">
         <label for="message">Message *</label>
         <textarea id="message" name="message" required></textarea>
     </div>
-    
+
     <button type="submit">Submit Form</button>
 </form>
 
@@ -786,10 +786,10 @@ The 6-digit `form_id` makes it easy to identify and submit forms:
 <script>
 document.querySelector('form[data-form-id]').addEventListener('submit', async function(e) {
     e.preventDefault();
-    
+
     const formId = this.dataset.formId;
     const formData = new FormData(this);
-    
+
     try {
         const response = await fetch(`/v2/api/public/forms/${formId}/submit/`, {
             method: 'POST',
@@ -798,9 +798,9 @@ document.querySelector('form[data-form-id]').addEventListener('submit', async fu
                 'X-CSRFToken': formData.get('csrfmiddlewaretoken')
             }
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok) {
             alert('Form submitted successfully!');
             this.reset();
@@ -834,7 +834,7 @@ def migrate_dfcms_forms(apps, schema_editor):
         # Check if DFCMS has form models
         OldForm = apps.get_model('modules', 'Form')
         OldFormField = apps.get_model('modules', 'FormField')
-        
+
         # Migrate to new FormTemplate structure
         for old_form in OldForm.objects.all():
             form_template = FormTemplate.objects.create(
@@ -846,7 +846,7 @@ def migrate_dfcms_forms(apps, schema_editor):
                 status='published',
                 is_active=old_form.is_active
             )
-            
+
             # Migrate email templates
             for old_template in old_form.email_templates.all():
                 EmailTemplate.objects.create(
@@ -857,7 +857,7 @@ def migrate_dfcms_forms(apps, schema_editor):
                     body_html=old_template.body_html,
                     recipient_type=old_template.recipient_type
                 )
-                
+
     except LookupError:
         # DFCMS form models don't exist, skip migration
         pass
@@ -883,7 +883,7 @@ class FormField(models.Model):
     field_type = models.CharField(max_length=20, choices=FIELD_TYPE_CHOICES)
     allow_uploads = models.BooleanField(default=False)
     upload_max_size = models.IntegerField(default=5242880)  # 5MB
-    
+
     def get_upload_media_files(self, submission_data):
         """Get uploaded media files for this field"""
         if self.field_type == 'file' and self.allow_uploads:
@@ -894,12 +894,12 @@ class FormField(models.Model):
 # Integration with translations.md
 class FormTemplate(TenantModel):
     # ... other fields ...
-    
+
     def get_translated_field(self, field_name, language_code):
         """Get translated field configuration"""
         from services.translation import TranslationService
         return TranslationService.get_translated_field(
-            self.fields.get(field_name, {}), 
+            self.fields.get(field_name, {}),
             language_code,
             context='form_field'
         )

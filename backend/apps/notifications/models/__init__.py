@@ -3,18 +3,18 @@ Notifications models.
 """
 from .models import (
     Notification,
+    NotificationChannel,
     NotificationPreference,
+    NotificationStatus,
     NotificationTemplate,
     NotificationType,
-    NotificationChannel,
-    NotificationStatus,
 )
 
 __all__ = [
-    'Notification',
-    'NotificationPreference', 
-    'NotificationTemplate',
-    'NotificationType',
-    'NotificationChannel',
-    'NotificationStatus',
+    "Notification",
+    "NotificationPreference",
+    "NotificationTemplate",
+    "NotificationType",
+    "NotificationChannel",
+    "NotificationStatus",
 ]

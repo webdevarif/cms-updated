@@ -63,7 +63,7 @@ logger = logging.getLogger(__name__)
 
 class QueueService:
     """Infrastructure queue management service"""
-    
+
     @staticmethod
     def enqueue_task(task_name, args=None, kwargs=None, countdown=0, eta=None):
         """
@@ -77,10 +77,10 @@ class QueueService:
             countdown=countdown,
             eta=eta
         )
-        
+
         logger.info(f"Enqueued task: {task_name} (ID: {task.id})")
         return task
-    
+
     @staticmethod
     def get_task_status(task_id):
         """
@@ -88,7 +88,7 @@ class QueueService:
         INFRASTRUCTURE PROVIDES: Task status tracking
         """
         result = AsyncResult(task_id)
-        
+
         status_map = {
             'PENDING': 'pending',
             'STARTED': 'started',
@@ -97,14 +97,14 @@ class QueueService:
             'RETRY': 'retrying',
             'REVOKED': 'revoked'
         }
-        
+
         return {
             'task_id': task_id,
             'status': status_map.get(result.status, result.status),
             'result': result.result if result.ready() else None,
             'traceback': result.traceback if result.failed() else None
         }
-    
+
     @staticmethod
     def revoke_task(task_id, terminate=False):
         """
@@ -114,7 +114,7 @@ class QueueService:
         current_app.control.revoke(task_id, terminate=terminate)
         logger.info(f"Revoked task: {task_id}")
         return True
-    
+
     @staticmethod
     def retry_task(task_id, countdown=60):
         """
@@ -123,16 +123,16 @@ class QueueService:
         """
         current_app.control.revoke(task_id, terminate=False)
         result = AsyncResult(task_id)
-        
+
         if result.failed():
             # Re-enqueue the task
             task_name = result.args[0] if result.args else None
             if task_name:
                 QueueService.enqueue_task(task_name, args=result.args, kwargs=result.kwargs, countdown=countdown)
-        
+
         logger.info(f"Retrying task: {task_id}")
         return True
-    
+
     @staticmethod
     def get_active_tasks():
         """
@@ -141,7 +141,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         active = inspect.active()
-        
+
         tasks = []
         for worker, task_list in (active or {}).items():
             for task in task_list:
@@ -152,9 +152,9 @@ class QueueService:
                     'kwargs': task['kwargs'],
                     'worker': worker
                 })
-        
+
         return tasks
-    
+
     @staticmethod
     def get_scheduled_tasks():
         """
@@ -163,7 +163,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         scheduled = inspect.scheduled()
-        
+
         tasks = []
         for worker, task_list in (scheduled or {}).items():
             for task in task_list:
@@ -173,9 +173,9 @@ class QueueService:
                     'eta': task['request']['eta'],
                     'worker': worker
                 })
-        
+
         return tasks
-    
+
     @staticmethod
     def get_worker_stats():
         """
@@ -184,7 +184,7 @@ class QueueService:
         """
         inspect = current_app.control.inspect()
         stats = inspect.stats()
-        
+
         worker_stats = []
         for worker, stat in (stats or {}).items():
             worker_stats.append({
@@ -192,7 +192,7 @@ class QueueService:
                 'total_tasks': stat.get('total', {}),
                 'pool': stat.get('pool', {})
             })
-        
+
         return worker_stats
 ```
 
@@ -202,7 +202,7 @@ class QueueService:
 
 class TaskMonitoringService:
     """Infrastructure task monitoring service"""
-    
+
     @staticmethod
     def get_task_stats(hours=24):
         """
@@ -212,11 +212,11 @@ class TaskMonitoringService:
         from django.utils import timezone
         from datetime import timedelta
         from .models import TaskLog
-        
+
         since = timezone.now() - timedelta(hours=hours)
-        
+
         logs = TaskLog.objects.filter(created_at__gte=since)
-        
+
         stats = {
             'total': logs.count(),
             'success': logs.filter(status='success').count(),
@@ -227,9 +227,9 @@ class TaskMonitoringService:
                 avg=models.Avg('duration_ms')
             )['avg__duration'] or 0
         }
-        
+
         return stats
-    
+
     @staticmethod
     def get_slow_tasks(threshold_ms=5000):
         """
@@ -237,11 +237,11 @@ class TaskMonitoringService:
         INFRASTRUCTURE PROVIDES: Performance bottleneck identification
         """
         from .models import TaskLog
-        
+
         return TaskLog.objects.filter(
             duration_ms__gt=threshold_ms
         ).order_by('-duration_ms')
-    
+
     @staticmethod
     def get_failing_tasks(limit=50):
         """
@@ -250,13 +250,13 @@ class TaskMonitoringService:
         """
         from .models import TaskLog
         from django.db.models import Count
-        
+
         return TaskLog.objects.filter(
             status='failed'
         ).values('task_name').annotate(
             count=Count('id')
         ).order_by('-count')[:limit]
-    
+
     @staticmethod
     def log_task(task_id, task_name, status, result=None, duration_ms=None, error=None):
         """
@@ -265,7 +265,7 @@ class TaskMonitoringService:
         APPLICATION MUST: Call this method for task monitoring
         """
         from .models import TaskLog
-        
+
         TaskLog.objects.create(
             task_id=task_id,
             task_name=task_name,
@@ -310,22 +310,22 @@ class QueueServiceTest(TestCase):
     def test_enqueue_task(self):
         """Test task enqueueing"""
         task = QueueService.enqueue_task('test_task', args=['arg1'], kwargs={'key': 'value'})
-        
+
         self.assertIsNotNone(task.id)
-    
+
     def test_get_task_status(self):
         """Test getting task status"""
         task = QueueService.enqueue_task('test_task', args=['arg1'])
         status = QueueService.get_task_status(task.id)
-        
+
         self.assertIn('status', status)
         self.assertIn('task_id', status)
-    
+
     def test_revoke_task(self):
         """Test task revocation"""
         task = QueueService.enqueue_task('test_task', args=['arg1'], countdown=60)
         result = QueueService.revoke_task(task.id)
-        
+
         self.assertTrue(result)
 ```
 
@@ -368,7 +368,7 @@ def example_task(self, data_id):
     try:
         # Application business logic here
         result = process_data(data_id)
-        
+
         # APPLICATION MUST: Log task completion
         TaskMonitoringService.log_task(
             task_id=self.request.id,
@@ -376,9 +376,9 @@ def example_task(self, data_id):
             status='success',
             result={'data_id': data_id}
         )
-        
+
         return result
-        
+
     except Exception as exc:
         # APPLICATION MUST: Log task failure
         TaskMonitoringService.log_task(
@@ -387,7 +387,7 @@ def example_task(self, data_id):
             status='failed',
             error=str(exc)
         )
-        
+
         # APPLICATION MUST: Implement retry logic
         raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
 ```
@@ -428,6 +428,6 @@ python manage.py purge_tasks --queue=email
 
 ---
 
-**Version**: 1.0  
-**Last Updated**: 2026-01-26  
+**Version**: 1.0
+**Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

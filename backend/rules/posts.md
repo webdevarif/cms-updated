@@ -46,7 +46,7 @@ apps/backend/modules/posts/
 class PostType(models.Model):
     """Define content types (blog, page, or custom)"""
     BUILTIN_TYPES = ['post', 'page']
-    
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True)
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, null=True, blank=True)
@@ -57,12 +57,12 @@ class PostType(models.Model):
     supports_custom_fields = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'posts_post_type'
         unique_together = [['store', 'slug']]
         ordering = ['name']
-    
+
     def __str__(self):
         return self.name
 ```
@@ -78,7 +78,7 @@ class Post(models.Model):
         ('private', 'Private'),
         ('trash', 'Trash'),
     ]
-    
+
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, db_index=True)
     content = models.TextField()
@@ -98,7 +98,7 @@ class Post(models.Model):
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'posts_post'
         indexes = [
@@ -108,16 +108,16 @@ class Post(models.Model):
             models.Index(fields=['author']),
         ]
         ordering = ['-published_at', '-created_at']
-    
+
     def __str__(self):
         return self.title
-    
+
     def get_absolute_url(self):
         """Generate SEO-friendly URL"""
         if self.post_type.is_hierarchical and self.parent:
             return f"/{self.parent.slug}/{self.slug}/"
         return f"/{self.slug}/"
-    
+
     def is_published(self):
         """Check if post is published"""
         return self.status == 'published' and self.published_at <= timezone.now()
@@ -132,7 +132,7 @@ class Taxonomy(models.Model):
         ('tag', 'Tag'),
         ('custom', 'Custom'),
     ]
-    
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100)
     taxonomy_type = models.CharField(max_length=20, choices=TAXONOMY_TYPES)
@@ -141,12 +141,12 @@ class Taxonomy(models.Model):
     is_hierarchical = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'posts_taxonomy'
         unique_together = [['store', 'slug']]
         ordering = ['name']
-    
+
     def __str__(self):
         return f"{self.name} ({self.get_taxonomy_type_display()})"
 
@@ -159,12 +159,12 @@ class Term(models.Model):
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'posts_term'
         unique_together = [['taxonomy', 'slug']]
         ordering = ['name']
-    
+
     def __str__(self):
         return self.name
 
@@ -172,7 +172,7 @@ class PostTerm(models.Model):
     """Many-to-many relationship between posts and terms"""
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
     term = models.ForeignKey(Term, on_delete=models.CASCADE)
-    
+
     class Meta:
         db_table = 'posts_post_term'
         unique_together = [['post', 'term']]
@@ -214,7 +214,7 @@ class PostService:
     def create_post(store, user, post_type, **data):
         """Create a new post with validation and logging"""
         from .models import Post
-        
+
         # Create post logic
         post = Post.objects.create(
             store=store,
@@ -222,7 +222,7 @@ class PostService:
             author=user,
             **data
         )
-        
+
         # Log the creation
         log_event_async.delay(
             event_type='POST_CREATED',
@@ -236,12 +236,12 @@ class PostService:
             }
         )
         return post
-        
+
     @staticmethod
     def update_post(post, user, **data):
         """Update existing post with revision tracking and logging"""
         from .models import PostRevision
-        
+
         # Create revision before update
         revision = PostRevision.objects.create(
             post=post,
@@ -252,12 +252,12 @@ class PostService:
             custom_fields=post.custom_fields,
             revision_number=post.revisions.count() + 1
         )
-        
+
         # Update post
         for field, value in data.items():
             setattr(post, field, value)
         post.save()
-        
+
         # Log the update
         log_event_async.delay(
             event_type='POST_UPDATED',
@@ -271,7 +271,7 @@ class PostService:
             }
         )
         return post
-    
+
     @staticmethod
     def publish_post(post, user):
         """Publish a post"""
@@ -279,7 +279,7 @@ class PostService:
             post.status = 'published'
             post.published_at = timezone.now()
             post.save()
-            
+
             log_event_async.delay(
                 event_type='POST_PUBLISHED',
                 message=f'Published post: {post.title}',
@@ -308,13 +308,13 @@ class StoreScopedViewSet(viewsets.ModelViewSet):
     Base ViewSet that automatically filters by store.
     All ViewSets must inherit from this and filter by request.store
     """
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         if hasattr(self.request, 'store'):
             return queryset.filter(store=self.request.store)
         return queryset.none()
-    
+
     def perform_create(self, serializer):
         if hasattr(self.request, 'store'):
             serializer.save(store=self.request.store)
@@ -384,26 +384,26 @@ class TestPostViews:
         post1 = post_factory(store=store, title="Store 1 Post")
         other_store = Store.objects.create(name="Other Store")
         post2 = post_factory(store=other_store, title="Store 2 Post")
-        
+
         # Authenticate and make request
         client.force_authenticate(user=user)
         url = reverse('v2:post-list')
         response = client.get(url, HTTP_X_STORE_ID=str(store.id))
-        
+
         # Verify response
         assert response.status_code == 200
         results = response.data['results']
         assert len(results) == 1
         assert results[0]['title'] == "Store 1 Post"
-    
+
     def test_permission_denied(self, client, other_store, user, post_factory):
         """Test access control for other store's posts"""
         post = post_factory(store=other_store)
-        
+
         client.force_authenticate(user=user)
         url = reverse('v2:post-detail', args=[post.id])
         response = client.get(url, HTTP_X_STORE_ID=str(user.stores.first().id))
-        
+
         assert response.status_code == 404  # Not 403 to avoid leaking existence
 ```
 
@@ -464,7 +464,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Starting post migration...")
-        
+
         # Create default post types for each store
         for store in Store.objects.all():
             # Create or get blog post type
@@ -477,17 +477,17 @@ class Command(BaseCommand):
                     'supports_comments': True
                 }
             )
-            
+
             if created:
                 self.stdout.write(f"Created post type 'blog' for {store.name}")
-        
+
         # Migrate legacy posts
         from ...v1.blogs.models import BlogPost
         migrated = 0
-        
+
         for legacy_post in BlogPost.objects.all():
             post_type = PostType.objects.get(store=legacy_post.store, slug='blog')
-            
+
             Post.objects.update_or_create(
                 legacy_id=legacy_post.id,
                 store=legacy_post.store,
@@ -502,7 +502,7 @@ class Command(BaseCommand):
                 }
             )
             migrated += 1
-            
+
         self.stdout.write(
             self.style.SUCCESS(f'Successfully migrated {migrated} posts')
         )
@@ -532,7 +532,7 @@ class Command(BaseCommand):
 
 ---
 
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25
 
@@ -549,13 +549,13 @@ class StoreScopedViewSet(viewsets.ModelViewSet):
     Base ViewSet that automatically filters by store.
     All ViewSets must inherit from this and filter by request.store
     """
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         if hasattr(self.request, 'store'):
             return queryset.filter(store=self.request.store)
         return queryset.none()
-    
+
     def perform_create(self, serializer):
         if hasattr(self.request, 'store'):
             serializer.save(store=self.request.store)
@@ -622,26 +622,26 @@ class TestPostViews:
         post1 = post_factory(store=store, title="Store 1 Post")
         other_store = Store.objects.create(name="Other Store")
         post2 = post_factory(store=other_store, title="Store 2 Post")
-        
+
         # Authenticate and make request
         client.force_authenticate(user=user)
         url = reverse('v2:post-list')
         response = client.get(url, HTTP_X_STORE_ID=str(store.id))
-        
+
         # Verify response
         assert response.status_code == 200
         results = response.data['results']
         assert len(results) == 1
         assert results[0]['title'] == "Store 1 Post"
-    
+
     def test_permission_denied(self, client, other_store, user, post_factory):
         """Test access control for other store's posts"""
         post = post_factory(store=other_store)
-        
+
         client.force_authenticate(user=user)
         url = reverse('v2:post-detail', args=[post.id])
         response = client.get(url, HTTP_X_STORE_ID=str(user.stores.first().id))
-        
+
         assert response.status_code == 404  # Not 403 to avoid leaking existence
 ```
 
@@ -657,7 +657,7 @@ class PostService:
     def create_post(store, user, post_type, **data):
         """Create a new post with validation and logging"""
         from .models import Post
-        
+
         # Create post logic
         post = Post.objects.create(
             store=store,
@@ -665,7 +665,7 @@ class PostService:
             author=user,
             **data
         )
-        
+
         # Log the creation
         log_event_async.delay(
             event_type='POST_CREATED',
@@ -679,12 +679,12 @@ class PostService:
             }
         )
         return post
-        
+
     @staticmethod
     def update_post(post, user, **data):
         """Update existing post with revision tracking and logging"""
         from .models import PostRevision
-        
+
         # Create revision before update
         revision = PostRevision.objects.create(
             post=post,
@@ -695,12 +695,12 @@ class PostService:
             custom_fields=post.custom_fields,
             revision_number=post.revisions.count() + 1
         )
-        
+
         # Update post
         for field, value in data.items():
             setattr(post, field, value)
         post.save()
-        
+
         # Log the update
         log_event_async.delay(
             event_type='POST_UPDATED',
@@ -727,7 +727,7 @@ class PostService:
 class PostType(models.Model):
     """Define content types (blog, page, or custom)"""
     BUILTIN_TYPES = ['post', 'page']
-    
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True)
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, null=True, blank=True)
@@ -746,7 +746,7 @@ class Post(models.Model):
         ('private', 'Private'),
         ('trash', 'Trash'),
     ]
-    
+
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, db_index=True)
     content = models.TextField()
@@ -764,7 +764,7 @@ class Taxonomy(models.Model):
         ('tag', 'Tag'),
         ('custom', 'Custom'),
     ]
-    
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100)
     taxonomy_type = models.CharField(max_length=20, choices=TAXONOMY_TYPES)
@@ -792,6 +792,6 @@ class Term(models.Model):
 - Generate sitemaps for content
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

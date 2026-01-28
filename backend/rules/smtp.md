@@ -33,7 +33,7 @@ from fernet_fields import EncryptedCharField
 class SmtpConfiguration(models.Model):
     # ... other fields ...
     password = EncryptedCharField(max_length=255)
-    
+
     def get_decrypted_password(self):
         """Get decrypted password for SMTP auth"""
         return self.password
@@ -53,7 +53,7 @@ from rest_framework.throttling import UserRateThrottle
 
 class EmailRateThrottle(UserRateThrottle):
     scope = 'emails'
-    
+
     def get_cache_key(self, request, view):
         # Rate limit by store
         store_id = request.store.id if hasattr(request, 'store') else 'anon'
@@ -69,7 +69,7 @@ from fernet_fields import EncryptedCharField
 class SmtpConfiguration(models.Model):
     # ... other fields ...
     password = EncryptedCharField(max_length=255)
-    
+
     def get_decrypted_password(self):
         """Get decrypted password for SMTP auth"""
         return self.password
@@ -89,7 +89,7 @@ from rest_framework.throttling import UserRateThrottle
 
 class EmailRateThrottle(UserRateThrottle):
     scope = 'emails'
-    
+
     def get_cache_key(self, request, view):
         # Rate limit by store
         store_id = request.store.id if hasattr(request, 'store') else 'anon'
@@ -148,11 +148,11 @@ class EmailService:
             'store_id': str(store.id) if store else None,
             'user_id': str(user.id) if user else None
         }
-        
+
         try:
             # Get SMTP config (implementation omitted for brevity)
             smtp_config = cls._get_smtp_config(smtp_config_id, store)
-            
+
             # Log email sending attempt
             log_event_async.delay(
                 event_type='EMAIL_SEND_ATTEMPT',
@@ -161,7 +161,7 @@ class EmailService:
                 user=user,
                 metadata=log_data
             )
-            
+
             # Send email (implementation details)
             result = django_send_mail(
                 subject=subject,
@@ -174,7 +174,7 @@ class EmailService:
                 auth_password=smtp_config.get_decrypted_password(),
                 connection=smtp_config.get_connection()
             )
-            
+
             # Log success
             log_event_async.delay(
                 event_type='EMAIL_SEND_SUCCESS',
@@ -186,9 +186,9 @@ class EmailService:
                     'message_id': result.message_id if hasattr(result, 'message_id') else None
                 }
             )
-            
+
             return {'success': True, 'message_id': getattr(result, 'message_id', None)}
-            
+
         except Exception as e:
             # Log failure
             log_event_async.delay(
@@ -229,10 +229,10 @@ from ...models import SmtpConfiguration
 
 class Command(BaseCommand):
     help = 'Migrate SMTP configurations from legacy system'
-    
+
     def handle(self, *args, **options):
         count = 0
-        
+
         for legacy in LegacySmtpConfig.objects.all():
             try:
                 with transaction.atomic():
@@ -251,12 +251,12 @@ class Command(BaseCommand):
                     )
                     count += 1
                     self.stdout.write(f"Migrated SMTP config: {config.name}")
-                    
+
             except Exception as e:
                 self.stderr.write(f"Error migrating {legacy.config_name}: {str(e)}")
-        
+
         self.stdout.write(self.style.SUCCESS(f'Successfully migrated {count} SMTP configurations'))
-    
+
     def _map_provider(self, legacy_provider):
         """Map legacy provider names to new ones"""
         provider_map = {
@@ -272,6 +272,6 @@ class Command(BaseCommand):
 [Benefits content to be added]
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

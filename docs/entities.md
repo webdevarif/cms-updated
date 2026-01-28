@@ -73,12 +73,12 @@ class EntityAction(TenantModel):
     Store-scoped entity actions (Like, Heart, Upvote, DownVote, etc.)
     Defines available actions for content types
     """
-    
+
     # Core fields
     name = models.CharField(max_length=50)
     slug = models.SlugField(max_length=50)
     description = models.TextField(blank=True)
-    
+
     # Action configuration
     ACTION_TYPES = [
         ('toggle', 'Toggle (Like/Unlike)'),
@@ -87,25 +87,25 @@ class EntityAction(TenantModel):
         ('counter', 'Counter (View count)'),
     ]
     action_type = models.CharField(max_length=20, choices=ACTION_TYPES, default='toggle')
-    
+
     # Visual configuration
     icon = models.CharField(max_length=50, blank=True)
     color = models.CharField(max_length=20, blank=True)
-    
+
     # Content type targeting
     content_types = models.JSONField(
         default=list,
         help_text="Which models this action applies to"
     )
-    
+
     # Settings
     is_active = models.BooleanField(default=True)
     is_public = models.BooleanField(default=True)
     allow_anonymous = models.BooleanField(default=False)
-    
+
     # Metadata
     metadata = models.JSONField(default=dict, blank=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'entities_entity_action'
         unique_together = [['store', 'slug']]
@@ -114,7 +114,7 @@ class EntityAction(TenantModel):
             models.Index(fields=['content_types']),
         ]
         ordering = ['name']
-    
+
     def __str__(self):
         return f"{self.name} ({self.action_type})"
 ```
@@ -132,7 +132,7 @@ class EntityInteraction(TenantModel):
     User interactions with entities (likes, votes, etc.)
     Generic relationship to any model
     """
-    
+
     # Relationships
     action = models.ForeignKey(
         'entities.EntityAction',
@@ -146,7 +146,7 @@ class EntityInteraction(TenantModel):
         null=True,
         blank=True
     )
-    
+
     # Generic foreign key to any model
     content_type = models.ForeignKey(
         ContentType,
@@ -154,20 +154,20 @@ class EntityInteraction(TenantModel):
     )
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-    
+
     # Interaction data
     value = models.JSONField(default=dict, blank=True)
     rating = models.IntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
-    
+
     # Metadata
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'entities_entity_interaction'
         unique_together = [
@@ -179,7 +179,7 @@ class EntityInteraction(TenantModel):
             models.Index(fields=['created_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.user} {self.action.name} {self.content_object}"
 ```
@@ -199,22 +199,22 @@ logger = logging.getLogger(__name__)
 
 class EntityService:
     """Shared entity interaction service"""
-    
+
     @staticmethod
     @transaction.atomic
     def toggle_action(user, content_object, action_slug, store=None):
         """Toggle an action (like/unlike, favorite/unfavorite)"""
         from .models import EntityAction, EntityInteraction
-        
+
         # Get action
         action = EntityAction.objects.get(store=store, slug=action_slug)
-        
+
         if action.action_type != 'toggle':
             raise ValueError(f"Action '{action.name}' is not a toggle action")
-        
+
         # Get content type
         content_type = ContentType.objects.get_for_model(content_object)
-        
+
         # Check existing interaction
         try:
             interaction = EntityInteraction.objects.get(
@@ -224,11 +224,11 @@ class EntityService:
                 content_type=content_type,
                 object_id=content_object.id
             )
-            
+
             # Remove existing interaction
             interaction.delete()
             action_performed = 'removed'
-            
+
         except EntityInteraction.DoesNotExist:
             # Create new interaction
             interaction = EntityInteraction.objects.create(
@@ -239,7 +239,7 @@ class EntityService:
                 object_id=content_object.id
             )
             action_performed = 'added'
-        
+
         # Log action
         log_event_async(
             user=user,
@@ -253,21 +253,21 @@ class EntityService:
                 'object_id': content_object.id
             }
         )
-        
+
         return {
             'action': action_performed,
             'entity_action': action,
             'interaction': interaction if action_performed == 'added' else None
         }
-    
+
     @staticmethod
     def get_interaction_count(content_object, action_slug, store=None):
         """Get total count for an action"""
         from .models import EntityAction, EntityInteraction
-        
+
         action = EntityAction.objects.get(store=store, slug=action_slug)
         content_type = ContentType.objects.get_for_model(content_object)
-        
+
         return EntityInteraction.objects.filter(
             store=store,
             action=action,
@@ -275,14 +275,14 @@ class EntityService:
             object_id=content_object.id,
             is_active=True
         ).count()
-    
+
     @staticmethod
     def get_user_interactions(user, content_object, store=None):
         """Get all user interactions for an object"""
         from .models import EntityInteraction
-        
+
         content_type = ContentType.objects.get_for_model(content_object)
-        
+
         return EntityInteraction.objects.filter(
             store=store,
             user=user,
@@ -290,14 +290,14 @@ class EntityService:
             object_id=content_object.id,
             is_active=True
         ).select_related('action')
-    
+
     @staticmethod
     def get_popular_objects(action_slug, limit=10, store=None):
         """Get most popular objects for an action"""
         from .models import EntityAction, EntityInteraction
-        
+
         action = EntityAction.objects.get(store=store, slug=action_slug)
-        
+
         return EntityInteraction.objects.filter(
             store=store,
             action=action,
@@ -323,7 +323,7 @@ class CustomerEntityViewSet(TenantViewSet):
     Customer entity interaction endpoints
     """
     permission_classes = [IsAuthenticated, IsStoreUser]
-    
+
     @extend_schema(
         summary="Toggle Entity Action",
         request=EntityActionSerializer,
@@ -334,7 +334,7 @@ class CustomerEntityViewSet(TenantViewSet):
         """Toggle an entity action (like/unlike, etc.)"""
         serializer = EntityActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         content_type = ContentType.objects.get(
             model=serializer.validated_data['content_type']
         )
@@ -342,16 +342,16 @@ class CustomerEntityViewSet(TenantViewSet):
         content_object = model_class.objects.get(
             id=serializer.validated_data['object_id']
         )
-        
+
         result = EntityService.toggle_action(
             user=request.user,
             content_object=content_object,
             action_slug=serializer.validated_data['action_slug'],
             store=request.store
         )
-        
+
         return Response(result)
-    
+
     @extend_schema(
         summary="Get Entity Stats",
         responses={200: dict}
@@ -362,29 +362,29 @@ class CustomerEntityViewSet(TenantViewSet):
         content_type = request.query_params.get('content_type')
         object_id = request.query_params.get('object_id')
         action_slug = request.query_params.get('action_slug')
-        
+
         if not all([content_type, object_id]):
             return Response(
                 {'error': 'content_type and object_id are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         content_type_obj = ContentType.objects.get(model=content_type)
         model_class = content_type_obj.model_class()
         content_object = model_class.objects.get(id=object_id)
-        
+
         count = EntityService.get_interaction_count(
             content_object=content_object,
             action_slug=action_slug,
             store=request.store
         )
-        
+
         user_interactions = EntityService.get_user_interactions(
             user=request.user,
             content_object=content_object,
             store=request.store
         )
-        
+
         return Response({
             'count': count,
             'user_interactions': EntityInteractionSerializer(
@@ -402,7 +402,7 @@ class CustomerEntityViewSet(TenantViewSet):
 # Example: Adding entity actions to a Post model
 class Post(TenantModel):
     # ... existing fields ...
-    
+
     @property
     def like_count(self):
         """Get total likes"""
@@ -412,7 +412,7 @@ class Post(TenantModel):
             action_slug='like',
             store=self.store
         )
-    
+
     def user_liked(self, user):
         """Check if user liked this post"""
         from entities.services import EntityService
@@ -422,7 +422,7 @@ class Post(TenantModel):
             store=self.store
         )
         return interactions.filter(action__slug='like').exists()
-    
+
     def toggle_like(self, user):
         """Toggle like for user"""
         from entities.services import EntityService
@@ -451,15 +451,15 @@ async function toggleLike(postId) {
                 object_id: postId
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.action === 'added') {
             updateLikeButton(true, result.interaction);
         } else {
             updateLikeButton(false, null);
         }
-        
+
     } catch (error) {
         console.error('Error toggling like:', error);
     }
@@ -520,7 +520,7 @@ class EntityServiceTest(TestCase):
             title='Test Post',
             slug='test-post'
         )
-        
+
         # Create like action
         self.like_action = EntityAction.objects.create(
             store=self.store,
@@ -528,7 +528,7 @@ class EntityServiceTest(TestCase):
             slug='like',
             action_type='toggle'
         )
-    
+
     def test_toggle_like_add(self):
         """Test adding a like"""
         result = EntityService.toggle_action(
@@ -537,10 +537,10 @@ class EntityServiceTest(TestCase):
             action_slug='like',
             store=self.store
         )
-        
+
         self.assertEqual(result['action'], 'added')
         self.assertIsNotNone(result['interaction'])
-    
+
     def test_toggle_like_remove(self):
         """Test removing a like"""
         # Add like first
@@ -550,7 +550,7 @@ class EntityServiceTest(TestCase):
             action_slug='like',
             store=self.store
         )
-        
+
         # Remove like
         result = EntityService.toggle_action(
             user=self.user,
@@ -558,7 +558,7 @@ class EntityServiceTest(TestCase):
             action_slug='like',
             store=self.store
         )
-        
+
         self.assertEqual(result['action'], 'removed')
         self.assertIsNone(result['interaction'])
 ```

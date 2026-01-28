@@ -29,13 +29,13 @@ errorlog = "/var/log/gunicorn/error.log"
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
 
 # Process naming
-proc_name = 'cms_backend'
+proc_name = "cms_backend"
 
 # Server mechanics
 daemon = False
-pidfile = '/var/run/gunicorn/cms_backend.pid'
-user = 'www-data'
-group = 'www-data'
+pidfile = "/var/run/gunicorn/cms_backend.pid"
+user = "www-data"
+group = "www-data"
 tmp_upload_dir = None
 
 # SSL (if needed - usually handled by nginx)
@@ -44,7 +44,7 @@ certfile = None
 
 # Application
 wsgi_module = "core.wsgi:application"
-pythonpath = '/var/www/cms/backend'
+pythonpath = "/var/www/cms/backend"
 
 # Worker timeout
 graceful_timeout = 30
@@ -61,48 +61,59 @@ raw_env = [
     "PYTHONPATH=/var/www/cms/backend",
 ]
 
+
 # Function to set environment variables dynamically
 def on_starting(server):
     """Called just before the master process is initialized."""
     # Set production environment variables
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings.production')
-    os.environ.setdefault('PYTHONPATH', '/var/www/cms/backend')
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings.production")
+    os.environ.setdefault("PYTHONPATH", "/var/www/cms/backend")
 
     # Ensure production settings are used
-    if os.getenv('DJANGO_DEBUG', 'False') == 'True':
+    if os.getenv("DJANGO_DEBUG", "False") == "True":
         print("WARNING: DEBUG mode is enabled in production!")
+
 
 def on_reload(server):
     """Called when the server is reloaded."""
     print("Gunicorn server reloaded")
 
+
 def post_fork(server, worker):
     """Called just after a worker has been forked."""
     import django
+
     django.setup()
+
 
 def pre_fork(server, worker):
     """Called just prior to forking the worker subprocess."""
     pass
 
+
 def pre_exec(server):
     """Called just prior to exec'ing off the master process."""
     pass
+
 
 def when_ready(server):
     """Called when the server is ready to receive connections."""
     print(f"Gunicorn server ready with {workers} workers on {bind}")
 
+
 def worker_abort(worker):
     """Called when a worker received the SIGABRT signal."""
     print(f"Worker {worker.pid} received SIGABRT")
+
 
 def worker_int(worker):
     """Called when a worker received the SIGINT or SIGQUIT signal."""
     print(f"Worker {worker.pid} received SIGINT/SIGQUIT")
 
+
 # Health check
 def application():
     """Application factory for gunicorn."""
     from core.wsgi import application as app
+
     return app

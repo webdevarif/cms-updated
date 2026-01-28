@@ -1,12 +1,13 @@
 """
 Public gift cards API tests - endpoint-focused only.
 """
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase
-from rest_framework import status
-from django.urls import reverse
 from decimal import Decimal
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
 
 User = get_user_model()
 
@@ -16,8 +17,8 @@ class PublicGiftCardsAPITests(APITestCase):
 
     def setUp(self):
         """Set up test data"""
-        from apps.stores.models import Store
         from apps.giftcards.models.giftcards import GiftCard, GiftCardHistory
+        from apps.stores.models import Store
 
         self.store = Store.objects.create(
             name="Test Store",
@@ -155,9 +156,10 @@ class PublicGiftCardsAPITests(APITestCase):
     def test_expired_card_not_redeemable(self):
         """Test that expired cards are not redeemable"""
         # Create an expired card
-        from django.utils import timezone
         import datetime
-        
+
+        from django.utils import timezone
+
         expired_card = GiftCard.objects.create(
             store=self.store,
             created_by=self.user,
@@ -195,15 +197,15 @@ class PublicGiftCardsAPITests(APITestCase):
     def test_read_only_serializer_fields(self):
         """Test that serializer fields are read-only"""
         url = reverse('public-gift-cards-detail', kwargs={'pk': self.gift_card.id})
-        
+
         # Try to update via POST (should fail)
         response = self.client.post(url, {'current_balance': '50.00'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        
+
         # Try to update via PATCH (should fail)
         response = self.client.patch(url, {'current_balance': '50.00'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
-        
+
         # Try to delete (should fail)
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)

@@ -39,7 +39,7 @@ apps/backend/modules/posts/
 class PostType(models.Model):
     """Define content types (blog, page, or custom)"""
     BUILTIN_TYPES = ['post', 'page']
-    
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True)
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, null=True, blank=True)
@@ -59,7 +59,7 @@ class Post(models.Model):
         ('private', 'Private'),
         ('trash', 'Trash'),
     ]
-    
+
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, db_index=True)
     content = models.TextField()
@@ -78,7 +78,7 @@ class Taxonomy(models.Model):
         ('tag', 'Tag'),
         ('custom', 'Custom'),
     ]
-    
+
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100)
     taxonomy_type = models.CharField(max_length=20, choices=TAXONOMY_TYPES)
@@ -128,7 +128,7 @@ class PostService:
     def create_post(store, user, post_type, **data):
         """Create a new post with validation and logging"""
         from .models import Post
-        
+
         # Create post logic
         post = Post.objects.create(
             store=store,
@@ -136,7 +136,7 @@ class PostService:
             author=user,
             **data
         )
-        
+
         # Log the creation
         log_event_async.delay(
             event_type='POST_CREATED',
@@ -150,12 +150,12 @@ class PostService:
             }
         )
         return post
-        
+
     @staticmethod
     def update_post(post, user, **data):
         """Update existing post with revision tracking and logging"""
         from .models import PostRevision
-        
+
         # Create revision before update
         revision = PostRevision.objects.create(
             post=post,
@@ -166,12 +166,12 @@ class PostService:
             custom_fields=post.custom_fields,
             revision_number=post.revisions.count() + 1
         )
-        
+
         # Update post
         for field, value in data.items():
             setattr(post, field, value)
         post.save()
-        
+
         # Log the update
         log_event_async.delay(
             event_type='POST_UPDATED',
@@ -201,13 +201,13 @@ class StoreScopedViewSet(viewsets.ModelViewSet):
     Base ViewSet that automatically filters by store.
     All ViewSets must inherit from this and filter by request.store
     """
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         if hasattr(self.request, 'store'):
             return queryset.filter(store=self.request.store)
         return queryset.none()
-    
+
     def perform_create(self, serializer):
         if hasattr(self.request, 'store'):
             serializer.save(store=self.request.store)
@@ -276,26 +276,26 @@ class TestPostViews:
         post1 = post_factory(store=store, title="Store 1 Post")
         other_store = Store.objects.create(name="Other Store")
         post2 = post_factory(store=other_store, title="Store 2 Post")
-        
+
         # Authenticate and make request
         client.force_authenticate(user=user)
         url = reverse('v2:post-list')
         response = client.get(url, HTTP_X_STORE_ID=str(store.id))
-        
+
         # Verify response
         assert response.status_code == 200
         results = response.data['results']
         assert len(results) == 1
         assert results[0]['title'] == "Store 1 Post"
-    
+
     def test_permission_denied(self, client, other_store, user, post_factory):
         """Test access control for other store's posts"""
         post = post_factory(store=other_store)
-        
+
         client.force_authenticate(user=user)
         url = reverse('v2:post-detail', args=[post.id])
         response = client.get(url, HTTP_X_STORE_ID=str(user.stores.first().id))
-        
+
         assert response.status_code == 404  # Not 403 to avoid leaking existence
 ```
 
@@ -334,7 +334,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Starting post migration...")
-        
+
         # Create default post types for each store
         for store in Store.objects.all():
             # Create or get blog post type
@@ -347,17 +347,17 @@ class Command(BaseCommand):
                     'supports_comments': True
                 }
             )
-            
+
             if created:
                 self.stdout.write(f"Created post type 'blog' for {store.name}")
-        
+
         # Migrate legacy posts
         from ...v1.blogs.models import BlogPost
         migrated = 0
-        
+
         for legacy_post in BlogPost.objects.all():
             post_type = PostType.objects.get(store=legacy_post.store, slug='blog')
-            
+
             Post.objects.update_or_create(
                 legacy_id=legacy_post.id,
                 store=legacy_post.store,
@@ -372,7 +372,7 @@ class Command(BaseCommand):
                 }
             )
             migrated += 1
-            
+
         self.stdout.write(
             self.style.SUCCESS(f'Successfully migrated {migrated} posts')
         )

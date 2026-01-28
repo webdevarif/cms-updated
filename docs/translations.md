@@ -78,47 +78,47 @@ from django.core.cache import caches
 
 class TranslationParser:
     """Parses and translates HTML content"""
-    
+
     def __init__(self, store=None, language_code=None, user=None):
         self.store = store
         self.language_code = language_code or settings.LANGUAGE_CODE
         self.user = user
         self.cache = caches['translations']
-        
+
     def parse_html(self, html_content, cache_key=None):
         """Parse and translate HTML content with caching"""
         if not html_content:
             return html_content
-            
+
         if not cache_key and self.store:
             cache_key = self._generate_cache_key(html_content)
             cached = self.cache.get(cache_key)
             if cached is not None:
                 return cached
-                
+
         soup = BeautifulSoup(html_content, 'html.parser')
         self._process_nodes(soup)
-        
+
         result = str(soup)
         if cache_key:
             self.cache.set(cache_key, result, timeout=3600)
-            
+
         return result
-    
+
     def _process_nodes(self, soup):
         """Process all translatable nodes"""
         for text_node in self._find_translatable_text_nodes(soup):
             self._process_text_node(text_node)
-            
+
         for tag in soup.find_all(attrs=True):
             self._process_attributes(tag)
-    
+
     def _process_text_node(self, text_node):
         """Process a single text node with XSS protection"""
         original = text_node.string.strip()
         if not original or len(original) < 2:
             return
-            
+
         # Sanitize HTML content
         if '<' in original:
             original = bleach.clean(
@@ -126,15 +126,15 @@ class TranslationParser:
                 tags=settings.BLEACH_ALLOWED_TAGS,
                 attributes=settings.BLEACH_ALLOWED_ATTRIBUTES
             )
-        
+
         # Get or create translation key
         key = self._get_or_create_key(original)
-        
+
         # Get translation
         translation = self._get_translation(key, original)
         if translation and translation.text != original:
             text_node.replace_with(translation.text)
-    
+
     # ... (other helper methods)
 ```
 
@@ -148,49 +148,49 @@ import re
 
 class TranslationMiddleware:
     """Handles request/response translation"""
-    
+
     def __init__(self, get_response):
         self.get_response = get_response
         self.ignore_paths = [
             r'^/admin/', r'^/static/', r'^/media/', r'^/api/',
             r'\.(js|css|jpg|jpeg|png|gif|ico|svg|woff|ttf|eot|webp|mp4|webm|mp3|wav|ogg|json|xml|csv)$'
         ]
-    
+
     def __call__(self, request):
         # Set language from request
         self.set_language(request)
-        
+
         # Process response
         response = self.get_response(request)
-        
+
         # Skip translation for certain paths/content types
         if self.should_skip_translation(request, response):
             return response
-            
+
         # Parse and translate response
         return self.translate_response(request, response)
-    
+
     def set_language(self, request):
         """Set language from request"""
         language = self.get_language_from_request(request)
         translation.activate(language)
         request.LANGUAGE_CODE = translation.get_language()
-    
+
     def get_language_from_request(self, request):
         """Get language with store fallback"""
         # 1. URL parameter
         if 'lang' in request.GET:
             return request.GET['lang']
-            
+
         # 2. Session
         if hasattr(request, 'session') and 'django_language' in request.session:
             return request.session['django_language']
-            
+
         # 3. Store default
         store = getattr(request, 'store', None)
         if store and hasattr(store, 'default_language') and store.default_language:
             return store.default_language.code
-            
+
         # 4. Accept-Language header
         if 'HTTP_ACCEPT_LANGUAGE' in request.META:
             try:
@@ -199,7 +199,7 @@ class TranslationMiddleware:
                 )
             except LookupError:
                 pass
-                
+
         # 5. Default from settings
         return settings.LANGUAGE_CODE
 ```
@@ -219,7 +219,7 @@ class TranslationKeyAdmin(admin.ModelAdmin):
     list_display = ('key', 'namespace', 'content_type', 'translation_count')
     list_filter = ('namespace', 'content_type', 'plural_form')
     search_fields = ('key', 'description')
-    
+
     def translation_count(self, obj):
         return obj.translations.count()
     translation_count.short_description = 'Translations'
@@ -229,7 +229,7 @@ class TranslationAdmin(admin.ModelAdmin):
     list_display = ('key', 'language', 'store', 'preview_text', 'is_auto_translated')
     list_filter = ('language', 'store', 'is_auto_translated')
     search_fields = ('key__key', 'text')
-    
+
     def preview_text(self, obj):
         return obj.text[:100] + ('...' if len(obj.text) > 100 else '')
     preview_text.short_description = 'Text Preview'
@@ -340,11 +340,11 @@ class TranslationTests(TestCase):
     def test_html_sanitization(self):
         # Test XSS protection
         pass
-        
+
     def test_plural_forms(self):
         # Test pluralization
         pass
-        
+
     def test_performance(self):
         # Test with large content
         pass
@@ -377,13 +377,13 @@ from ..models import TranslationKey
 
 class Command(BaseCommand):
     help = 'Clean up unused translation keys'
-    
+
     def handle(self, *args, **options):
         # Find and delete unused keys
         unused = TranslationKey.objects.annotate(
             trans_count=Count('translations')
         ).filter(trans_count=0)
-        
+
         count = unused.count()
         if count > 0:
             self.stdout.write(f'Deleting {count} unused translation keys...')

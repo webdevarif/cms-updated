@@ -2,19 +2,22 @@
 Dashboard pages views - full admin interface for page management.
 Architectural + real implementation for dashboard pages interface.
 """
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
-
 from apps.pages.models.pages import Post, PostType, Taxonomy, Term
 from apps.stores.models import Store
 from core.permissions import IsStoreOwner
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 from .serializers import (
-    PageDashboardSerializer, PageDashboardListSerializer,
-    PostTypeSerializer, TaxonomySerializer, TermSerializer
+    PageDashboardListSerializer,
+    PageDashboardSerializer,
+    PostTypeSerializer,
+    TaxonomySerializer,
+    TermSerializer,
 )
 
 
@@ -22,7 +25,7 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
     """
     Dashboard pages API - full admin CRUD on all pages.
     Architectural + real implementation for dashboard pages interface.
-    
+
     Provides:
     - List all pages in store
     - Create/update/delete pages
@@ -30,54 +33,55 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
     - Publish/unpublish actions
     - Revision management
     """
-    
+
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['title', 'content', 'meta_description']
-    ordering_fields = ['created_at', 'updated_at', 'title', 'status']
-    ordering = ['-updated_at']
-    filterset_fields = ['status', 'post_type', 'author']
-    
+    search_fields = ["title", "content", "meta_description"]
+    ordering_fields = ["created_at", "updated_at", "title", "status"]
+    ordering = ["-updated_at"]
+    filterset_fields = ["status", "post_type", "author"]
+
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
-        if self.action == 'list':
+        if self.action == "list":
             return PageDashboardListSerializer
         return PageDashboardSerializer
-    
+
     def get_queryset(self):
         """Filter to store pages and page post type."""
-        store = getattr(self.request, 'store', None)
-        
-        queryset = Post.objects.filter(
-            store=store
-        ).select_related('store', 'featured_image', 'post_type', 'author')
-        
+        store = getattr(self.request, "store", None)
+
+        queryset = Post.objects.filter(store=store).select_related(
+            "store", "featured_image", "post_type", "author"
+        )
+
         # Filter to page post type only
-        page_type = PostType.objects.filter(slug='page').first()
+        page_type = PostType.objects.filter(slug="page").first()
         if page_type:
             queryset = queryset.filter(post_type=page_type)
-        
+
         return queryset
-    
+
     def perform_create(self, serializer):
         """Set store when creating page."""
-        serializer.save(store=getattr(self.request, 'store', None))
-    
-    @action(detail=False, methods=['post'])
+        serializer.save(store=getattr(self.request, "store", None))
+
+    @action(detail=False, methods=["post"])
     def bulk_action(self, request):
         """
         Perform bulk actions on pages (publish, unpublish, delete, tag operations).
         """
-        from .serializers import BulkActionSerializer
         from django.db import transaction
+
+        from .serializers import BulkActionSerializer
 
         serializer = BulkActionSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        action_type = serializer.validated_data['action']
-        page_ids = serializer.validated_data['ids']
-        extra_data = serializer.validated_data.get('data', {})
+        action_type = serializer.validated_data["action"]
+        page_ids = serializer.validated_data["ids"]
+        extra_data = serializer.validated_data.get("data", {})
 
         # Filter pages by store and IDs
         queryset = self.get_queryset().filter(id__in=page_ids)
@@ -86,24 +90,24 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
 
         try:
             with transaction.atomic():
-                if action_type == 'publish':
-                    updated = queryset.update(status='published')
-                    message = f'Successfully published {updated} pages'
+                if action_type == "publish":
+                    updated = queryset.update(status="published")
+                    message = f"Successfully published {updated} pages"
 
-                elif action_type == 'unpublish':
-                    updated = queryset.update(status='draft')
-                    message = f'Successfully unpublished {updated} pages'
+                elif action_type == "unpublish":
+                    updated = queryset.update(status="draft")
+                    message = f"Successfully unpublished {updated} pages"
 
-                elif action_type == 'delete':
+                elif action_type == "delete":
                     deleted = queryset.delete()[0]  # delete() returns (count, details)
-                    message = f'Successfully deleted {deleted} pages'
+                    message = f"Successfully deleted {deleted} pages"
 
-                elif action_type == 'add_tags':
-                    tags_to_add = extra_data.get('tags', [])
+                elif action_type == "add_tags":
+                    tags_to_add = extra_data.get("tags", [])
                     if not tags_to_add:
                         return Response(
-                            {'error': 'No tags specified for add_tags action'},
-                            status=status.HTTP_400_BAD_REQUEST
+                            {"error": "No tags specified for add_tags action"},
+                            status=status.HTTP_400_BAD_REQUEST,
                         )
 
                     updated_count = 0
@@ -111,17 +115,17 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
                         current_tags = set(page.tags or [])
                         current_tags.update(tags_to_add)
                         page.tags = list(current_tags)
-                        page.save(update_fields=['tags'])
+                        page.save(update_fields=["tags"])
                         updated_count += 1
 
-                    message = f'Successfully added tags {tags_to_add} to {updated_count} pages'
+                    message = f"Successfully added tags {tags_to_add} to {updated_count} pages"
 
-                elif action_type == 'remove_tags':
-                    tags_to_remove = extra_data.get('tags', [])
+                elif action_type == "remove_tags":
+                    tags_to_remove = extra_data.get("tags", [])
                     if not tags_to_remove:
                         return Response(
-                            {'error': 'No tags specified for remove_tags action'},
-                            status=status.HTTP_400_BAD_REQUEST
+                            {"error": "No tags specified for remove_tags action"},
+                            status=status.HTTP_400_BAD_REQUEST,
                         )
 
                     results = []
@@ -130,193 +134,213 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
                             current_tags = set(page.tags or [])
                             current_tags.difference_update(tags_to_remove)
                             page.tags = list(current_tags)
-                            page.save(update_fields=['tags'])
-                            results.append({'id': page.id, 'status': 'success'})
+                            page.save(update_fields=["tags"])
+                            results.append({"id": page.id, "status": "success"})
                         except Exception as e:
-                            results.append({'id': page.id, 'status': 'error', 'error': str(e)})
+                            results.append({"id": page.id, "status": "error", "error": str(e)})
 
-                    success_count = sum(1 for r in results if r['status'] == 'success')
-                    message = f'Successfully removed tags {tags_to_remove} from {success_count} pages'
+                    success_count = sum(1 for r in results if r["status"] == "success")
+                    message = (
+                        f"Successfully removed tags {tags_to_remove} from {success_count} pages"
+                    )
 
-                elif action_type == 'duplicate':
+                elif action_type == "duplicate":
                     results = []
                     for page in queryset:
                         try:
                             # Create a duplicate of the page
                             duplicate_data = {
-                                'title': f"{page.title} (Copy)",
-                                'content': page.content,
-                                'excerpt': page.excerpt,
-                                'status': 'draft',  # Duplicates start as drafts
-                                'post_type': page.post_type,
-                                'author': page.author,
-                                'store': page.store,
-                                'featured_image': page.featured_image,
-                                'tags': page.tags,
-                                'custom_fields': page.custom_fields,
-                                'meta_title': page.meta_title,
-                                'meta_description': page.meta_description,
-                                'meta_keywords': page.meta_keywords
+                                "title": f"{page.title} (Copy)",
+                                "content": page.content,
+                                "excerpt": page.excerpt,
+                                "status": "draft",  # Duplicates start as drafts
+                                "post_type": page.post_type,
+                                "author": page.author,
+                                "store": page.store,
+                                "featured_image": page.featured_image,
+                                "tags": page.tags,
+                                "custom_fields": page.custom_fields,
+                                "meta_title": page.meta_title,
+                                "meta_description": page.meta_description,
+                                "meta_keywords": page.meta_keywords,
                             }
                             duplicate_page = Post.objects.create(**duplicate_data)
-                            results.append({'id': page.id, 'status': 'success', 'duplicate_id': duplicate_page.id})
+                            results.append(
+                                {
+                                    "id": page.id,
+                                    "status": "success",
+                                    "duplicate_id": duplicate_page.id,
+                                }
+                            )
                         except Exception as e:
-                            results.append({'id': page.id, 'status': 'error', 'error': str(e)})
+                            results.append({"id": page.id, "status": "error", "error": str(e)})
 
-                    success_count = sum(1 for r in results if r['status'] == 'success')
-                    message = f'Successfully duplicated {success_count} pages'
+                    success_count = sum(1 for r in results if r["status"] == "success")
+                    message = f"Successfully duplicated {success_count} pages"
 
-                elif action_type == 'archive':
+                elif action_type == "archive":
                     results = []
                     for page in queryset:
                         try:
                             # Archive pages (could set a custom status or metadata)
-                            if not hasattr(page, 'custom_fields'):
+                            if not hasattr(page, "custom_fields"):
                                 page.custom_fields = {}
-                            page.custom_fields['archived'] = True
-                            page.custom_fields['archived_at'] = str(timezone.now())
-                            page.save(update_fields=['custom_fields'])
-                            results.append({'id': page.id, 'status': 'success'})
+                            page.custom_fields["archived"] = True
+                            page.custom_fields["archived_at"] = str(timezone.now())
+                            page.save(update_fields=["custom_fields"])
+                            results.append({"id": page.id, "status": "success"})
                         except Exception as e:
-                            results.append({'id': page.id, 'status': 'error', 'error': str(e)})
+                            results.append({"id": page.id, "status": "error", "error": str(e)})
 
-                    success_count = sum(1 for r in results if r['status'] == 'success')
-                    message = f'Successfully archived {success_count} pages'
+                    success_count = sum(1 for r in results if r["status"] == "success")
+                    message = f"Successfully archived {success_count} pages"
 
-                elif action_type == 'restore':
+                elif action_type == "restore":
                     results = []
                     for page in queryset:
                         try:
                             # Restore archived pages
-                            if hasattr(page, 'custom_fields') and page.custom_fields:
-                                page.custom_fields.pop('archived', None)
-                                page.custom_fields.pop('archived_at', None)
-                                page.save(update_fields=['custom_fields'])
-                            results.append({'id': page.id, 'status': 'success'})
+                            if hasattr(page, "custom_fields") and page.custom_fields:
+                                page.custom_fields.pop("archived", None)
+                                page.custom_fields.pop("archived_at", None)
+                                page.save(update_fields=["custom_fields"])
+                            results.append({"id": page.id, "status": "success"})
                         except Exception as e:
-                            results.append({'id': page.id, 'status': 'error', 'error': str(e)})
+                            results.append({"id": page.id, "status": "error", "error": str(e)})
 
-                    success_count = sum(1 for r in results if r['status'] == 'success')
-                    message = f'Successfully restored {success_count} pages'
+                    success_count = sum(1 for r in results if r["status"] == "success")
+                    message = f"Successfully restored {success_count} pages"
 
-                elif action_type == 'status_change':
-                    new_status = extra_data.get('status')
+                elif action_type == "status_change":
+                    new_status = extra_data.get("status")
                     if not new_status:
                         return Response(
-                            {'error': 'No status specified for status_change action'},
-                            status=status.HTTP_400_BAD_REQUEST
+                            {"error": "No status specified for status_change action"},
+                            status=status.HTTP_400_BAD_REQUEST,
                         )
 
-                    valid_statuses = ['draft', 'published', 'scheduled', 'archived']
+                    valid_statuses = ["draft", "published", "scheduled", "archived"]
                     if new_status not in valid_statuses:
                         return Response(
-                            {'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'},
-                            status=status.HTTP_400_BAD_REQUEST
+                            {
+                                "error": f'Invalid status. Must be one of: {", ".join(valid_statuses)}'
+                            },
+                            status=status.HTTP_400_BAD_REQUEST,
                         )
 
                     results = []
                     for page in queryset:
                         try:
                             page.status = new_status
-                            if new_status == 'published' and not page.published_at:
+                            if new_status == "published" and not page.published_at:
                                 page.published_at = timezone.now()
-                            page.save(update_fields=['status', 'published_at'])
-                            results.append({'id': page.id, 'status': 'success', 'new_status': new_status})
+                            page.save(update_fields=["status", "published_at"])
+                            results.append(
+                                {"id": page.id, "status": "success", "new_status": new_status}
+                            )
                         except Exception as e:
-                            results.append({'id': page.id, 'status': 'error', 'error': str(e)})
+                            results.append({"id": page.id, "status": "error", "error": str(e)})
 
-                    success_count = sum(1 for r in results if r['status'] == 'success')
-                    message = f'Successfully changed status to {new_status} for {success_count} pages'
+                    success_count = sum(1 for r in results if r["status"] == "success")
+                    message = (
+                        f"Successfully changed status to {new_status} for {success_count} pages"
+                    )
 
                 else:
                     return Response(
-                        {'error': f'Unsupported action: {action_type}'},
-                        status=status.HTTP_400_BAD_REQUEST
+                        {"error": f"Unsupported action: {action_type}"},
+                        status=status.HTTP_400_BAD_REQUEST,
                     )
 
                 # Log the bulk operation
                 from apps.logs.tasks import log_event_async
-                log_event_async.delay({
-                    'event_type': 'CONTENT_BULK_UPDATE',
-                    'message': f'Bulk {action_type} operation on pages',
-                    'user': request.user,
-                    'store': request.store,
-                    'entity_type': 'Page',
-                    'metadata': {
-                        'action': action_type,
-                        'requested_count': total_requested,
-                        'found_count': total_found,
-                        'affected_count': sum(1 for r in results if r['status'] == 'success'),
-                        'results': results,
-                        'extra_data': extra_data
-                    }
-                })
 
-                return Response({
-                    'message': message,
-                    'action': action_type,
-                    'requested': total_requested,
-                    'found': total_found,
-                    'affected': sum(1 for r in results if r['status'] == 'success'),
-                    'results': results  # Detailed per-ID results
-                })
+                log_event_async.delay(
+                    {
+                        "event_type": "CONTENT_BULK_UPDATE",
+                        "message": f"Bulk {action_type} operation on pages",
+                        "user": request.user,
+                        "store": request.store,
+                        "entity_type": "Page",
+                        "metadata": {
+                            "action": action_type,
+                            "requested_count": total_requested,
+                            "found_count": total_found,
+                            "affected_count": sum(1 for r in results if r["status"] == "success"),
+                            "results": results,
+                            "extra_data": extra_data,
+                        },
+                    }
+                )
+
+                return Response(
+                    {
+                        "message": message,
+                        "action": action_type,
+                        "requested": total_requested,
+                        "found": total_found,
+                        "affected": sum(1 for r in results if r["status"] == "success"),
+                        "results": results,  # Detailed per-ID results
+                    }
+                )
 
         except Exception as e:
             return Response(
-                {'error': f'Bulk operation failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": f"Bulk operation failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
         """Publish a page."""
         page = self.get_object()
-        page.status = 'published'
+        page.status = "published"
         page.save()
-        
+
         serializer = self.get_serializer(page)
         return Response(serializer.data)
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def unpublish(self, request, pk=None):
         """Unpublish a page (set to draft)."""
         page = self.get_object()
-        page.status = 'draft'
+        page.status = "draft"
         page.save()
-        
+
         serializer = self.get_serializer(page)
         return Response(serializer.data)
-    
-    @action(detail=True, methods=['get'])
+
+    @action(detail=True, methods=["get"])
     def revisions(self, request, pk=None):
         """Get page revision history."""
         page = self.get_object()
-        revisions = page.revisions.all().order_by('-revision_number')
-        
+        revisions = page.revisions.all().order_by("-revision_number")
+
         data = []
         for revision in revisions:
-            data.append({
-                'id': revision.id,
-                'revision_number': revision.revision_number,
-                'title': revision.title,
-                'created_at': revision.created_at,
-                'user': revision.user.email if revision.user else None
-            })
-        
+            data.append(
+                {
+                    "id": revision.id,
+                    "revision_number": revision.revision_number,
+                    "title": revision.title,
+                    "created_at": revision.created_at,
+                    "user": revision.user.email if revision.user else None,
+                }
+            )
+
         return Response(data)
-    
-    @action(detail=True, methods=['post'])
+
+    @action(detail=True, methods=["post"])
     def restore_revision(self, request, pk=None):
         """Restore a page to a specific revision."""
         page = self.get_object()
-        revision_id = request.data.get('revision_id')
-        
+        revision_id = request.data.get("revision_id")
+
         if not revision_id:
             return Response(
-                {'error': 'revision_id is required'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "revision_id is required"}, status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             revision = page.revisions.get(id=revision_id)
             page.title = revision.title
@@ -324,205 +348,228 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
             page.excerpt = revision.excerpt
             page.custom_fields = revision.custom_fields
             page.save()
-            
+
             serializer = self.get_serializer(page)
             return Response(serializer.data)
-            
+
         except page.revisions.model.DoesNotExist:
-            return Response(
-                {'error': 'Revision not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-    
-    @action(detail=False, methods=['get'])
+            return Response({"error": "Revision not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=["get"])
     def analytics(self, request):
         """Get pages analytics and statistics for the store with time-range filtering"""
-        store = getattr(self.request, 'store', None)
+        store = getattr(self.request, "store", None)
         if not store:
-            return Response(
-                {'error': 'Store context required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "Store context required"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Parse time range parameters
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-        
+        start_date = request.GET.get("start_date")
+        end_date = request.GET.get("end_date")
+
         from datetime import datetime
-        
+
         date_filter = {}
         if start_date:
             try:
-                start_dt = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
-                date_filter['created_at__gte'] = start_dt
+                start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                date_filter["created_at__gte"] = start_dt
             except ValueError:
                 return Response(
-                    {'error': 'Invalid start_date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Invalid start_date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
-        
+
         if end_date:
             try:
-                end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
-                date_filter['created_at__lte'] = end_dt
+                end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+                date_filter["created_at__lte"] = end_dt
             except ValueError:
                 return Response(
-                    {'error': 'Invalid end_date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)'},
-                    status=status.HTTP_400_BAD_REQUEST
+                    {"error": "Invalid end_date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         try:
             # Base queryset with date filtering
             base_queryset = self.get_queryset().filter(**date_filter)
-            
+
             # Get page counts by status
             total_pages = base_queryset.count()
-            published_pages = base_queryset.filter(status='published').count()
-            draft_pages = base_queryset.filter(status='draft').count()
-            scheduled_pages = base_queryset.filter(status='scheduled').count()
+            published_pages = base_queryset.filter(status="published").count()
+            draft_pages = base_queryset.filter(status="draft").count()
+            scheduled_pages = base_queryset.filter(status="scheduled").count()
 
             # Get pages by post type
             from django.db.models import Count
+
             pages_by_type = {}
-            type_counts = base_queryset.values('post_type__name').annotate(
-                count=Count('id')
-            ).order_by('-count')
-            pages_by_type = {item['post_type__name']: item['count'] for item in type_counts if item['post_type__name']}
+            type_counts = (
+                base_queryset.values("post_type__name")
+                .annotate(count=Count("id"))
+                .order_by("-count")
+            )
+            pages_by_type = {
+                item["post_type__name"]: item["count"]
+                for item in type_counts
+                if item["post_type__name"]
+            }
 
             # Get author distribution
-            author_counts = base_queryset.values('author__email', 'author__first_name', 'author__last_name').annotate(
-                count=Count('id')
-            ).order_by('-count')[:10]
-            
+            author_counts = (
+                base_queryset.values("author__email", "author__first_name", "author__last_name")
+                .annotate(count=Count("id"))
+                .order_by("-count")[:10]
+            )
+
             authors = []
             for author_data in author_counts:
-                if author_data['author__email']:
-                    authors.append({
-                        'email': author_data['author__email'],
-                        'name': f"{author_data['author__first_name'] or ''} {author_data['author__last_name'] or ''}".strip() or 'Unknown',
-                        'pages_count': author_data['count']
-                    })
+                if author_data["author__email"]:
+                    authors.append(
+                        {
+                            "email": author_data["author__email"],
+                            "name": f"{author_data['author__first_name'] or ''} {author_data['author__last_name'] or ''}".strip()
+                            or "Unknown",
+                            "pages_count": author_data["count"],
+                        }
+                    )
 
             # Get template usage
-            template_counts = base_queryset.exclude(template__isnull=True).values('template__name').annotate(
-                count=Count('id')
-            ).order_by('-count')[:10]
-            
-            templates = [{'name': item['template__name'], 'count': item['count']} for item in template_counts if item['template__name']]
+            template_counts = (
+                base_queryset.exclude(template__isnull=True)
+                .values("template__name")
+                .annotate(count=Count("id"))
+                .order_by("-count")[:10]
+            )
+
+            templates = [
+                {"name": item["template__name"], "count": item["count"]}
+                for item in template_counts
+                if item["template__name"]
+            ]
 
             # Get publishing trends (daily pages in the time range)
             if start_date and end_date:
                 from django.db.models.functions import TruncDate
-                publishing_trends = base_queryset.filter(status='published').annotate(
-                    date=TruncDate('published_at')
-                ).values('date').annotate(
-                    count=Count('id')
-                ).order_by('date')
-                
-                trends = [{'date': str(item['date']), 'count': item['count']} for item in publishing_trends]
+
+                publishing_trends = (
+                    base_queryset.filter(status="published")
+                    .annotate(date=TruncDate("published_at"))
+                    .values("date")
+                    .annotate(count=Count("id"))
+                    .order_by("date")
+                )
+
+                trends = [
+                    {"date": str(item["date"]), "count": item["count"]}
+                    for item in publishing_trends
+                ]
             else:
                 trends = []
 
             # Get recent pages
             recent_pages = PageDashboardListSerializer(
-                base_queryset.order_by('-created_at')[:5], many=True
+                base_queryset.order_by("-created_at")[:5], many=True
             ).data
 
             analytics_data = {
-                'overview': {
-                    'total_pages': total_pages,
-                    'published_pages': published_pages,
-                    'draft_pages': draft_pages,
-                    'scheduled_pages': scheduled_pages,
-                    'publish_rate': (published_pages / total_pages * 100) if total_pages > 0 else 0
+                "overview": {
+                    "total_pages": total_pages,
+                    "published_pages": published_pages,
+                    "draft_pages": draft_pages,
+                    "scheduled_pages": scheduled_pages,
+                    "publish_rate": (published_pages / total_pages * 100) if total_pages > 0 else 0,
                 },
-                'by_type': pages_by_type,
-                'authors': authors,
-                'templates': templates,
-                'publishing_trends': trends,
-                'recent_pages': recent_pages,
-                'engagement': {
+                "by_type": pages_by_type,
+                "authors": authors,
+                "templates": templates,
+                "publishing_trends": trends,
+                "recent_pages": recent_pages,
+                "engagement": {
                     # Placeholder for future engagement metrics
-                    'avg_views_per_page': 0,  # To be implemented with view tracking
-                    'total_views': 0,  # To be implemented with view tracking
-                    'avg_time_on_page': 0  # To be implemented with analytics tracking
+                    "avg_views_per_page": 0,  # To be implemented with view tracking
+                    "total_views": 0,  # To be implemented with view tracking
+                    "avg_time_on_page": 0,  # To be implemented with analytics tracking
                 },
-                'time_range': {
-                    'start_date': start_date,
-                    'end_date': end_date,
-                    'has_date_filter': bool(start_date or end_date)
-                }
+                "time_range": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "has_date_filter": bool(start_date or end_date),
+                },
             }
 
             return Response(analytics_data)
 
         except Exception as e:
             return Response(
-                {'error': f'Analytics failed: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": f"Analytics failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
-    @action(detail=False, methods=['get'])
+
+    @action(detail=False, methods=["get"])
     def reports(self, request):
         """Get pages reports."""
-        period = request.query_params.get('period', '30d')
-        
+        period = request.query_params.get("period", "30d")
+
         # Placeholder report data
-        return Response({
-            'period': period,
-            'pages_created': 0,  # To be implemented
-            'pages_published': 0,  # To be implemented
-            'total_views': 0,  # To be implemented
-            'popular_pages': []  # To be implemented
-        })
+        return Response(
+            {
+                "period": period,
+                "pages_created": 0,  # To be implemented
+                "pages_published": 0,  # To be implemented
+                "total_views": 0,  # To be implemented
+                "popular_pages": [],  # To be implemented
+            }
+        )
 
 
 class PostTypeViewSet(viewsets.ModelViewSet):
     """Dashboard post types management."""
-    
+
     permission_classes = [IsAuthenticated, IsStoreOwner]
     serializer_class = PostTypeSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['name', 'slug']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
-    filterset_fields = ['is_public', 'is_system', 'is_hierarchical']
-    
+    search_fields = ["name", "slug"]
+    ordering_fields = ["name", "created_at"]
+    ordering = ["name"]
+    filterset_fields = ["is_public", "is_system", "is_hierarchical"]
+
     def get_queryset(self):
         """Filter to store post types."""
-        store = getattr(self.request, 'store', None)
-        return PostType.objects.filter(store=store).order_by('name')
+        store = getattr(self.request, "store", None)
+        return PostType.objects.filter(store=store).order_by("name")
 
 
 class TaxonomyViewSet(viewsets.ModelViewSet):
     """Dashboard taxonomy management."""
-    
+
     permission_classes = [IsAuthenticated, IsStoreOwner]
     serializer_class = TaxonomySerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['name', 'slug']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
-    filterset_fields = ['taxonomy_type']
-    
+    search_fields = ["name", "slug"]
+    ordering_fields = ["name", "created_at"]
+    ordering = ["name"]
+    filterset_fields = ["taxonomy_type"]
+
     def get_queryset(self):
         """Filter to store taxonomies."""
-        store = getattr(self.request, 'store', None)
-        return Taxonomy.objects.filter(store=store).order_by('name')
+        store = getattr(self.request, "store", None)
+        return Taxonomy.objects.filter(store=store).order_by("name")
 
 
 class TermViewSet(viewsets.ModelViewSet):
     """Dashboard term management."""
-    
+
     permission_classes = [IsAuthenticated, IsStoreOwner]
     serializer_class = TermSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ['name', 'slug']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
-    filterset_fields = ['taxonomy', 'parent']
-    
+    search_fields = ["name", "slug"]
+    ordering_fields = ["name", "created_at"]
+    ordering = ["name"]
+    filterset_fields = ["taxonomy", "parent"]
+
     def get_queryset(self):
         """Filter to store terms."""
-        store = getattr(self.request, 'store', None)
-        return Term.objects.filter(store=store).select_related('taxonomy', 'parent').order_by('name')
+        store = getattr(self.request, "store", None)
+        return (
+            Term.objects.filter(store=store).select_related("taxonomy", "parent").order_by("name")
+        )

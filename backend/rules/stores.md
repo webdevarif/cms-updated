@@ -72,33 +72,33 @@ apps/
 ## 🔒 Permissions
 access_code = models.CharField(max_length=6, unique=True, editable=False)
     verification_token = models.CharField(max_length=255, unique=True, blank=True, null=True)
-    
+
     # Status & Type
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     store_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='ecommerce')
-    
+
     # Enhanced Features
     domain = models.URLField(blank=True, null=True, unique=True)
     logo = models.ImageField(upload_to='stores/logos/', blank=True, null=True)
     favicon = models.ImageField(upload_to='stores/favicons/', blank=True, null=True)
-    
+
     # Dynamic Settings (JSON field for configs)
     settings = models.JSONField(default=dict, blank=True)
-    
+
     # SEO Fields
     meta_title = models.CharField(max_length=255, blank=True)
     meta_description = models.TextField(blank=True)
     meta_keywords = models.CharField(max_length=500, blank=True)
-    
+
     # Analytics
     google_analytics_id = models.CharField(max_length=50, blank=True)
     facebook_pixel_id = models.CharField(max_length=50, blank=True)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     last_accessed = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         db_table = 'stores_store'
         ordering = ['-created_at']
@@ -109,22 +109,22 @@ access_code = models.CharField(max_length=6, unique=True, editable=False)
             models.Index(fields=['domain']),
             models.Index(fields=['created_at']),
         ]
-    
+
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         # Auto-generate slug if not provided
         if not self.slug:
             self.slug = slugify(self.name)
-        
+
         # Generate access code and verification token for new stores
         if not self.pk:
             self.access_code = self._generate_access_code()
             self.verification_token = secrets.token_urlsafe(32)
-        
+
         super().save(*args, **kwargs)
-    
+
     def _generate_access_code(self):
         """Generate unique 6-digit access code"""
         while True:
@@ -136,36 +136,36 @@ access_code = models.CharField(max_length=6, unique=True, editable=False)
 ```python
 class StoreSettings(models.Model):
     """Store-specific settings with explicit store relationship"""
-    
+
     store = models.OneToOneField(
-        'Store', 
-        on_delete=models.CASCADE, 
+        'Store',
+        on_delete=models.CASCADE,
         related_name='store_settings'
     )
-    
+
     # General Settings
     site_name = models.CharField(max_length=255, default='My Store')
     site_description = models.TextField(blank=True)
     contact_email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
-    
+
     # Address
     address = models.TextField(blank=True)
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
-    
+
     # Currency & Locale
     currency = models.CharField(max_length=3, default='USD')
     timezone = models.CharField(max_length=50, default='UTC')
     language = models.CharField(max_length=10, default='en')
-    
+
     # E-commerce Settings
     tax_rate = models.DecimalField(max_digits=5, decimal_places=4, default=0)
     shipping_enabled = models.BooleanField(default=True)
     free_shipping_threshold = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    
+
     # Media References
     logo = models.ForeignKey(
         'media.MediaFile',
@@ -183,16 +183,16 @@ class StoreSettings(models.Model):
         related_name='store_favicons',
         help_text="Store favicon image"
     )
-    
+
     # Advanced Settings (JSON for flexibility)
     custom_settings = models.JSONField(default=dict, blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'stores_settings'
-    
+
     def __str__(self):
         return f"{self.store.name} Settings"
 ```
@@ -229,7 +229,7 @@ from apps.logs.tasks import log_event_async
 
 class StoreService:
     """Store business logic following DFCMS patterns"""
-    
+
     @staticmethod
     @transaction.atomic
     def create_store(owner, store_data):
@@ -243,14 +243,14 @@ class StoreService:
                 description=store_data.get('description', ''),
                 store_type=store_data.get('store_type', 'ecommerce')
             )
-            
+
             # Create default settings
             StoreSettings.objects.create(
                 store=store,
                 site_name=store.name,
                 contact_email=owner.email
             )
-            
+
             # Log store creation
             log_event_async.delay({
                 'event_type': 'CONTENT_CREATE',
@@ -261,9 +261,9 @@ class StoreService:
                 'entity_id': store.id,
                 'metadata': {'store_data': store_data}
             })
-            
+
             return store
-            
+
         except Exception as e:
             log_event_async.delay({
                 'event_type': 'SYSTEM_ERROR',
@@ -273,7 +273,7 @@ class StoreService:
                 'metadata': {'error': str(e), 'store_data': store_data}
             })
             raise
-    
+
     @staticmethod
     def update_store(store, update_data, user=None):
         """Update store with logging"""
@@ -283,13 +283,13 @@ class StoreService:
                 'status': store.status,
                 'description': store.description
             }
-            
+
             for field, value in update_data.items():
                 if hasattr(store, field):
                     setattr(store, field, value)
-            
+
             store.save()
-            
+
             # Log update
             log_event_async.delay({
                 'event_type': 'CONTENT_UPDATE',
@@ -303,9 +303,9 @@ class StoreService:
                     'new_data': update_data
                 }
             })
-            
+
             return store
-            
+
         except Exception as e:
             log_event_async.delay({
                 'event_type': 'SYSTEM_ERROR',
@@ -316,7 +316,7 @@ class StoreService:
                 'metadata': {'error': str(e), 'update_data': update_data}
             })
             raise
-    
+
     @staticmethod
     def verify_store(store, token):
         """Verify store email"""
@@ -324,7 +324,7 @@ class StoreService:
             store.status = 'active'
             store.verification_token = None
             store.save()
-            
+
             log_event_async.delay({
                 'event_type': 'CONTENT_UPDATE',
                 'message': f"Store verified: {store.name}",
@@ -333,38 +333,38 @@ class StoreService:
                 'entity_id': store.id,
                 'metadata': {'verification': True}
             })
-            
+
             return True
         return False
-    
+
     @staticmethod
     def get_store_analytics(store, days=30):
         """Get store analytics data from logs"""
         from datetime import timedelta
         from django.utils import timezone
         from apps.logs.models import LogEntry
-        
+
         since = timezone.now() - timedelta(days=days)
-        
+
         # Get analytics from logs app
         page_views = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).count()
-        
+
         unique_visitors = LogEntry.objects.filter(
             store=store,
             event_type='PAGE_VIEW',
             created_at__gte=since
         ).values('session_id').distinct().count()
-        
+
         security_events = LogEntry.objects.filter(
             store=store,
             is_suspicious=True,
             created_at__gte=since
         ).count()
-        
+
         return {
             'page_views': page_views,
             'unique_visitors': unique_visitors,
@@ -386,14 +386,14 @@ from apps.stores.models import Store
 
 class Command(BaseCommand):
     help = 'Migrate old stores from DFCMS structure'
-    
+
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Show what would be migrated')
         parser.add_argument('--batch-size', type=int, default=1000, help='Batch size for migration')
-    
+
     def handle(self, *args, **options):
         from apps.activity_logs.models import ActivityLog  # Old DFCMS
-        
+
         # Migrate stores logic here
         self.stdout.write(self.style.SUCCESS("Store migration completed"))
 ```
@@ -426,6 +426,6 @@ class Command(BaseCommand):
 **Next Review**: 2026-02-25
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

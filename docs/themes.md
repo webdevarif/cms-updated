@@ -48,7 +48,7 @@ class Theme(TenantModel):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-is_active', 'name']
         unique_together = [['store', 'name']]
@@ -66,16 +66,16 @@ class ColorScheme(models.Model):
     name = models.CharField(max_length=100)
     key = models.SlugField(max_length=100)
     is_default = models.BooleanField(default=False)
-    
+
     # Light mode colors
     colors = models.JSONField(default=dict, help_text="Light mode colors", blank=True)
-    
+
     # Dark mode colors (optional)
     dark_colors = models.JSONField(default=dict, blank=True, help_text="Dark mode colors")
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['theme', 'key']]
         ordering = ['name']
@@ -95,65 +95,65 @@ class ColorScheme(models.Model):
             'foreground': '#111827' if mode == 'light' else '#f3f4f6',
             'muted': '#6b7280' if mode == 'light' else '#9ca3af',
             'muted_foreground': '#374151' if mode == 'light' else '#d1d5db',
-            
+
             # Primary colors
             'primary': '#3b82f6',
             'primary_foreground': '#ffffff',
             'primary_hover': '#2563eb',
-            
+
             # Secondary colors
             'secondary': '#f3f4f6' if mode == 'light' else '#1f2937',
             'secondary_foreground': '#111827' if mode == 'light' else '#f9fafb',
             'secondary_hover': '#e5e7eb' if mode == 'light' else '#374151',
-            
+
             # Accent colors
             'accent': '#f59e0b',
             'accent_foreground': '#ffffff',
             'accent_hover': '#d97706',
-            
+
             # Destructive colors
             'destructive': '#ef4444',
             'destructive_foreground': '#ffffff',
             'destructive_hover': '#dc2626',
-            
+
             # Success colors
             'success': '#10b981',
             'success_foreground': '#ffffff',
             'success_hover': '#059669',
-            
+
             # Warning colors
             'warning': '#f59e0b',
             'warning_foreground': '#ffffff',
             'warning_hover': '#d97706',
-            
+
             # Info colors
             'info': '#3b82f6',
             'info_foreground': '#ffffff',
             'info_hover': '#2563eb',
-            
+
             # Border colors
             'border': '#e5e7eb' if mode == 'light' else '#374151',
             'input': '#d1d5db' if mode == 'light' else '#4b5563',
             'ring': '#93c5fd',
-            
+
             # Card colors
             'card': '#ffffff' if mode == 'light' else '#1f2937',
             'card_foreground': '#111827' if mode == 'light' else '#f9fafb',
-            
+
             # Popover colors
             'popover': '#ffffff' if mode == 'light' else '#1f2937',
             'popover_foreground': '#111827' if mode == 'light' else '#f9fafb',
-            
+
             # Tooltip colors
             'tooltip': '#111827' if mode == 'light' else '#f3f4f6',
             'tooltip_foreground': '#f9fafb' if mode == 'light' else '#111827',
-            
+
             # Overlay colors
             'overlay': 'rgba(0, 0, 0, 0.5)',
-            
+
             # Shadow colors
             'shadow': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-            
+
             # Button variants
             'button_primary': {
                 'background': '#3b82f6',
@@ -186,23 +186,23 @@ class ColorScheme(models.Model):
                 'border': 'transparent',
                 'underline': True,
             },
-            
+
             # Form elements
             'input_background': '#ffffff' if mode == 'light' else '#1f2937',
             'input_foreground': '#111827' if mode == 'light' else '#f9fafb',
             'input_placeholder': '#9ca3af',
             'input_border': '#d1d5db',
             'input_ring': '#93c5fd',
-            
+
             # Checkbox/radio
             'checkbox_background': '#ffffff' if mode == 'light' else '#1f2937',
             'checkbox_foreground': '#3b82f6',
             'checkbox_border': '#d1d5db',
-            
+
             # Toggle
             'toggle_background': '#e5e7eb' if mode == 'light' else '#374151',
             'toggle_foreground': '#3b82f6',
-            
+
             # Badge variants
             'badge_primary': {
                 'background': '#dbeafe',
@@ -222,7 +222,7 @@ class ColorScheme(models.Model):
                 'border': '#e5e7eb' if mode == 'light' else '#374151',
             },
         }
-        
+
         return base
 ```
 
@@ -235,7 +235,7 @@ class Typography(models.Model):
     """
     theme = models.OneToOneField(Theme, on_delete=models.CASCADE, related_name='typography')
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
-    
+
     # Base font settings
     base_font_size = models.PositiveSmallIntegerField(
         default=16,
@@ -250,7 +250,7 @@ class Typography(models.Model):
             ('auto', 'System Default')
         ]
     )
-    
+
     # Font families
     font_primary = models.CharField(
         max_length=255,
@@ -272,14 +272,14 @@ class Typography(models.Model):
         default="'JetBrains Mono', 'Fira Code', monospace",
         help_text="Monospace font family"
     )
-    
+
     # Font weights
     font_weight_light = models.PositiveIntegerField(default=300)
     font_weight_normal = models.PositiveIntegerField(default=400)
     font_weight_medium = models.PositiveIntegerField(default=500)
     font_weight_semibold = models.PositiveIntegerField(default=600)
     font_weight_bold = models.PositiveIntegerField(default=700)
-    
+
     # Line heights
     line_height_none = models.DecimalField(max_digits=3, decimal_places=2, default=1.0)
     line_height_tight = models.DecimalField(max_digits=3, decimal_places=2, default=1.25)
@@ -287,7 +287,7 @@ class Typography(models.Model):
     line_height_normal = models.DecimalField(max_digits=3, decimal_places=2, default=1.5)
     line_height_relaxed = models.DecimalField(max_digits=3, decimal_places=2, default=1.625)
     line_height_loose = models.DecimalField(max_digits=3, decimal_places=2, default=2.0)
-    
+
     # Letter spacing
     letter_spacing_tighter = models.DecimalField(max_digits=4, decimal_places=3, default=-0.05)
     letter_spacing_tight = models.DecimalField(max_digits=4, decimal_places=3, default=-0.025)
@@ -295,19 +295,19 @@ class Typography(models.Model):
     letter_spacing_wide = models.DecimalField(max_digits=4, decimal_places=3, default=0.025)
     letter_spacing_wider = models.DecimalField(max_digits=4, decimal_places=3, default=0.05)
     letter_spacing_widest = models.DecimalField(max_digits=4, decimal_places=3, default=0.1)
-    
+
     # Headings configuration
     headings = models.JSONField(
         default=dict,
         help_text="Advanced heading configurations (h1-h6)"
     )
-    
+
     # Paragraph styles
     paragraph_margin = models.JSONField(
         default=dict,
         help_text="Margin settings for paragraphs"
     )
-    
+
     # Text transforms
     text_transform_headings = models.CharField(
         max_length=20,
@@ -319,7 +319,7 @@ class Typography(models.Model):
             ('capitalize', 'Capitalize')
         ]
     )
-    
+
     # Font loading strategy
     font_display = models.CharField(
         max_length=20,
@@ -333,7 +333,7 @@ class Typography(models.Model):
         ],
         help_text="Controls how fonts are displayed while loading"
     )
-    
+
     # Text rendering
     text_rendering = models.CharField(
         max_length=50,
@@ -345,21 +345,21 @@ class Typography(models.Model):
             ('geometricPrecision', 'Geometric Precision')
         ]
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         verbose_name_plural = "Typography"
         ordering = ['-created_at']
-    
+
     def save(self, *args, **kwargs):
         if not self.headings:
             self.headings = self.get_default_headings()
         if not self.paragraph_margin:
             self.paragraph_margin = self.get_default_paragraph_margins()
         super().save(*args, **kwargs)
-    
+
     def get_default_headings(self):
         """Generate default heading configurations"""
         return {
@@ -418,7 +418,7 @@ class Typography(models.Model):
                 'text_transform': self.text_transform_headings,
             }
         }
-    
+
     def get_default_paragraph_margins(self):
         """Generate default paragraph margins"""
         return {
@@ -427,7 +427,7 @@ class Typography(models.Model):
             'first_child': {'margin_top': '0'},
             'last_child': {'margin_bottom': '0'}
         }
-    
+
     def get_font_face_rules(self):
         """Generate @font-face rules for selected fonts"""
         return f"""
@@ -441,7 +441,7 @@ class Typography(models.Model):
             font-style: normal;
             font-display: {self.font_display};
         }}
-        
+
         /* Secondary Font */
         @font-face {{
             font-family: 'Secondary Font';
@@ -453,7 +453,7 @@ class Typography(models.Model):
             font-display: {self.font_display};
         }}
         """
-    
+
     def get_css_variables(self):
         """Generate CSS variables for typography"""
         return {
@@ -461,30 +461,30 @@ class Typography(models.Model):
             '--font-serif': 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
             '--font-mono': self.font_mono,
             '--font-accent': self.font_accent,
-            
+
             '--text-base': f'{self.base_font_size}px',
             '--text-scale-ratio': '1.2',
-            
+
             '--font-weight-light': str(self.font_weight_light),
             '--font-weight-normal': str(self.font_weight_normal),
             '--font-weight-medium': str(self.font_weight_medium),
             '--font-weight-semibold': str(self.font_weight_semibold),
             '--font-weight-bold': str(self.font_weight_bold),
-            
+
             '--line-height-none': str(self.line_height_none),
             '--line-height-tight': str(self.line_height_tight),
             '--line-height-snug': str(self.line_height_snug),
             '--line-height-normal': str(self.line_height_normal),
             '--line-height-relaxed': str(self.line_height_relaxed),
             '--line-height-loose': str(self.line_height_loose),
-            
+
             '--letter-spacing-tighter': f'{self.letter_spacing_tighter}em',
             '--letter-spacing-tight': f'{self.letter_spacing_tight}em',
             '--letter-spacing-normal': f'{self.letter_spacing_normal}em',
             '--letter-spacing-wide': f'{self.letter_spacing_wide}em',
             '--letter-spacing-wider': f'{self.letter_spacing_wider}em',
             '--letter-spacing-widest': f'{self.letter_spacing_widest}em',
-            
+
             '--text-rendering': self.text_rendering,
             '--font-smoothing': self.font_smoothing,
         }
@@ -501,13 +501,13 @@ class StyleClass(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100)
     description = models.TextField(blank=True)
-    
+
     # Default CSS properties (base styles)
     default_css = models.JSONField(
         default=dict,
         help_text="Default CSS properties for this style class"
     )
-    
+
     # Light/Dark mode overrides
     light_css = models.JSONField(
         default=dict,
@@ -519,83 +519,83 @@ class StyleClass(models.Model):
         blank=True,
         help_text="Dark mode CSS overrides (merges with default_css)"
     )
-    
+
     # Version-specific overrides (for different template versions)
     version_css = models.JSONField(
         default=dict,
         blank=True,
         help_text="Version-specific CSS overrides (e.g., {'v1': {...}, 'v2': {...}})"
     )
-    
+
     # Media queries for responsive design
     media_queries = models.JSONField(
         default=dict,
         blank=True,
         help_text="Responsive styles (e.g., {'sm': {...}, 'md': {...}, 'lg': {...}})"
     )
-    
+
     # Pseudo-class styles
     pseudo_classes = models.JSONField(
         default=dict,
         blank=True,
         help_text="Pseudo-class styles (e.g., {'hover': {...}, 'focus': {...}, 'active': {...}})"
     )
-    
+
     # Animation properties
     animations = models.JSONField(
         default=dict,
         blank=True,
         help_text="Animation properties (e.g., {'transition': 'all 0.3s ease', 'animation': 'fadeIn 0.5s'})"
     )
-    
+
     # Custom CSS (raw CSS for complex styles)
     custom_css = models.TextField(
         blank=True,
         help_text="Raw CSS for complex styles that can't be expressed in JSON"
     )
-    
+
     # Version-specific custom CSS
     version_custom_css = models.JSONField(
         default=dict,
         blank=True,
         help_text="Version-specific raw CSS (e.g., {'v1': '...', 'v2': '...'})"
     )
-    
+
     # CSS variables for this class
     css_variables = models.JSONField(
         default=dict,
         blank=True,
         help_text="CSS variables specific to this class"
     )
-    
+
     is_active = models.BooleanField(default=True)
     is_system = models.BooleanField(default=False, help_text="System style classes cannot be deleted")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['theme', 'slug']]
         ordering = ['name']
-    
+
     def get_css_for_version(self, version='default', mode='light'):
         """
         Get CSS properties for a specific version and mode
         """
         # Start with default CSS
         css = self.default_css.copy()
-        
+
         # Apply mode-specific overrides
         if mode == 'dark' and self.dark_css:
             css.update(self.dark_css)
         elif mode == 'light' and self.light_css:
             css.update(self.light_css)
-        
+
         # Apply version-specific overrides
         if version != 'default' and self.version_css.get(version):
             css.update(self.version_css[version])
-        
+
         return css
-    
+
     def get_custom_css_for_version(self, version='default'):
         """
         Get custom CSS for a specific version
@@ -603,7 +603,7 @@ class StyleClass(models.Model):
         if version != 'default' and self.version_custom_css.get(version):
             return self.version_custom_css[version]
         return self.custom_css
-    
+
     def get_media_query_css(self, version='default', mode='light'):
         """
         Get media query CSS for responsive design
@@ -618,63 +618,63 @@ class StyleClass(models.Model):
                 css.update(self.version_css[version])
             result[breakpoint] = css
         return result
-    
+
     def get_pseudo_class_css(self, pseudo_class, version='default', mode='light'):
         """
         Get pseudo-class CSS (hover, focus, active, etc.)
         """
         css = self.pseudo_classes.get(pseudo_class, {}).copy()
-        
+
         # Apply mode-specific overrides
         if mode == 'dark' and self.dark_css:
             css.update(self.dark_css)
         elif mode == 'light' and self.light_css:
             css.update(self.light_css)
-        
+
         # Apply version-specific overrides
         if version != 'default' and self.version_css.get(version):
             css.update(self.version_css[version])
-        
+
         return css
-    
+
     def generate_css_class(self, version='default', mode='light'):
         """
         Generate complete CSS class with all properties
         """
         css_rules = []
-        
+
         # Main class
         main_css = self.get_css_for_version(version, mode)
         if main_css:
             main_props = '; '.join([f"{k}: {v}" for k, v in main_css.items()])
             css_rules.append(f".{self.slug} {{ {main_props}; }}")
-        
+
         # Media queries
         media_css = self.get_media_query_css(version, mode)
         for breakpoint, styles in media_css.items():
             if styles:
                 props = '; '.join([f"{k}: {v}" for k, v in styles.items()])
                 css_rules.append(f"@media (min-width: {breakpoint}) {{ .{self.slug} {{ {props}; }} }}")
-        
+
         # Pseudo-classes
         for pseudo in ['hover', 'focus', 'active', 'disabled']:
             pseudo_css = self.get_pseudo_class_css(pseudo, version, mode)
             if pseudo_css:
                 props = '; '.join([f"{k}: {v}" for k, v in pseudo_css.items()])
                 css_rules.append(f".{self.slug}:{pseudo} {{ {props}; }}")
-        
+
         # Custom CSS
         custom_css = self.get_custom_css_for_version(version)
         if custom_css:
             css_rules.append(custom_css)
-        
+
         # CSS variables
         if self.css_variables:
             var_props = '; '.join([f"{k}: {v}" for k, v in self.css_variables.items()])
             css_rules.append(f".{self.slug} {{ {var_props}; }}")
-        
+
         return '\n'.join(css_rules)
-    
+
     def save(self, *args, **kwargs):
         # Auto-generate slug if not provided
         if not self.slug:
@@ -717,14 +717,14 @@ class Layout(models.Model):
     is_default = models.BooleanField(default=False)
     is_system = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    
+
     # Content slots (for dynamic content injection)
     content_slots = models.JSONField(
         default=dict,
         blank=True,
         help_text="Defines content slots and their default content"
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -739,7 +739,7 @@ class Layout(models.Model):
         # Ensure only one default layout per theme
         if self.is_default and self.theme:
             Layout.objects.filter(
-                theme=self.theme, 
+                theme=self.theme,
                 is_default=True
             ).exclude(pk=self.pk).update(is_default=False)
 
@@ -757,7 +757,7 @@ class Template(models.Model):
     """
     theme = models.ForeignKey(Theme, on_delete=models.CASCADE, related_name='templates')
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE)
-    
+
     TEMPLATE_ROLES = [
         ('body', 'Body'),        # Main content (default)
         ('header', 'Header'),    # Header component
@@ -765,7 +765,7 @@ class Template(models.Model):
         ('partial', 'Partial'),  # Reusable partials
         ('section', 'Section'),  # Page sections
     ]
-    
+
     name = models.CharField(max_length=100)
     key = models.SlugField(max_length=100)
     template_role = models.CharField(
@@ -775,7 +775,7 @@ class Template(models.Model):
         help_text="Defines the template's role in the layout system"
     )
     description = models.TextField(blank=True)
-    
+
     # Template content (body-only for header/footer roles)
     content = models.TextField(
         help_text="HTML template with variables (Django template syntax)"
@@ -784,12 +784,12 @@ class Template(models.Model):
     template_type = models.CharField(max_length=20, choices=TEMPLATE_TYPES)
     key = models.SlugField(max_length=100)
     description = models.TextField(blank=True)
-    
+
     # Template content
     content = models.TextField(
         help_text="HTML template with variables (Django template syntax)"
     )
-    
+
     # Advanced customization tab
     custom_css = models.TextField(
         blank=True,
@@ -799,7 +799,7 @@ class Template(models.Model):
         blank=True,
         help_text="Custom JavaScript for this template"
     )
-    
+
     # Version-specific customizations
     version_css = models.JSONField(
         default=dict,
@@ -811,7 +811,7 @@ class Template(models.Model):
         blank=True,
         help_text="Version-specific JavaScript (e.g., {'v1': '...', 'v2': '...'})"
     )
-    
+
     # Template metadata
     meta_title = models.CharField(
         max_length=200,
@@ -827,7 +827,7 @@ class Template(models.Model):
         blank=True,
         help_text="Default meta keywords for pages using this template"
     )
-    
+
     # Template settings
     is_default = models.BooleanField(
         default=False,
@@ -838,7 +838,7 @@ class Template(models.Model):
         default=False,
         help_text="System templates cannot be deleted"
     )
-    
+
     # Layout association (for body templates)
     layout = models.ForeignKey(
         'Layout',
@@ -848,21 +848,21 @@ class Template(models.Model):
         help_text="Default layout for this template (body templates only)",
         related_name='templates_using_this_layout'
     )
-    
+
     # Template variables (for documentation)
     variables = models.JSONField(
         default=dict,
         blank=True,
         help_text="Available variables in this template"
     )
-    
+
     # Template dependencies
     requires = models.JSONField(
         default=list,
         blank=True,
         help_text="Required components or templates"
     )
-    
+
     # Preview settings
     preview_image = models.URLField(
         blank=True,
@@ -873,7 +873,7 @@ class Template(models.Model):
         blank=True,
         help_text="Sample data for template preview"
     )
-    
+
     # Performance settings
     cache_duration = models.PositiveIntegerField(
         default=300,
@@ -883,10 +883,10 @@ class Template(models.Model):
         default=False,
         help_text="Minify HTML output"
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         unique_together = [['theme', 'key']]
         ordering = ['template_type', 'name']
@@ -894,7 +894,7 @@ class Template(models.Model):
             models.Index(fields=['theme', 'template_type']),
             models.Index(fields=['is_default', 'is_active']),
         ]
-    
+
     def get_css_for_version(self, version='default'):
         """
         Get CSS for a specific version
@@ -902,7 +902,7 @@ class Template(models.Model):
         if version != 'default' and self.version_css.get(version):
             return self.version_css[version]
         return self.custom_css
-    
+
     def get_js_for_version(self, version='default'):
         """
         Get JavaScript for a specific version
@@ -910,7 +910,7 @@ class Template(models.Model):
         if version != 'default' and self.version_js.get(version):
             return self.version_js[version]
         return self.custom_js
-    
+
     def render_content(self, context=None):
         """
         Render template content with context.
@@ -918,45 +918,45 @@ class Template(models.Model):
         """
         from django.template import Template, Context
         from django.template.exceptions import TemplateSyntaxError
-        
+
         content = Template(self.content).render(Context(context or {}))
             'template_name': self.name,
             'template_key': self.key,
         })
-        
+
         # Render the template
         django_template = DjangoTemplate(self.content)
         return django_template.render(DjangoContext(template_context))
-    
+
     def get_variables_list(self):
         """
         Extract variables from template content
         """
         import re
         variables = set()
-        
+
         # Find Django template variables
         pattern = r'\{\{\s*([^}]+)\s*\}\}'
         matches = re.findall(pattern, self.content)
-        
+
         for match in matches:
             # Clean up the variable name
             var = match.strip().split('.')[0].strip()
             if var and not var.startswith('|') and not var.startswith('if'):
                 variables.add(var)
-        
+
         return sorted(list(variables))
-    
+
     def save(self, *args, **kwargs):
         # Auto-generate slug if not provided
         if not self.slug:
             from django.utils.text import slugify
             self.slug = slugify(self.name)
-        
+
         # Extract variables from content
         if not self.variables:
             self.variables = self.get_variables_list()
-        
+
         super().save(*args, **kwargs)
 
 ---
@@ -1164,11 +1164,11 @@ python manage.py migrate themes
        # 1. Page-specific layout
        if page.layout:
            return page.layout
-           
+
        # 2. Template's default layout
        if page.template and page.template.layout:
            return page.template.layout
-           
+
        # 3. Theme's default layout
        return Layout.objects.filter(
            theme=page.theme,
@@ -1181,21 +1181,21 @@ python manage.py migrate themes
    def render_page(page, context):
        """Render a complete page with layout"""
        layout = get_page_layout(page)
-       
+
        # Start with empty HTML
        html = []
-       
+
        # Add header if layout has one
        if layout and layout.header_template:
            html.append(layout.header_template.render_content(context))
-       
+
        # Add main content
        html.append(page.template.render_content(context))
-       
+
        # Add footer if layout has one
        if layout and layout.footer_template:
            html.append(layout.footer_template.render_content(context))
-           
+
        return '\n'.join(html)
    ```
 

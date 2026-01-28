@@ -100,7 +100,7 @@ class Notification(TenantModel):
     """
     Store-scoped notification for multi-channel delivery
     """
-    
+
     # Core fields
     notification_type = models.CharField(
         max_length=50,
@@ -109,7 +109,7 @@ class Notification(TenantModel):
     )
     title = models.CharField(max_length=255)
     message = models.TextField()
-    
+
     # Relationships
     user = models.ForeignKey(
         User,
@@ -118,7 +118,7 @@ class Notification(TenantModel):
         null=True,
         blank=True
     )
-    
+
     # Targeting
     target_type = models.CharField(
         max_length=50,
@@ -131,31 +131,31 @@ class Notification(TenantModel):
         default='user'
     )
     target_id = models.CharField(max_length=100, blank=True)
-    
+
     # Channels
     channels = models.JSONField(
         default=list,
         help_text="List of channels to send notification through"
     )
-    
+
     # Status
     status = models.CharField(
         max_length=20,
         choices=NotificationStatus.choices,
         default='pending'
     )
-    
+
     # Delivery tracking
     delivery_attempts = models.PositiveSmallIntegerField(default=0)
     last_attempt_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     read_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Metadata
     metadata = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'notifications_notification'
         indexes = [
@@ -165,21 +165,21 @@ class Notification(TenantModel):
             models.Index(fields=['status', 'created_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.title} - {self.user.email if self.user else 'No user'}"
-    
+
     def mark_as_read(self):
         """Mark notification as read"""
         if self.status != 'read':
             self.status = 'read'
             self.read_at = timezone.now()
             self.save(update_fields=['status', 'read_at'])
-    
+
     def is_delivered(self):
         """Check if notification is delivered"""
         return self.status in ['delivered', 'read']
-    
+
     def should_send_via_channel(self, channel):
         """Check if notification should be sent via specific channel"""
         return channel in self.channels
@@ -191,14 +191,14 @@ class NotificationPreference(TenantModel):
     """
     User notification preferences per channel and type
     """
-    
+
     # Relationships
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name='notification_preferences'
     )
-    
+
     # Preferences
     notification_type = models.CharField(
         max_length=50,
@@ -208,7 +208,7 @@ class NotificationPreference(TenantModel):
         default=dict,
         help_text="Channel preferences: {email: true, in_app: true, push: false, sms: false}"
     )
-    
+
     # Digest settings
     digest_enabled = models.BooleanField(default=False)
     digest_frequency = models.CharField(
@@ -221,19 +221,19 @@ class NotificationPreference(TenantModel):
         ],
         default='immediate'
     )
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'notifications_preference'
         unique_together = [['store', 'user', 'notification_type']]
         ordering = ['user', 'notification_type']
-    
+
     def __str__(self):
         return f"{self.user.email} - {self.notification_type}"
-    
+
     def is_channel_enabled(self, channel):
         """Check if channel is enabled for this notification type"""
         return self.channel_preferences.get(channel, True)
@@ -245,54 +245,54 @@ class NotificationTemplate(TenantModel):
     """
     Reusable notification templates
     """
-    
+
     # Core fields
     name = models.CharField(max_length=255)
     notification_type = models.CharField(
         max_length=50,
         choices=NotificationType.choices
     )
-    
+
     # Template content
     title_template = models.CharField(max_length=255)
     message_template = models.TextField()
-    
+
     # Channel-specific templates
     email_subject_template = models.CharField(max_length=255, blank=True)
     email_body_template = models.TextField(blank=True)
     push_title_template = models.CharField(max_length=255, blank=True)
     push_body_template = models.TextField(blank=True)
     sms_template = models.TextField(blank=True)
-    
+
     # Variables documentation
     variables = models.JSONField(
         default=dict,
         help_text="Available variables and their descriptions"
     )
-    
+
     # Status
     is_active = models.BooleanField(default=True)
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'notifications_template'
         unique_together = [['store', 'notification_type', 'name']]
         ordering = ['notification_type', 'name']
-    
+
     def __str__(self):
         return f"{self.name} - {self.notification_type}"
-    
+
     def render(self, context):
         """Render template with context variables"""
         from django.template import Template, Context
-        
+
         def render_template(template_string):
             template = Template(template_string)
             return template.render(Context(context))
-        
+
         return {
             'title': render_template(self.title_template),
             'message': render_template(self.message_template),
@@ -327,14 +327,14 @@ class NotificationViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     filterset_fields = ['status', 'notification_type', 'user']
     search_fields = ['title', 'message']
     ordering_fields = ['created_at', 'title']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Mark as Read",
         description="Mark notification as read",
@@ -345,10 +345,10 @@ class NotificationViewSet(TenantViewSet):
         """Mark notification as read"""
         notification = self.get_object()
         notification.mark_as_read()
-        
+
         serializer = self.get_serializer(notification)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Resend Notification",
         description="Resend failed notification",
@@ -358,10 +358,10 @@ class NotificationViewSet(TenantViewSet):
     def resend(self, request, pk=None):
         """Resend notification"""
         notification = self.get_object()
-        
+
         from services.notification import NotificationService
         NotificationService.send_notification(notification)
-        
+
         serializer = self.get_serializer(notification)
         return Response(serializer.data, status=status.HTTP_200_OK)
 ```
@@ -374,7 +374,7 @@ class NotificationPreferenceViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    
+
     queryset = NotificationPreference.objects.all()
     serializer_class = NotificationPreferenceSerializer
     filterset_fields = ['notification_type']
@@ -400,7 +400,7 @@ logger = logging.getLogger(__name__)
 
 class NotificationService:
     """Shared notification management service"""
-    
+
     @staticmethod
     @transaction.atomic
     def create_notification(
@@ -417,7 +417,7 @@ class NotificationService:
         """
         if channels is None:
             channels = ['in_app']
-        
+
         notification = Notification.objects.create(
             store=store,
             notification_type=notification_type,
@@ -427,13 +427,13 @@ class NotificationService:
             channels=channels,
             metadata=metadata or {}
         )
-        
+
         # Trigger async sending
         from .tasks import send_notification
         send_notification.delay(notification.id)
-        
+
         return notification
-    
+
     @staticmethod
     def send_notification(notification):
         """
@@ -446,7 +446,7 @@ class NotificationService:
                 user=notification.user,
                 notification_type=notification.notification_type
             ).first()
-            
+
             if preferences:
                 # Filter channels based on preferences
                 enabled_channels = [
@@ -455,22 +455,22 @@ class NotificationService:
                 ]
                 notification.channels = enabled_channels
                 notification.save(update_fields=['channels'])
-        
+
         # Send via each channel
         for channel in notification.channels:
             try:
                 NotificationService._send_via_channel(notification, channel)
             except Exception as e:
                 logger.error(f"Failed to send notification via {channel}: {e}")
-        
+
         # Update status
         notification.status = 'sent'
         notification.delivery_attempts += 1
         notification.last_attempt_at = timezone.now()
         notification.save(update_fields=['status', 'delivery_attempts', 'last_attempt_at'])
-        
+
         return notification
-    
+
     @staticmethod
     def _send_via_channel(notification, channel):
         """Send notification via specific channel"""
@@ -486,17 +486,17 @@ class NotificationService:
         elif channel == 'sms':
             from .channels.sms import SMSChannel
             SMSChannel.send(notification)
-    
+
     @staticmethod
     def get_user_notifications(user, status=None, limit=50):
         """Get notifications for a user"""
         queryset = Notification.objects.filter(user=user)
-        
+
         if status:
             queryset = queryset.filter(status=status)
-        
+
         return queryset.order_by('-created_at')[:limit]
-    
+
     @staticmethod
     def get_unread_count(user):
         """Get unread notification count for user"""
@@ -504,7 +504,7 @@ class NotificationService:
             user=user,
             status='pending'
         ).count()
-    
+
     @staticmethod
     def mark_all_as_read(user):
         """Mark all user notifications as read"""
@@ -512,7 +512,7 @@ class NotificationService:
             user=user,
             status='pending'
         ).update(status='read', read_at=timezone.now())
-        
+
         return count
 ```
 
@@ -527,13 +527,13 @@ from abc import ABC, abstractmethod
 
 class BaseChannel(ABC):
     """Base channel class"""
-    
+
     @staticmethod
     @abstractmethod
     def send(notification):
         """Send notification via this channel"""
         pass
-    
+
     @staticmethod
     @abstractmethod
     def validate_config(notification):
@@ -549,20 +549,20 @@ from services.smtp import SMTPService
 
 class EmailChannel(BaseChannel):
     """Email notification channel"""
-    
+
     @staticmethod
     def send(notification):
         """Send notification via email"""
         if not notification.user or not notification.user.email:
             logger.warning(f"No email for notification #{notification.id}")
             return
-        
+
         # Get or create email template
         template = NotificationTemplate.objects.filter(
             store=notification.store,
             notification_type=notification.notification_type
         ).first()
-        
+
         if template:
             rendered = template.render(notification.metadata)
             subject = rendered.get('email_subject', notification.title)
@@ -570,7 +570,7 @@ class EmailChannel(BaseChannel):
         else:
             subject = notification.title
             body = notification.message
-        
+
         # Send via SMTP service
         SMTPService.send_template_email(
             template_name='notification',
@@ -580,9 +580,9 @@ class EmailChannel(BaseChannel):
             text_content=notification.message,
             store=notification.store
         )
-        
+
         logger.info(f"Email notification sent to {notification.user.email}")
-    
+
     @staticmethod
     def validate_config(notification):
         """Validate email configuration"""
@@ -596,7 +596,7 @@ from .base import BaseChannel
 
 class InAppChannel(BaseChannel):
     """In-app notification channel"""
-    
+
     @staticmethod
     def send(notification):
         """Store notification for in-app display"""
@@ -605,9 +605,9 @@ class InAppChannel(BaseChannel):
         notification.status = 'delivered'
         notification.delivered_at = timezone.now()
         notification.save(update_fields=['status', 'delivered_at'])
-        
+
         logger.info(f"In-app notification #{notification.id} delivered")
-    
+
     @staticmethod
     def validate_config(notification):
         """Validate in-app configuration"""
@@ -621,7 +621,7 @@ from .base import BaseChannel
 
 class PushChannel(BaseChannel):
     """Push notification channel"""
-    
+
     @staticmethod
     def send(notification):
         """Send notification via push"""
@@ -631,17 +631,17 @@ class PushChannel(BaseChannel):
             user=notification.user,
             is_active=True
         )
-        
+
         if not tokens.exists():
             logger.warning(f"No push tokens for user {notification.user.email}")
             return
-        
+
         # Get template
         template = NotificationTemplate.objects.filter(
             store=notification.store,
             notification_type=notification.notification_type
         ).first()
-        
+
         if template:
             rendered = template.render(notification.metadata)
             title = rendered.get('push_title', notification.title)
@@ -649,13 +649,13 @@ class PushChannel(BaseChannel):
         else:
             title = notification.title
             body = notification.message
-        
+
         # Send via FCM/APNs (implementation depends on provider)
         # This is a placeholder for actual push service integration
         for token in tokens:
             # Send push notification
             logger.info(f"Push notification sent to {token.token}")
-    
+
     @staticmethod
     def validate_config(notification):
         """Validate push configuration"""
@@ -673,30 +673,30 @@ from .base import BaseChannel
 
 class SMSChannel(BaseChannel):
     """SMS notification channel"""
-    
+
     @staticmethod
     def send(notification):
         """Send notification via SMS"""
         if not notification.user or not notification.user.phone:
             logger.warning(f"No phone number for notification #{notification.id}")
             return
-        
+
         # Get template
         template = NotificationTemplate.objects.filter(
             store=notification.store,
             notification_type=notification.notification_type
         ).first()
-        
+
         if template:
             rendered = template.render(notification.metadata)
             message = rendered.get('sms', notification.message)
         else:
             message = notification.message
-        
+
         # Send via SMS service (implementation depends on provider)
         # This is a placeholder for actual SMS service integration
         logger.info(f"SMS notification sent to {notification.user.phone}")
-    
+
     @staticmethod
     def validate_config(notification):
         """Validate SMS configuration"""
@@ -722,20 +722,20 @@ def send_notification(self, notification_id):
     """
     from .models import Notification
     from .services import NotificationService
-    
+
     try:
         notification = Notification.objects.get(id=notification_id)
         result = NotificationService.send_notification(notification)
-        
+
         return {
             'notification_id': notification_id,
             'status': result.status
         }
-        
+
     except Notification.DoesNotExist:
         logger.error(f"Notification #{notification_id} not found")
         raise
-        
+
     except Exception as exc:
         logger.error(f"Notification sending failed: {exc}")
         raise self.retry(exc=exc, countdown=60)
@@ -747,13 +747,13 @@ def cleanup_old_notifications(days=90):
     """
     from django.utils import timezone
     from .models import Notification
-    
+
     cutoff = timezone.now() - timezone.timedelta(days=days)
     deleted_count = Notification.objects.filter(
         created_at__lt=cutoff,
         status='read'
     ).delete()[0]
-    
+
     logger.info(f"Cleaned up {deleted_count} old notifications")
     return deleted_count
 
@@ -764,12 +764,12 @@ def send_digest_notifications():
     """
     from .models import Notification, NotificationPreference
     from django.utils import timezone
-    
+
     # Get users with digest enabled
     preferences = NotificationPreference.objects.filter(
         digest_enabled=True
     ).select_related('user')
-    
+
     for preference in preferences:
         # Get pending notifications
         cutoff = timezone.now() - timezone.timedelta(hours=24)
@@ -779,7 +779,7 @@ def send_digest_notifications():
             status='pending',
             created_at__gte=cutoff
         )
-        
+
         if notifications.exists():
             # Create digest notification
             NotificationService.create_notification(
@@ -791,10 +791,10 @@ def send_digest_notifications():
                 channels=['email'],
                 metadata={'notification_count': notifications.count()}
             )
-            
+
             # Mark as delivered
             notifications.update(status='delivered', delivered_at=timezone.now())
-    
+
     logger.info("Digest notifications sent")
 ```
 
@@ -853,7 +853,7 @@ class NotificationServiceTest(TestCase):
             email='test@example.com',
             password='password'
         )
-    
+
     def test_create_notification(self):
         """Test notification creation"""
         notification = NotificationService.create_notification(
@@ -863,11 +863,11 @@ class NotificationServiceTest(TestCase):
             message='Your order has been created',
             user=self.user
         )
-        
+
         self.assertEqual(notification.notification_type, 'order.created')
         self.assertEqual(notification.user, self.user)
         self.assertEqual(notification.status, 'pending')
-    
+
     def test_mark_as_read(self):
         """Test marking notification as read"""
         notification = Notification.objects.create(
@@ -877,9 +877,9 @@ class NotificationServiceTest(TestCase):
             message='Your order has been created',
             user=self.user
         )
-        
+
         notification.mark_as_read()
-        
+
         self.assertEqual(notification.status, 'read')
         self.assertIsNotNone(notification.read_at)
 ```

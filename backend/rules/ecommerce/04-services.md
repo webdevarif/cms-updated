@@ -8,7 +8,7 @@
 ```python
 class ProductService:
     """Business logic for product management"""
-    
+
     @staticmethod
     def get_product(store, product_id):
         """
@@ -16,12 +16,12 @@ class ProductService:
         Uses cache infrastructure from @backend/rules/cache.md
         """
         from apps.cache.services import CacheService
-        
+
         # Try cache first - Uses infrastructure
         cached = CacheService.get_json(store, 'ecommerce', 'product', product_id)
         if cached:
             return cached
-        
+
         # Fetch from database
         try:
             product = Product.objects.select_related('category').get(
@@ -29,7 +29,7 @@ class ProductService:
             )
         except Product.DoesNotExist:
             return None
-        
+
         # Cache the result - Uses infrastructure
         data = {
             'id': product.id,
@@ -42,9 +42,9 @@ class ProductService:
             'category': product.category.name if product.category else None,
         }
         CacheService.cache_json(store, 'ecommerce', 'product', product.id, data, timeout=3600)
-        
+
         return data
-    
+
     @staticmethod
     def search_products(store, query, filters=None, page=1, page_size=20):
         """
@@ -52,7 +52,7 @@ class ProductService:
         Uses search infrastructure from @backend/rules/search.md
         """
         from apps.search.services import SearchService
-        
+
         # Use infrastructure search service
         return SearchService.search(
             store=store,
@@ -62,7 +62,7 @@ class ProductService:
             page=page,
             page_size=page_size
         )
-    
+
     @staticmethod
     def create_product(store, user, data):
         """Create new product with variants and categories"""
@@ -84,7 +84,7 @@ class ProductService:
             seo_description=data.get('seo_description', ''),
             created_by=user
         )
-        
+
         # Create variants
         if 'variants' in data:
             for variant_data in data['variants']:
@@ -106,11 +106,11 @@ class ProductService:
                     option2=variant_data.get('option2', ''),
                     option3=variant_data.get('option3', '')
                 )
-        
+
         # Add categories
         if 'category_ids' in data:
             product.categories.set(data['category_ids'])
-        
+
         # Create inventory records
         for variant in product.variants.all():
             Inventory.objects.get_or_create(
@@ -119,7 +119,7 @@ class ProductService:
                 variant=variant,
                 defaults={'quantity': variant.inventory_quantity}
             )
-        
+
         # Log creation
         log_event_async(
             user=user,
@@ -129,21 +129,21 @@ class ProductService:
             object_id=product.id,
             details={'title': product.title, 'sku': product.sku}
         )
-        
+
         return product
-    
+
     @staticmethod
     def update_product(product, user, data):
         """Update product and related data"""
         old_status = product.status
-        
+
         # Update product fields
         for field, value in data.items():
             if field not in ['variants', 'category_ids']:
                 setattr(product, field, value)
-        
+
         product.save()
-        
+
         # Update variants
         if 'variants' in data:
             for variant_data in data['variants']:
@@ -160,11 +160,11 @@ class ProductService:
                         product=product,
                         **variant_data
                     )
-        
+
         # Update categories
         if 'category_ids' in data:
             product.categories.set(data['category_ids'])
-        
+
         # Log status change
         if 'status' in data and old_status != data['status']:
             log_event_async(
@@ -178,9 +178,9 @@ class ProductService:
                     'new_status': data['status']
                 }
             )
-        
+
         return product
-    
+
     @staticmethod
     def duplicate_product(product, user):
         """Duplicate product with variants"""
@@ -202,7 +202,7 @@ class ProductService:
             seo_description=product.seo_description,
             created_by=user
         )
-        
+
         # Duplicate variants
         for variant in product.variants.all():
             ProductVariant.objects.create(
@@ -223,10 +223,10 @@ class ProductService:
                 option2=variant.option2,
                 option3=variant.option3
             )
-        
+
         # Copy categories
         new_product.categories.set(product.categories.all())
-        
+
         # Log duplication
         log_event_async(
             user=user,
@@ -239,15 +239,15 @@ class ProductService:
                 'original_title': product.title
             }
         )
-        
+
         return new_product
-    
+
     @staticmethod
     def delete_product(product, user):
         """Soft delete product"""
         product.status = 'deleted'
         product.save()
-        
+
         # Log deletion
         log_event_async(
             user=user,
@@ -265,7 +265,7 @@ class ProductService:
 ```python
 class CartService:
     """Business logic for shopping cart management"""
-    
+
     @staticmethod
     def get_cart(store, user=None, session_key=None):
         """Get or create cart for user or session"""
@@ -284,9 +284,9 @@ class CartService:
             )
         else:
             cart = None
-        
+
         return cart
-    
+
     @staticmethod
     def add_item(cart, product, variant=None, quantity=1):
         """Add item to cart with inventory check"""
@@ -302,11 +302,11 @@ class CartService:
                 product=product,
                 variant__isnull=True
             ).first()
-        
+
         # Check inventory availability
         if inventory and inventory.available < quantity:
             raise ValidationError(f"Only {inventory.available} items available")
-        
+
         # Get or create cart item
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
@@ -317,23 +317,23 @@ class CartService:
                 'unit_price': variant.price if variant else product.variants.first().price
             }
         )
-        
+
         if not created:
             new_quantity = cart_item.quantity + quantity
-            
+
             # Check inventory again for additional quantity
             if inventory and inventory.available < new_quantity:
                 raise ValidationError(f"Only {inventory.available} items available")
-            
+
             cart_item.quantity = new_quantity
             cart_item.save()
-        
+
         # Reserve inventory
         if inventory:
             inventory.reserve(cart_item.quantity)
-        
+
         return cart_item
-    
+
     @staticmethod
     def update_item_quantity(cart_item, quantity):
         """Update cart item quantity with inventory check"""
@@ -344,33 +344,33 @@ class CartService:
                 product=cart_item.product,
                 variant=cart_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.release(cart_item.quantity)
-            
+
             cart_item.delete()
             return True
-        
+
         # Check inventory availability
         inventory = Inventory.objects.filter(
             store=cart_item.cart.store,
             product=cart_item.product,
             variant=cart_item.variant
         ).first()
-        
+
         if inventory and inventory.available < quantity:
             raise ValidationError(f"Only {inventory.available} items available")
-        
+
         # Update quantity and adjust reservation
         if inventory:
             inventory.release(cart_item.quantity)
             inventory.reserve(quantity)
-        
+
         cart_item.quantity = quantity
         cart_item.save()
-        
+
         return cart_item
-    
+
     @staticmethod
     def remove_item(cart_item):
         """Remove item from cart and release inventory"""
@@ -379,12 +379,12 @@ class CartService:
             product=cart_item.product,
             variant=cart_item.variant
         ).first()
-        
+
         if inventory:
             inventory.release(cart_item.quantity)
-        
+
         cart_item.delete()
-    
+
     @staticmethod
     def clear_cart(cart):
         """Clear all items from cart and release inventory"""
@@ -394,18 +394,18 @@ class CartService:
                 product=item.product,
                 variant=item.variant
             ).first()
-            
+
             if inventory:
                 inventory.release(item.quantity)
-        
+
         cart.items.all().delete()
-    
+
     @staticmethod
     def convert_to_order(cart, billing_address, shipping_address, customer_notes=''):
         """Convert cart to order"""
         if not cart.items.exists():
             raise ValidationError("Cannot create order from empty cart")
-        
+
         # Create order
         order = Order.objects.create(
             store=cart.store,
@@ -416,7 +416,7 @@ class CartService:
             customer_notes=customer_notes,
             currency=cart.currency
         )
-        
+
         # Create order items
         for cart_item in cart.items.all():
             OrderItem.objects.create(
@@ -429,11 +429,11 @@ class CartService:
                 unit_price=cart_item.unit_price,
                 total_price=cart_item.get_total()
             )
-        
+
         # Calculate totals
         order.calculate_totals()
         order.save()
-        
+
         # Reserve inventory for order
         for cart_item in cart.items.all():
             inventory = Inventory.objects.filter(
@@ -441,14 +441,14 @@ class CartService:
                 product=cart_item.product,
                 variant=cart_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.reserve(cart_item.quantity)
-        
+
         # Update cart status
         cart.status = 'converted'
         cart.save()
-        
+
         return order
 ```
 
@@ -458,19 +458,19 @@ class CartService:
 ```python
 class OrderService:
     """Business logic for order management"""
-    
+
     @staticmethod
     def create_order_from_cart(cart, billing_address, shipping_address, customer_notes=''):
         """Create order from cart"""
         return CartService.convert_to_order(
             cart, billing_address, shipping_address, customer_notes
         )
-    
+
     @staticmethod
     def update_order_status(order, new_status, user=None):
         """Update order status with validation"""
         old_status = order.status
-        
+
         # Validate status transition
         valid_transitions = {
             'pending': ['confirmed', 'cancelled'],
@@ -480,19 +480,19 @@ class OrderService:
             'delivered': [],
             'cancelled': []
         }
-        
+
         if new_status not in valid_transitions.get(old_status, []):
             raise ValidationError(f"Cannot transition from {old_status} to {new_status}")
-        
+
         order.status = new_status
         order.save()
-        
+
         # Handle inventory based on status
         if new_status == 'cancelled':
             OrderService.release_inventory(order)
         elif new_status == 'shipped':
             OrderService.deduct_inventory(order)
-        
+
         # Log status change
         log_event_async(
             user=user,
@@ -506,13 +506,13 @@ class OrderService:
                 'order_number': order.order_number
             }
         )
-        
+
         # Send notifications
         if new_status in ['confirmed', 'shipped', 'delivered', 'cancelled']:
             send_order_status_email.delay(order.id, new_status)
-        
+
         return order
-    
+
     @staticmethod
     def release_inventory(order):
         """Release reserved inventory for cancelled order"""
@@ -522,10 +522,10 @@ class OrderService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.release(order_item.quantity)
-    
+
     @staticmethod
     def deduct_inventory(order):
         """Deduct inventory for shipped order"""
@@ -535,10 +535,10 @@ class OrderService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.deduct(order_item.quantity)
-    
+
     @staticmethod
     def process_payment(order, payment_method, payment_data):
         """Process payment for order"""
@@ -547,7 +547,7 @@ class OrderService:
             payment_method=payment_method,
             amount=order.total
         )
-        
+
         # Process based on payment method
         if payment_method.type == 'stripe':
             result = process_stripe_payment(payment, payment_data)
@@ -557,12 +557,12 @@ class OrderService:
             result = {'status': 'pending'}
         else:
             result = {'status': 'failed', 'error': 'Unsupported payment method'}
-        
+
         payment.status = result.get('status', 'failed')
         payment.transaction_id = result.get('transaction_id', '')
         payment.gateway_response = result
         payment.save()
-        
+
         # Update order payment status
         if payment.status == 'completed':
             order.payment_status = 'paid'
@@ -570,7 +570,7 @@ class OrderService:
         elif payment.status == 'failed':
             order.payment_status = 'failed'
             order.save()
-        
+
         # Log payment
         log_event_async(
             user=None,
@@ -585,9 +585,9 @@ class OrderService:
                 'method': payment_method.type
             }
         )
-        
+
         return payment
-    
+
     @staticmethod
     def calculate_shipping(order, shipping_method=None):
         """Calculate shipping cost for order"""
@@ -597,10 +597,10 @@ class OrderService:
                 store=order.store,
                 is_active=True
             ).first()
-        
+
         if not shipping_method:
             return Decimal('0.00')
-        
+
         # Calculate based on shipping method rules
         if shipping_method.type == 'flat_rate':
             return shipping_method.rate
@@ -611,9 +611,9 @@ class OrderService:
             return total_weight * shipping_method.rate_per_weight
         elif shipping_method.type == 'price_based':
             return order.subtotal * (shipping_method.rate_percentage / 100)
-        
+
         return Decimal('0.00')
-    
+
     @staticmethod
     def calculate_tax(order):
         """Calculate tax for order"""
@@ -622,18 +622,18 @@ class OrderService:
             store=order.store,
             is_active=True
         )
-        
+
         total_tax = Decimal('0.00')
-        
+
         for tax_rate in tax_rates:
             if tax_rate.applies_to_shipping:
                 taxable_amount = order.subtotal + order.shipping
             else:
                 taxable_amount = order.subtotal
-            
+
             tax_amount = taxable_amount * (tax_rate.rate / 100)
             total_tax += tax_amount
-        
+
         return total_tax
 ```
 
@@ -643,7 +643,7 @@ class OrderService:
 ```python
 class CustomerService:
     """Business logic for customer management"""
-    
+
     @staticmethod
     def create_customer(user, data):
         """Create customer profile for user"""
@@ -660,7 +660,7 @@ class CustomerService:
             default_billing_address=data.get('billing_address', {}),
             default_shipping_address=data.get('shipping_address', {})
         )
-        
+
         # Log customer creation
         log_event_async(
             user=user,
@@ -670,19 +670,19 @@ class CustomerService:
             object_id=customer.id,
             details={'email': customer.email}
         )
-        
+
         return customer
-    
+
     @staticmethod
     def update_customer(customer, data):
         """Update customer profile"""
         old_email = customer.email
-        
+
         for field, value in data.items():
             setattr(customer, field, value)
-        
+
         customer.save()
-        
+
         # Log email change
         if 'email' in data and old_email != data['email']:
             log_event_async(
@@ -693,28 +693,28 @@ class CustomerService:
                 object_id=customer.id,
                 details={'old_email': old_email, 'new_email': customer.email}
             )
-        
+
         return customer
-    
+
     @staticmethod
     def merge_customers(target_customer, source_customer):
         """Merge source customer into target customer"""
         # Merge orders
         Order.objects.filter(customer=source_customer).update(customer=target_customer)
-        
+
         # Merge carts
         Cart.objects.filter(customer=source_customer).update(customer=target_customer)
-        
+
         # Merge addresses
         if not target_customer.default_billing_address:
             target_customer.default_billing_address = source_customer.default_billing_address
-        
+
         if not target_customer.default_shipping_address:
             target_customer.default_shipping_address = source_customer.default_shipping_address
-        
+
         # Update statistics
         target_customer.update_statistics()
-        
+
         # Log merge
         log_event_async(
             user=target_customer.user,
@@ -727,12 +727,12 @@ class CustomerService:
                 'source_email': source_customer.email
             }
         )
-        
+
         # Delete source customer
         source_customer.delete()
-        
+
         return target_customer
-    
+
     @staticmethod
     def update_customer_statistics(customer):
         """Update customer order statistics"""
@@ -752,7 +752,7 @@ class CustomerService:
 ```python
 class CollectionService:
     """Business logic for collection management"""
-    
+
     @staticmethod
     def create_collection(store, user, data):
         """Create new collection"""
@@ -766,12 +766,12 @@ class CollectionService:
             sort_order=data.get('sort_order', 'manual'),
             created_by=user
         )
-        
+
         # Add image if provided
         if 'image_id' in data:
             collection.image_id = data['image_id']
             collection.save()
-        
+
         # Add conditions for smart collections
         if collection.is_smart and 'conditions' in data:
             for condition_data in data['conditions']:
@@ -782,7 +782,7 @@ class CollectionService:
                     value=condition_data['value'],
                     position=condition_data.get('position', 0)
                 )
-        
+
         # Add products for manual collections
         if not collection.is_smart and 'product_ids' in data:
             products = Product.objects.filter(
@@ -790,7 +790,7 @@ class CollectionService:
                 store=store
             )
             collection.products.add(*products)
-        
+
         # Log creation
         log_event_async(
             user=user,
@@ -800,14 +800,14 @@ class CollectionService:
             object_id=collection.id,
             details={'title': collection.title, 'is_smart': collection.is_smart}
         )
-        
+
         return collection
-    
+
     @staticmethod
     def get_smart_products(collection):
         """Get products for smart collection based on conditions"""
         queryset = Product.objects.filter(store=collection.store, status='published')
-        
+
         for condition in collection.conditions.all():
             if condition.field == 'title':
                 if condition.operator == 'contains':
@@ -816,7 +816,7 @@ class CollectionService:
                     queryset = queryset.filter(title__iexact=condition.value)
                 elif condition.operator == 'starts_with':
                     queryset = queryset.filter(title__istartswith=condition.value)
-            
+
             elif condition.field == 'price':
                 if condition.operator == 'greater_than':
                     queryset = queryset.filter(variants__price__gt=condition.value)
@@ -827,13 +827,13 @@ class CollectionService:
                         variants__price__gte=condition.value[0],
                         variants__price__lte=condition.value[1]
                     )
-            
+
             elif condition.field == 'category':
                 queryset = queryset.filter(categories__id=condition.value)
-            
+
             elif condition.field == 'tag':
                 queryset = queryset.filter(tags__contains=condition.value)
-        
+
         # Apply sorting
         if collection.sort_order == 'price_low_high':
             queryset = queryset.order_by('variants__price')
@@ -843,20 +843,20 @@ class CollectionService:
             queryset = queryset.order_by('-created_at')
         elif collection.sort_order == 'title':
             queryset = queryset.order_by('title')
-        
+
         return queryset.distinct()
-    
+
     @staticmethod
     def update_collection(collection, data):
         """Update collection"""
         old_is_smart = collection.is_smart
-        
+
         for field, value in data.items():
             if field not in ['conditions', 'product_ids']:
                 setattr(collection, field, value)
-        
+
         collection.save()
-        
+
         # Update conditions for smart collections
         if collection.is_smart and 'conditions' in data:
             collection.conditions.all().delete()
@@ -865,11 +865,11 @@ class CollectionService:
                     collection=collection,
                     **condition_data
                 )
-        
+
         # Update products for manual collections
         if not collection.is_smart and 'product_ids' in data:
             collection.products.set(data['product_ids'])
-        
+
         return collection
 ```
 
@@ -879,7 +879,7 @@ class CollectionService:
 ```python
 class CouponService:
     """Business logic for coupon management"""
-    
+
     @staticmethod
     def create_coupon(store, user, data):
         """Create new coupon"""
@@ -897,7 +897,7 @@ class CouponService:
             is_active=data.get('is_active', True),
             created_by=user
         )
-        
+
         # Log creation
         log_event_async(
             user=user,
@@ -911,37 +911,37 @@ class CouponService:
                 'value': str(coupon.value)
             }
         )
-        
+
         return coupon
-    
+
     @staticmethod
     def validate_coupon(coupon, customer=None, cart_total=0):
         """Validate coupon for use"""
         return coupon.is_valid(customer, cart_total)
-    
+
     @staticmethod
     def apply_coupon(coupon, order, customer=None):
         """Apply coupon to order"""
         is_valid, message = coupon.is_valid(customer, order.subtotal)
-        
+
         if not is_valid:
             raise ValidationError(message)
-        
+
         # Calculate discount
         discount_amount = coupon.apply_discount(order.subtotal)
-        
+
         # Update order discount
         order.discount = discount_amount
         order.calculate_totals()
         order.save()
-        
+
         # Add coupon to order
         order.coupons.add(coupon)
-        
+
         # Increment usage count
         coupon.used_count += 1
         coupon.save()
-        
+
         # Log coupon usage
         log_event_async(
             user=customer.user if customer else None,
@@ -955,16 +955,16 @@ class CouponService:
                 'discount_amount': str(discount_amount)
             }
         )
-        
+
         return discount_amount
-    
+
     @staticmethod
     def generate_bulk_coupons(store, user, template_data, count):
         """Generate multiple coupons from template"""
         coupons = []
         prefix = template_data.get('prefix', '')
         base_code = template_data['code']
-        
+
         for i in range(count):
             code = f"{prefix}{base_code}_{i+1}"
             coupon = Coupon.objects.create(
@@ -982,7 +982,7 @@ class CouponService:
                 created_by=user
             )
             coupons.append(coupon)
-        
+
         # Log bulk generation
         log_event_async(
             user=user,
@@ -995,7 +995,7 @@ class CouponService:
                 'prefix': prefix
             }
         )
-        
+
         return coupons
 ```
 
@@ -1005,7 +1005,7 @@ class CouponService:
 ```python
 class InventoryService:
     """Business logic for inventory management"""
-    
+
     @staticmethod
     def adjust_inventory(store, product, variant, quantity, transaction_type, user=None, notes=''):
         """Adjust inventory levels"""
@@ -1015,9 +1015,9 @@ class InventoryService:
             variant=variant,
             defaults={'quantity': 0}
         )
-        
+
         old_quantity = inventory.quantity
-        
+
         if transaction_type == 'add':
             inventory.quantity += quantity
         elif transaction_type == 'subtract':
@@ -1026,9 +1026,9 @@ class InventoryService:
             inventory.quantity = quantity
         else:
             raise ValidationError("Invalid transaction type")
-        
+
         inventory.save()
-        
+
         # Create transaction record
         InventoryTransaction.objects.create(
             inventory=inventory,
@@ -1037,7 +1037,7 @@ class InventoryService:
             notes=notes,
             created_by=user
         )
-        
+
         # Log inventory change
         log_event_async(
             user=user,
@@ -1054,9 +1054,9 @@ class InventoryService:
                 'quantity_change': quantity
             }
         )
-        
+
         return inventory
-    
+
     @staticmethod
     def reserve_inventory(order):
         """Reserve inventory for order"""
@@ -1066,13 +1066,13 @@ class InventoryService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 if not inventory.reserve(order_item.quantity):
                     raise ValidationError(
                         f"Insufficient inventory for {order_item.product.title}"
                     )
-    
+
     @staticmethod
     def release_inventory(order):
         """Release reserved inventory for cancelled order"""
@@ -1082,10 +1082,10 @@ class InventoryService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 inventory.release(order_item.quantity)
-    
+
     @staticmethod
     def deduct_inventory(order):
         """Deduct inventory for shipped order"""
@@ -1095,13 +1095,13 @@ class InventoryService:
                 product=order_item.product,
                 variant=order_item.variant
             ).first()
-            
+
             if inventory:
                 if not inventory.deduct(order_item.quantity):
                     raise ValidationError(
                         f"Insufficient inventory for {order_item.product.title}"
                     )
-    
+
     @staticmethod
     def get_low_stock_alerts(store, threshold=10):
         """Get products with low inventory"""
@@ -1109,9 +1109,9 @@ class InventoryService:
             store=store,
             available__lte=threshold
         ).select_related('product', 'variant')
-        
+
         return inventories
-    
+
     @staticmethod
     def sync_variant_inventory(variant):
         """Sync inventory between variant and inventory records"""
@@ -1120,7 +1120,7 @@ class InventoryService:
             product=variant.product,
             variant=variant
         ).first()
-        
+
         if inventory:
             variant.inventory_quantity = inventory.quantity
             variant.save()

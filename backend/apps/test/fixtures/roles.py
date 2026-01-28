@@ -10,28 +10,18 @@ User = get_user_model()
 @pytest.fixture
 def staff_user(store):
     """Create staff user fixture"""
-    from apps.accounts.models import StoreMember, Role
-    
-    user = User.objects.create_user(
-        email='staff@example.com',
-        password='testpass123'
-    )
-    
+    from apps.accounts.models import Role, StoreMember
+
+    user = User.objects.create_user(email="staff@example.com", password="testpass123")
+
     # Create staff role
     role = Role.objects.create(
-        store=store,
-        slug='staff',
-        name='Staff',
-        permissions=['content.read', 'ecommerce.read']
+        store=store, slug="staff", name="Staff", permissions=["content.read", "ecommerce.read"]
     )
-    
+
     # Assign role to user
-    StoreMember.objects.create(
-        store=store,
-        user=user,
-        role=role
-    )
-    
+    StoreMember.objects.create(store=store, user=user, role=role)
+
     return user
 
 
@@ -39,6 +29,7 @@ def staff_user(store):
 def anonymous_client():
     """Create anonymous APIClient fixture"""
     from rest_framework.test import APIClient
+
     return APIClient()
 
 
@@ -46,6 +37,7 @@ def anonymous_client():
 def authenticated_client(admin_user):
     """Create authenticated APIClient fixture"""
     from rest_framework.test import APIClient
+
     client = APIClient()
     client.force_authenticate(user=admin_user)
     return client

@@ -2,12 +2,13 @@
 Liquid-like template rendering service for themes.
 Provides template rendering with variable substitution and control structures.
 """
-import re
-from django.template import Template, Context, TemplateSyntaxError
-from django.template.loader import get_template
-from django.conf import settings
 import json
 import logging
+import re
+
+from django.conf import settings
+from django.template import Context, Template, TemplateSyntaxError
+from django.template.loader import get_template
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +23,15 @@ class LiquidTemplateRenderer:
     """
 
     # Liquid-style variable pattern: {{ variable }} or {{ variable | filter }}
-    VARIABLE_PATTERN = re.compile(r'\{\{\s*([^}]+?)\s*\}\}')
+    VARIABLE_PATTERN = re.compile(r"\{\{\s*([^}]+?)\s*\}\}")
 
     # Liquid-style tag patterns
-    IF_PATTERN = re.compile(r'\{\%\s*if\s+(.+?)\s*\%\}')
-    ELSE_PATTERN = re.compile(r'\{\%\s*else\s*\%\}')
-    ENDIF_PATTERN = re.compile(r'\{\%\s*endif\s*\%\}')
-    FOR_PATTERN = re.compile(r'\{\%\s*for\s+(.+?)\s+in\s+(.+?)\s*\%\}')
-    ENDFOR_PATTERN = re.compile(r'\{\%\s*endfor\s*\%\}')
-    COMMENT_PATTERN = re.compile(r'\{\#\s*(.+?)\s*\#\}')
+    IF_PATTERN = re.compile(r"\{\%\s*if\s+(.+?)\s*\%\}")
+    ELSE_PATTERN = re.compile(r"\{\%\s*else\s*\%\}")
+    ENDIF_PATTERN = re.compile(r"\{\%\s*endif\s*\%\}")
+    FOR_PATTERN = re.compile(r"\{\%\s*for\s+(.+?)\s+in\s+(.+?)\s*\%\}")
+    ENDFOR_PATTERN = re.compile(r"\{\%\s*endfor\s*\%\}")
+    COMMENT_PATTERN = re.compile(r"\{\#\s*(.+?)\s*\#\}")
 
     @staticmethod
     def render_template(template_content, context_data):
@@ -74,33 +75,17 @@ class LiquidTemplateRenderer:
         django_content = liquid_content
 
         # Convert Liquid comments to Django comments
-        django_content = LiquidTemplateRenderer.COMMENT_PATTERN.sub(
-            r'{# \1 #}',
-            django_content
-        )
+        django_content = LiquidTemplateRenderer.COMMENT_PATTERN.sub(r"{# \1 #}", django_content)
 
         # Convert Liquid if/else/endif to Django syntax
-        django_content = LiquidTemplateRenderer.ENDIF_PATTERN.sub(
-            r'{% endif %}',
-            django_content
-        )
-        django_content = LiquidTemplateRenderer.ELSE_PATTERN.sub(
-            r'{% else %}',
-            django_content
-        )
-        django_content = LiquidTemplateRenderer.IF_PATTERN.sub(
-            r'{% if \1 %}',
-            django_content
-        )
+        django_content = LiquidTemplateRenderer.ENDIF_PATTERN.sub(r"{% endif %}", django_content)
+        django_content = LiquidTemplateRenderer.ELSE_PATTERN.sub(r"{% else %}", django_content)
+        django_content = LiquidTemplateRenderer.IF_PATTERN.sub(r"{% if \1 %}", django_content)
 
         # Convert Liquid for/endfor to Django syntax
-        django_content = LiquidTemplateRenderer.ENDFOR_PATTERN.sub(
-            r'{% endfor %}',
-            django_content
-        )
+        django_content = LiquidTemplateRenderer.ENDFOR_PATTERN.sub(r"{% endfor %}", django_content)
         django_content = LiquidTemplateRenderer.FOR_PATTERN.sub(
-            r'{% for \1 in \2 %}',
-            django_content
+            r"{% for \1 in \2 %}", django_content
         )
 
         return django_content
@@ -143,7 +128,7 @@ class LiquidTemplateRenderer:
 
         for match in matches:
             # Extract variable name (before any filters)
-            var_name = match.split('|')[0].strip()
+            var_name = match.split("|")[0].strip()
             if var_name:
                 variables.add(var_name)
 
@@ -171,22 +156,26 @@ class ThemeRenderingService:
         """
         # Add store-specific context if available
         if store:
-            context.update({
-                'store': {
-                    'id': store.id,
-                    'name': store.name,
-                    'slug': store.slug,
-                    'domain': getattr(store, 'domain', ''),
+            context.update(
+                {
+                    "store": {
+                        "id": store.id,
+                        "name": store.name,
+                        "slug": store.slug,
+                        "domain": getattr(store, "domain", ""),
+                    }
                 }
-            })
+            )
 
         # Add global context
-        context.update({
-            'settings': {
-                'site_name': getattr(settings, 'SITE_NAME', 'My Store'),
-                'site_url': getattr(settings, 'SITE_URL', 'http://localhost'),
+        context.update(
+            {
+                "settings": {
+                    "site_name": getattr(settings, "SITE_NAME", "My Store"),
+                    "site_url": getattr(settings, "SITE_URL", "http://localhost"),
+                }
             }
-        })
+        )
 
         return LiquidTemplateRenderer.render_template(template_obj.content, context)
 
@@ -227,30 +216,29 @@ class ThemeRenderingService:
             else:
                 # Render layout with page data
                 layout_context = {
-                    'page': page_data,
-                    'theme': {
-                        'id': theme.id,
-                        'name': theme.name,
-                        'version': theme.version,
-                    }
+                    "page": page_data,
+                    "theme": {
+                        "id": theme.id,
+                        "name": theme.name,
+                        "version": theme.version,
+                    },
                 }
 
                 if store:
-                    layout_context['store'] = {
-                        'id': store.id,
-                        'name': store.name,
-                        'slug': store.slug,
+                    layout_context["store"] = {
+                        "id": store.id,
+                        "name": store.name,
+                        "slug": store.slug,
                     }
 
                 if request:
-                    layout_context['request'] = {
-                        'path': request.path,
-                        'user': request.user if request.user.is_authenticated else None,
+                    layout_context["request"] = {
+                        "path": request.path,
+                        "user": request.user if request.user.is_authenticated else None,
                     }
 
                 html_content = LiquidTemplateRenderer.render_template(
-                    layout.content,
-                    layout_context
+                    layout.content, layout_context
                 )
 
             # Get theme assets
@@ -260,26 +248,26 @@ class ThemeRenderingService:
             meta_tags = ThemeRenderingService.generate_meta_tags(page_data)
 
             return {
-                'html': html_content,
-                'css_files': css_files,
-                'js_files': js_files,
-                'meta_tags': meta_tags,
+                "html": html_content,
+                "css_files": css_files,
+                "js_files": js_files,
+                "meta_tags": meta_tags,
             }
 
         except Exception as e:
             logger.error(f"Page rendering error: {str(e)}")
             # Return basic HTML as fallback
             return {
-                'html': f"""
+                "html": f"""
                 <!DOCTYPE html>
                 <html>
                 <head><title>Error</title></head>
                 <body><h1>Rendering Error</h1><p>{str(e)}</p></body>
                 </html>
                 """,
-                'css_files': [],
-                'js_files': [],
-                'meta_tags': '',
+                "css_files": [],
+                "js_files": [],
+                "meta_tags": "",
             }
 
     @staticmethod
@@ -294,15 +282,15 @@ class ThemeRenderingService:
             dict: Asset URLs organized by type
         """
         assets = {
-            'css_files': [],
-            'js_files': [],
-            'images': [],
-            'fonts': [],
+            "css_files": [],
+            "js_files": [],
+            "images": [],
+            "fonts": [],
         }
 
         # Get CSS files from style classes
-        css_files = theme.style_classes.filter(is_active=True).values_list('css_file', flat=True)
-        assets['css_files'].extend([f for f in css_files if f])
+        css_files = theme.style_classes.filter(is_active=True).values_list("css_file", flat=True)
+        assets["css_files"].extend([f for f in css_files if f])
 
         # Get JS files (if theme has custom JS)
         # This would be extended based on theme model structure
@@ -355,26 +343,28 @@ class ThemeRenderingService:
         meta_tags = []
 
         # Title
-        if page_data.get('title'):
+        if page_data.get("title"):
             meta_tags.append(f'<title>{page_data["title"]}</title>')
 
         # Description
-        if page_data.get('description'):
+        if page_data.get("description"):
             meta_tags.append(f'<meta name="description" content="{page_data["description"]}">')
 
         # Keywords
-        if page_data.get('keywords'):
+        if page_data.get("keywords"):
             meta_tags.append(f'<meta name="keywords" content="{page_data["keywords"]}">')
 
         # Open Graph tags
-        if page_data.get('og_title'):
+        if page_data.get("og_title"):
             meta_tags.append(f'<meta property="og:title" content="{page_data["og_title"]}">')
-        if page_data.get('og_description'):
-            meta_tags.append(f'<meta property="og:description" content="{page_data["og_description"]}">')
-        if page_data.get('og_image'):
+        if page_data.get("og_description"):
+            meta_tags.append(
+                f'<meta property="og:description" content="{page_data["og_description"]}">'
+            )
+        if page_data.get("og_image"):
             meta_tags.append(f'<meta property="og:image" content="{page_data["og_image"]}">')
 
-        return '\n'.join(meta_tags)
+        return "\n".join(meta_tags)
 
     @staticmethod
     def validate_template_syntax(template_content):

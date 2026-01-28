@@ -1,11 +1,13 @@
 """
 Signals for translations module.
 """
-from django.db.models.signals import post_save, post_delete
+import logging
+
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+
 # from .models import Translation, TranslationKey
 from .tasks import invalidate_translation_on_update
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +18,7 @@ logger = logging.getLogger(__name__)
 #     # The cache invalidation is handled in the model's save method
 #     # This signal can be used for additional logic if needed
 #     logger.info(f"Translation saved: {instance.key} for language {instance.language.code}")
-#     
+#
 #     # Add any additional post-save logic here
 #     # For example: notify translation services, update search indexes, etc.
 
@@ -27,13 +29,13 @@ logger = logging.getLogger(__name__)
 #     try:
 #         from django.core.cache import caches
 #         cache = caches['translations']
-#         
+#
 #         # Invalidate specific translation cache
 #         cache_key = f"trans:{instance.store.id if instance.store else 'global'}:{instance.language.code}:{instance.key.key}"
 #         cache.delete(cache_key)
-#         
+#
 #         logger.info(f"Invalidated cache for deleted translation {instance.id}")
-#         
+#
 #     except Exception as exc:
 #         logger.error(f"Translation cache invalidation failed on delete: {exc}")
 

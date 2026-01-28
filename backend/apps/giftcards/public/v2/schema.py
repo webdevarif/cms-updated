@@ -2,12 +2,12 @@
 API schema definitions for Gift Cards.
 """
 from drf_spectacular.utils import (
-    extend_schema,
-    extend_schema_view,
-    OpenApiParameter,
     OpenApiExample,
+    OpenApiParameter,
     OpenApiResponse,
     OpenApiTypes,
+    extend_schema,
+    extend_schema_view,
 )
 from rest_framework import status
 
@@ -30,10 +30,10 @@ gift_card_response = {
                     "expires_at": "2024-12-31T23:59:59Z",
                     "created_at": "2023-01-01T12:00:00Z",
                     "is_expired": False,
-                    "is_redeemable": True
-                }
+                    "is_redeemable": True,
+                },
             )
-        ]
+        ],
     )
 }
 
@@ -41,32 +41,22 @@ error_response = {
     status.HTTP_400_BAD_REQUEST: OpenApiResponse(
         response=OpenApiTypes.OBJECT,
         description="Bad Request",
-        examples=[
-            OpenApiExample(
-                "Error Response",
-                value={"error": "Invalid input data"}
-            )
-        ]
+        examples=[OpenApiExample("Error Response", value={"error": "Invalid input data"})],
     ),
     status.HTTP_404_NOT_FOUND: OpenApiResponse(
         response=OpenApiTypes.OBJECT,
         description="Not Found",
-        examples=[
-            OpenApiExample(
-                "Not Found",
-                value={"error": "Gift card not found"}
-            )
-        ]
-    )
+        examples=[OpenApiExample("Not Found", value={"error": "Gift card not found"})],
+    ),
 }
 
 # Common parameters
 gift_card_code_parameter = OpenApiParameter(
-    name='code',
+    name="code",
     type=OpenApiTypes.STR,
     location=OpenApiParameter.QUERY,
-    description='Gift card code',
-    required=True
+    description="Gift card code",
+    required=True,
 )
 
 # View schemas
@@ -76,119 +66,107 @@ gift_card_list_schema = extend_schema_view(
         description="Retrieve a paginated list of gift cards with optional filtering.",
         parameters=[
             OpenApiParameter(
-                name='status',
+                name="status",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by status (active, redeemed, expired, voided)',
-                enum=['active', 'redeemed', 'expired', 'voided']
+                description="Filter by status (active, redeemed, expired, voided)",
+                enum=["active", "redeemed", "expired", "voided"],
             ),
             OpenApiParameter(
-                name='gift_card_type',
+                name="gift_card_type",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by gift card type',
-                enum=['digital', 'physical', 'promotional', 'refund', 'loyalty']
+                description="Filter by gift card type",
+                enum=["digital", "physical", "promotional", "refund", "loyalty"],
             ),
             OpenApiParameter(
-                name='search',
+                name="search",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Search in code, recipient_email, sender_email, recipient_name, sender_name'
+                description="Search in code, recipient_email, sender_email, recipient_name, sender_name",
             ),
         ],
-        responses={
-            **gift_card_response,
-            **error_response
-        }
+        responses={**gift_card_response, **error_response},
     ),
     create=extend_schema(
         summary="Create a gift card",
         description="Create a new gift card with the specified details.",
         request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'initial_balance': {'type': 'string', 'format': 'decimal', 'example': '100.00'},
-                    'currency': {'type': 'string', 'example': 'USD'},
-                    'gift_card_type': {'type': 'string', 'enum': ['digital', 'physical', 'promotional', 'refund', 'loyalty']},
-                    'expires_at': {'type': 'string', 'format': 'date-time', 'nullable': True},
-                    'recipient_email': {'type': 'string', 'format': 'email', 'nullable': True},
-                    'recipient_name': {'type': 'string', 'nullable': True},
-                    'sender_name': {'type': 'string', 'nullable': True},
-                    'sender_email': {'type': 'string', 'format': 'email', 'nullable': True},
-                    'message': {'type': 'string', 'nullable': True}
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "initial_balance": {"type": "string", "format": "decimal", "example": "100.00"},
+                    "currency": {"type": "string", "example": "USD"},
+                    "gift_card_type": {
+                        "type": "string",
+                        "enum": ["digital", "physical", "promotional", "refund", "loyalty"],
+                    },
+                    "expires_at": {"type": "string", "format": "date-time", "nullable": True},
+                    "recipient_email": {"type": "string", "format": "email", "nullable": True},
+                    "recipient_name": {"type": "string", "nullable": True},
+                    "sender_name": {"type": "string", "nullable": True},
+                    "sender_email": {"type": "string", "format": "email", "nullable": True},
+                    "message": {"type": "string", "nullable": True},
                 },
-                'required': ['initial_balance', 'currency', 'gift_card_type']
+                "required": ["initial_balance", "currency", "gift_card_type"],
             }
         },
         responses={
             status.HTTP_201_CREATED: gift_card_response[status.HTTP_200_OK],
-            **error_response
-        }
-    )
+            **error_response,
+        },
+    ),
 )
 
 gift_card_detail_schema = extend_schema_view(
     retrieve=extend_schema(
         summary="Retrieve a gift card",
         description="Get detailed information about a specific gift card.",
-        responses={
-            **gift_card_response,
-            **error_response
-        }
+        responses={**gift_card_response, **error_response},
     ),
     update=extend_schema(
         summary="Update a gift card",
         description="Update an existing gift card.",
         request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'expires_at': {'type': 'string', 'format': 'date-time', 'nullable': True},
-                    'recipient_email': {'type': 'string', 'format': 'email', 'nullable': True},
-                    'recipient_name': {'type': 'string', 'nullable': True},
-                    'sender_name': {'type': 'string', 'nullable': True},
-                    'sender_email': {'type': 'string', 'format': 'email', 'nullable': True},
-                    'message': {'type': 'string', 'nullable': True},
-                    'metadata': {'type': 'object', 'nullable': True}
-                }
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "expires_at": {"type": "string", "format": "date-time", "nullable": True},
+                    "recipient_email": {"type": "string", "format": "email", "nullable": True},
+                    "recipient_name": {"type": "string", "nullable": True},
+                    "sender_name": {"type": "string", "nullable": True},
+                    "sender_email": {"type": "string", "format": "email", "nullable": True},
+                    "message": {"type": "string", "nullable": True},
+                    "metadata": {"type": "object", "nullable": True},
+                },
             }
         },
-        responses={
-            **gift_card_response,
-            **error_response
-        }
+        responses={**gift_card_response, **error_response},
     ),
     partial_update=extend_schema(
         summary="Partially update a gift card",
         description="Partially update an existing gift card.",
         request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'expires_at': {'type': 'string', 'format': 'date-time', 'nullable': True},
-                    'recipient_email': {'type': 'string', 'format': 'email', 'nullable': True},
-                    'recipient_name': {'type': 'string', 'nullable': True},
-                    'sender_name': {'type': 'string', 'nullable': True},
-                    'sender_email': {'type': 'string', 'format': 'email', 'nullable': True},
-                    'message': {'type': 'string', 'nullable': True},
-                    'metadata': {'type': 'object', 'nullable': True}
-                }
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "expires_at": {"type": "string", "format": "date-time", "nullable": True},
+                    "recipient_email": {"type": "string", "format": "email", "nullable": True},
+                    "recipient_name": {"type": "string", "nullable": True},
+                    "sender_name": {"type": "string", "nullable": True},
+                    "sender_email": {"type": "string", "format": "email", "nullable": True},
+                    "message": {"type": "string", "nullable": True},
+                    "metadata": {"type": "object", "nullable": True},
+                },
             }
         },
-        responses={
-            **gift_card_response,
-            **error_response
-        }
+        responses={**gift_card_response, **error_response},
     ),
     destroy=extend_schema(
         summary="Delete a gift card",
         description="Mark a gift card as deleted.",
-        responses={
-            status.HTTP_204_NO_CONTENT: None,
-            **error_response
-        }
-    )
+        responses={status.HTTP_204_NO_CONTENT: None, **error_response},
+    ),
 )
 
 gift_card_redeem_schema = extend_schema_view(
@@ -196,29 +174,29 @@ gift_card_redeem_schema = extend_schema_view(
         summary="Redeem a gift card",
         description="Redeem an amount from a gift card.",
         request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'code': {'type': 'string', 'example': 'GC12345678'},
-                    'amount': {'type': 'string', 'format': 'decimal', 'example': '25.50'},
-                    'order_id': {'type': 'integer', 'nullable': True},
-                    'method': {'type': 'string', 'enum': ['online', 'in_store'], 'default': 'online'}
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "example": "GC12345678"},
+                    "amount": {"type": "string", "format": "decimal", "example": "25.50"},
+                    "order_id": {"type": "integer", "nullable": True},
+                    "method": {
+                        "type": "string",
+                        "enum": ["online", "in_store"],
+                        "default": "online",
+                    },
                 },
-                'required': ['code', 'amount']
+                "required": ["code", "amount"],
             }
         },
         responses={
             **gift_card_response,
             **error_response,
             status.HTTP_400_BAD_REQUEST: {
-                'description': 'Invalid redemption request',
-                'examples': {
-                    'application/json': {
-                        'error': 'Insufficient balance'
-                    }
-                }
-            }
-        }
+                "description": "Invalid redemption request",
+                "examples": {"application/json": {"error": "Insufficient balance"}},
+            },
+        },
     )
 )
 
@@ -239,13 +217,13 @@ gift_card_balance_schema = extend_schema_view(
                             "balance": "100.00",
                             "currency": "USD",
                             "is_expired": False,
-                            "expires_at": "2024-12-31T23:59:59Z"
-                        }
+                            "expires_at": "2024-12-31T23:59:59Z",
+                        },
                     )
-                ]
+                ],
             ),
-            **error_response
-        }
+            **error_response,
+        },
     )
 )
 
@@ -254,18 +232,15 @@ gift_card_activate_schema = extend_schema_view(
         summary="Activate a gift card",
         description="Activate an inactive gift card.",
         request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'expires_at': {'type': 'string', 'format': 'date-time', 'nullable': True},
-                    'notes': {'type': 'string', 'nullable': True}
-                }
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "expires_at": {"type": "string", "format": "date-time", "nullable": True},
+                    "notes": {"type": "string", "nullable": True},
+                },
             }
         },
-        responses={
-            **gift_card_response,
-            **error_response
-        }
+        responses={**gift_card_response, **error_response},
     )
 )
 
@@ -274,19 +249,16 @@ gift_card_void_schema = extend_schema_view(
         summary="Void a gift card",
         description="Void an active gift card.",
         request={
-            'application/json': {
-                'type': 'object',
-                'properties': {
-                    'reason': {'type': 'string'},
-                    'notes': {'type': 'string', 'nullable': True}
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "reason": {"type": "string"},
+                    "notes": {"type": "string", "nullable": True},
                 },
-                'required': ['reason']
+                "required": ["reason"],
             }
         },
-        responses={
-            **gift_card_response,
-            **error_response
-        }
+        responses={**gift_card_response, **error_response},
     )
 )
 
@@ -297,31 +269,31 @@ gift_card_history_schema = extend_schema_view(
         description="Retrieve history entries for gift cards with optional filtering.",
         parameters=[
             OpenApiParameter(
-                name='gift_card_id',
+                name="gift_card_id",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description='Filter by gift card ID'
+                description="Filter by gift card ID",
             ),
             OpenApiParameter(
-                name='action',
+                name="action",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description='Filter by action type',
-                enum=['created', 'redeemed', 'refunded', 'expired', 'voided', 'activated']
+                description="Filter by action type",
+                enum=["created", "redeemed", "refunded", "expired", "voided", "activated"],
             ),
             OpenApiParameter(
-                name='start_date',
+                name="start_date",
                 type=OpenApiTypes.DATE,
                 location=OpenApiParameter.QUERY,
-                description='Filter by start date (YYYY-MM-DD)'
+                description="Filter by start date (YYYY-MM-DD)",
             ),
             OpenApiParameter(
-                name='end_date',
+                name="end_date",
                 type=OpenApiTypes.DATE,
                 location=OpenApiParameter.QUERY,
-                description='Filter by end date (YYYY-MM-DD)'
-            )
-        ]
+                description="Filter by end date (YYYY-MM-DD)",
+            ),
+        ],
     ),
     retrieve=extend_schema(
         summary="Retrieve a history entry",
@@ -339,17 +311,14 @@ gift_card_history_schema = extend_schema_view(
                             "amount": "25.50",
                             "created_at": "2023-01-01T12:00:00Z",
                             "notes": "Redeemed for order #123",
-                            "metadata": {
-                                "order_id": "123",
-                                "method": "online"
-                            }
-                        }
+                            "metadata": {"order_id": "123", "method": "online"},
+                        },
                     )
-                ]
+                ],
             ),
-            **error_response
-        }
-    )
+            **error_response,
+        },
+    ),
 )
 
 # Rate limiting information
@@ -365,14 +334,14 @@ When rate limited, the API will return a `429 Too Many Requests` response with a
 
 # Main schema decorator
 gift_card_schema = extend_schema(
-    tags=['Gift Cards'],
+    tags=["Gift Cards"],
     description=f"""
     Manage gift cards for your store.
-    
+
     {rate_limit_info}
-    
+
     ### Status Codes
-    
+
     - `200 OK`: Request was successful
     - `201 Created`: Resource was created
     - `204 No Content`: Resource was deleted successfully
@@ -381,5 +350,5 @@ gift_card_schema = extend_schema(
     - `403 Forbidden`: Insufficient permissions
     - `404 Not Found`: Resource not found
     - `429 Too Many Requests`: Rate limit exceeded
-    """
+    """,
 )

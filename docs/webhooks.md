@@ -67,40 +67,40 @@ class Webhook(TenantModel):
     """
     Store-scoped webhook configuration for external integrations
     """
-    
+
     # Core fields
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     # Endpoint configuration
     url = models.URLField(max_length=2048)
     method = models.CharField(max_length=10, choices=[('POST', 'POST'), ('PUT', 'PUT')], default='POST')
-    
+
     # Security
     secret = models.CharField(max_length=255, default=secrets.token_urlsafe, help_text="HMAC signature secret")
     verify_ssl = models.BooleanField(default=True, help_text="Verify SSL certificate")
-    
+
     # Event filtering
     events = models.JSONField(default=list, help_text="List of event types to subscribe to")
     event_filter = models.JSONField(default=dict, help_text="Advanced event filtering rules")
-    
+
     # Headers
     headers = models.JSONField(default=dict, help_text="Custom HTTP headers")
-    
+
     # Status
     is_active = models.BooleanField(default=True)
     last_triggered_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Retry configuration
     max_retries = models.PositiveSmallIntegerField(default=5)
     retry_delay = models.PositiveIntegerField(default=60, help_text="Initial retry delay in seconds")
     retry_backoff_multiplier = models.FloatField(default=2.0, help_text="Exponential backoff multiplier")
-    
+
     # Metadata
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'webhooks_webhook'
         unique_together = [['store', 'url']]
@@ -109,37 +109,37 @@ class Webhook(TenantModel):
             models.Index(fields=['last_triggered_at']),
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.name} - {self.url}"
-    
+
     def generate_signature(self, payload):
         """Generate HMAC signature for payload"""
         import hmac
         import hashlib
         import json
-        
+
         payload_str = json.dumps(payload, sort_keys=True)
         signature = hmac.new(
             self.secret.encode('utf-8'),
             payload_str.encode('utf-8'),
             hashlib.sha256
         ).hexdigest()
-        
+
         return f"sha256={signature}"
-    
+
     def is_event_subscribed(self, event_type, event_data=None):
         """Check if webhook should be triggered for this event"""
         # Check if event type is in subscribed events
         if event_type not in self.events:
             return False
-        
+
         # Apply advanced filtering if configured
         if self.event_filter:
             return self._apply_event_filter(event_type, event_data)
-        
+
         return True
-    
+
     def _apply_event_filter(self, event_type, event_data):
         """Apply advanced event filtering rules"""
         # Example filter: {"entity_type": "Order", "status": ["completed", "refunded"]}
@@ -159,7 +159,7 @@ class WebhookEvent(TenantModel):
     """
     Represents an event that can trigger webhooks
     """
-    
+
     # Core fields
     event_type = models.CharField(max_length=100, unique=True, db_index=True)
     description = models.TextField(blank=True)
@@ -169,17 +169,17 @@ class WebhookEvent(TenantModel):
         ('user', 'User'),
         ('system', 'System'),
     ])
-    
+
     # Event schema
     schema = models.JSONField(default=dict, help_text="Event payload schema")
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         db_table = 'webhooks_event'
         ordering = ['category', 'event_type']
-    
+
     def __str__(self):
         return f"{self.event_type} ({self.category})"
 ```
@@ -190,17 +190,17 @@ class WebhookDelivery(TenantModel):
     """
     Tracks individual webhook delivery attempts
     """
-    
+
     # Relationships
     webhook = models.ForeignKey(Webhook, on_delete=models.CASCADE, related_name='deliveries')
-    
+
     # Event details
     event_type = models.CharField(max_length=100)
     event_id = models.CharField(max_length=100, blank=True)
-    
+
     # Payload
     payload = models.JSONField(default=dict)
-    
+
     # Delivery details
     status = models.CharField(max_length=20, choices=[
         ('pending', 'Pending'),
@@ -208,25 +208,25 @@ class WebhookDelivery(TenantModel):
         ('failed', 'Failed'),
         ('retrying', 'Retrying'),
     ], default='pending')
-    
+
     # Response details
     response_status = models.PositiveIntegerField(null=True, blank=True)
     response_body = models.TextField(blank=True)
     response_headers = models.JSONField(default=dict, blank=True)
-    
+
     # Retry tracking
     attempt_number = models.PositiveSmallIntegerField(default=1)
     next_retry_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Timing
     triggered_at = models.DateTimeField(auto_now_add=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     duration_ms = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Error details
     error_message = models.TextField(blank=True)
     error_code = models.CharField(max_length=50, blank=True)
-    
+
     class Meta(TenantModel.Meta):
         db_table = 'webhooks_delivery'
         indexes = [
@@ -236,7 +236,7 @@ class WebhookDelivery(TenantModel):
             models.Index(fields=['next_retry_at']),
         ]
         ordering = ['-triggered_at']
-    
+
     def __str__(self):
         return f"Delivery #{self.id} - {self.event_type} ({self.status})"
 ```
@@ -264,14 +264,14 @@ class WebhookViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = Webhook.objects.all()
     serializer_class = WebhookSerializer
     filterset_fields = ['is_active']
     search_fields = ['name', 'url', 'description']
     ordering_fields = ['created_at', 'name', 'last_triggered_at']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Test Webhook",
         description="Send test payload to webhook endpoint",
@@ -281,7 +281,7 @@ class WebhookViewSet(TenantViewSet):
     def test(self, request, pk=None):
         """Send test event to webhook"""
         webhook = self.get_object()
-        
+
         from services.webhook import WebhookService
         delivery = WebhookService.trigger_webhook(
             webhook=webhook,
@@ -289,10 +289,10 @@ class WebhookViewSet(TenantViewSet):
             event_data={'test': True, 'timestamp': timezone.now().isoformat()},
             store=webhook.store
         )
-        
+
         serializer = WebhookDeliverySerializer(delivery)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
     @extend_schema(
         summary="Regenerate Secret",
         description="Generate new webhook secret",
@@ -304,7 +304,7 @@ class WebhookViewSet(TenantViewSet):
         webhook = self.get_object()
         webhook.secret = secrets.token_urlsafe()
         webhook.save(update_fields=['secret'])
-        
+
         serializer = self.get_serializer(webhook)
         return Response(serializer.data, status=status.HTTP_200_OK)
 ```
@@ -317,7 +317,7 @@ class WebhookDeliveryViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    
+
     queryset = WebhookDelivery.objects.all()
     serializer_class = WebhookDeliverySerializer
     filterset_fields = ['webhook', 'status', 'event_type']
@@ -344,7 +344,7 @@ logger = logging.getLogger(__name__)
 
 class WebhookService:
     """Shared webhook management service"""
-    
+
     @staticmethod
     @transaction.atomic
     def trigger_webhook(webhook, event_type, event_data, store):
@@ -354,7 +354,7 @@ class WebhookService:
         # Check if webhook is subscribed to this event
         if not webhook.is_event_subscribed(event_type, event_data):
             return None
-        
+
         # Create delivery record
         delivery = WebhookDelivery.objects.create(
             webhook=webhook,
@@ -364,24 +364,24 @@ class WebhookService:
             status='pending',
             attempt_number=1
         )
-        
+
         # Update webhook last triggered timestamp
         webhook.last_triggered_at = timezone.now()
         webhook.save(update_fields=['last_triggered_at'])
-        
+
         # Trigger async delivery
         from .tasks import deliver_webhook
         deliver_webhook.delay(delivery.id)
-        
+
         return delivery
-    
+
     @staticmethod
     def deliver_webhook_sync(delivery):
         """
         Synchronous webhook delivery
         """
         webhook = delivery.webhook
-        
+
         # Prepare request
         headers = {
             'Content-Type': 'application/json',
@@ -391,10 +391,10 @@ class WebhookService:
             'X-Store-ID': str(webhook.store.id),
             **webhook.headers
         }
-        
+
         # Measure delivery time
         start_time = timezone.now()
-        
+
         try:
             response = requests.request(
                 method=webhook.method,
@@ -404,17 +404,17 @@ class WebhookService:
                 verify=webhook.verify_ssl,
                 timeout=30
             )
-            
+
             # Calculate duration
             duration_ms = int((timezone.now() - start_time).total_seconds() * 1000)
-            
+
             # Update delivery
             delivery.response_status = response.status_code
             delivery.response_body = response.text[:10000]  # Limit response body size
             delivery.response_headers = dict(response.headers)
             delivery.delivered_at = timezone.now()
             delivery.duration_ms = duration_ms
-            
+
             # Determine status
             if 200 <= response.status_code < 300:
                 delivery.status = 'success'
@@ -422,68 +422,68 @@ class WebhookService:
                 delivery.status = 'failed'
                 delivery.error_message = f"HTTP {response.status_code}"
                 delivery.error_code = 'HTTP_ERROR'
-            
+
             delivery.save(update_fields=[
                 'response_status', 'response_body', 'response_headers',
                 'delivered_at', 'duration_ms', 'status', 'error_message', 'error_code'
             ])
-            
+
             # Log delivery
             logger.info(
                 f"Webhook #{delivery.id} delivered to {webhook.url} "
                 f"- Status: {response.status_code} - Duration: {duration_ms}ms"
             )
-            
+
         except requests.exceptions.Timeout:
             delivery.status = 'failed'
             delivery.error_message = 'Request timeout'
             delivery.error_code = 'TIMEOUT'
             delivery.save(update_fields=['status', 'error_message', 'error_code'])
             logger.error(f"Webhook #{delivery.id} timeout")
-            
+
         except requests.exceptions.SSLError as e:
             delivery.status = 'failed'
             delivery.error_message = f'SSL error: {str(e)}'
             delivery.error_code = 'SSL_ERROR'
             delivery.save(update_fields=['status', 'error_message', 'error_code'])
             logger.error(f"Webhook #{delivery.id} SSL error: {e}")
-            
+
         except requests.exceptions.RequestException as e:
             delivery.status = 'failed'
             delivery.error_message = str(e)
             delivery.error_code = 'REQUEST_ERROR'
             delivery.save(update_fields=['status', 'error_message', 'error_code'])
             logger.error(f"Webhook #{delivery.id} request error: {e}")
-        
+
         # Schedule retry if failed and retries remaining
         if delivery.status == 'failed' and delivery.attempt_number < webhook.max_retries:
             WebhookService.schedule_retry(delivery)
-        
+
         return delivery
-    
+
     @staticmethod
     def schedule_retry(delivery):
         """
         Schedule webhook delivery retry with exponential backoff
         """
         webhook = delivery.webhook
-        
+
         # Calculate retry delay with exponential backoff
         retry_delay = webhook.retry_delay * (webhook.retry_backoff_multiplier ** (delivery.attempt_number - 1))
-        
+
         # Update delivery
         delivery.status = 'retrying'
         delivery.attempt_number += 1
         delivery.next_retry_at = timezone.now() + timezone.timedelta(seconds=retry_delay)
         delivery.save(update_fields=['status', 'attempt_number', 'next_retry_at'])
-        
+
         # Schedule retry task
         from .tasks import deliver_webhook
         deliver_webhook.apply_async(
             args=[delivery.id],
             eta=delivery.next_retry_at
         )
-        
+
         logger.info(
             f"Webhook #{delivery.id} scheduled for retry #{delivery.attempt_number} "
             f"in {retry_delay}s"
@@ -510,27 +510,27 @@ def deliver_webhook(self, delivery_id):
     """
     from .models import WebhookDelivery
     from .services import WebhookService
-    
+
     try:
         delivery = WebhookDelivery.objects.select_related('webhook').get(id=delivery_id)
-        
+
         # Skip if already successful
         if delivery.status == 'success':
             return {'status': 'already_delivered'}
-        
+
         # Deliver webhook
         result = WebhookService.deliver_webhook_sync(delivery)
-        
+
         return {
             'delivery_id': delivery_id,
             'status': result.status,
             'response_status': result.response_status
         }
-        
+
     except WebhookDelivery.DoesNotExist:
         logger.error(f"Webhook delivery #{delivery_id} not found")
         raise
-        
+
     except Exception as exc:
         logger.error(f"Webhook delivery failed: {exc}")
         raise self.retry(exc=exc, countdown=60)
@@ -542,13 +542,13 @@ def cleanup_old_deliveries(days=90):
     """
     from django.utils import timezone
     from .models import WebhookDelivery
-    
+
     cutoff = timezone.now() - timezone.timedelta(days=days)
     deleted_count = WebhookDelivery.objects.filter(
         triggered_at__lt=cutoff,
         status='success'
     ).delete()[0]
-    
+
     logger.info(f"Cleaned up {deleted_count} old webhook deliveries")
     return deleted_count
 ```
@@ -584,7 +584,7 @@ def verify_webhook_signature(payload, signature, secret):
         payload_str.encode('utf-8'),
         hashlib.sha256
     ).hexdigest()
-    
+
     return hmac.compare_digest(f"sha256={expected_signature}", signature)
 ```
 
@@ -632,7 +632,7 @@ class WebhookServiceTest(TestCase):
             url='https://example.com/webhook',
             events=['order.created']
         )
-    
+
     def test_trigger_webhook(self):
         """Test webhook triggering"""
         event_data = {'id': '123', 'status': 'created'}
@@ -642,11 +642,11 @@ class WebhookServiceTest(TestCase):
             event_data=event_data,
             store=self.store
         )
-        
+
         self.assertIsNotNone(delivery)
         self.assertEqual(delivery.event_type, 'order.created')
         self.assertEqual(delivery.status, 'pending')
-    
+
     def test_webhook_not_subscribed(self):
         """Test webhook not subscribed to event"""
         delivery = WebhookService.trigger_webhook(
@@ -655,14 +655,14 @@ class WebhookServiceTest(TestCase):
             event_data={'id': '456'},
             store=self.store
         )
-        
+
         self.assertIsNone(delivery)
-    
+
     def test_signature_generation(self):
         """Test signature generation"""
         payload = {'test': 'data'}
         signature = self.webhook.generate_signature(payload)
-        
+
         self.assertTrue(signature.startswith('sha256='))
         self.assertEqual(len(signature), 71)  # sha256= + 64 hex chars
 ```
@@ -707,7 +707,7 @@ def trigger_order_webhooks(sender, instance, **kwargs):
         store=instance.store,
         is_active=True
     )
-    
+
     event_data = {
         'id': str(instance.id),
         'order_number': instance.order_number,
@@ -715,7 +715,7 @@ def trigger_order_webhooks(sender, instance, **kwargs):
         'total': float(instance.total),
         'created_at': instance.created_at.isoformat()
     }
-    
+
     for webhook in webhooks:
         WebhookService.trigger_webhook(
             webhook=webhook,

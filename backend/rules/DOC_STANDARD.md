@@ -32,6 +32,6 @@
 [Value proposition and technical advantages]
 
 ---
-**Version**: X.X  
-**Last Updated**: {{date}}  
+**Version**: X.X
+**Last Updated**: {{date}}
 **Next Review**: {{date+30d}}

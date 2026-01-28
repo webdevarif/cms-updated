@@ -8,6 +8,6 @@ class TestPublicViewSet(viewsets.ViewSet):
     Public test endpoints.
     """
     permission_classes = [permissions.AllowAny]
-    
+
     def list(self, request):
         return Response({"message": "test public API"})

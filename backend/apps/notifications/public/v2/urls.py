@@ -1,12 +1,12 @@
 """
 URL configuration for notifications public API v2.
 """
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 # Public router for notifications
 public_router = DefaultRouter()
 
 urlpatterns = [
-    path('', include(public_router.urls)),
+    path("", include(public_router.urls)),
 ]

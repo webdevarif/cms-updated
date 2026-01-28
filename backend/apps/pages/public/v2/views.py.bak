@@ -16,14 +16,14 @@ class PagePublicViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Public pages API - read-only access to published pages.
     Architectural + real implementation for public pages interface.
-    
+
     Provides:
     - List published pages
     - Retrieve page by ID
     - Retrieve page by slug
     - Search and filtering capabilities
     """
-    
+
     permission_classes = []  # AllowAny
     queryset = Post.objects.filter(status='published').select_related('store', 'featured_image')
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -31,32 +31,32 @@ class PagePublicViewSet(viewsets.ReadOnlyModelViewSet):
     ordering_fields = ['created_at', 'updated_at', 'title']
     ordering = ['-created_at']
     filterset_fields = ['store', 'post_type']
-    
+
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
         if self.action == 'list':
             return PagePublicListSerializer
         return PagePublicSerializer
-    
+
     def get_queryset(self):
         """Filter to only published pages and page post type."""
         queryset = super().get_queryset()
-        
+
         # Filter to page post type only
         page_type = PostType.objects.filter(slug='page').first()
         if page_type:
             queryset = queryset.filter(post_type=page_type)
-        
+
         return queryset
-    
+
     @action(detail=False, methods=['get'], url_path='slug/(?P<slug>[^/.]+)')
     def retrieve_by_slug(self, request, slug=None):
         """
         Retrieve a page by its slug.
-        
+
         Args:
             slug: The page slug to look up
-            
+
         Returns:
             Page data if found, 404 if not found or not published
         """
@@ -67,17 +67,17 @@ class PagePublicViewSet(viewsets.ReadOnlyModelViewSet):
                     {'error': 'Page post type not found'},
                     status=status.HTTP_404_NOT_FOUND
                 )
-            
+
             page = Post.objects.get(
                 slug=slug,
                 status='published',
                 post_type=page_type,
                 store=self.request.store if hasattr(self.request, 'store') else None
             )
-            
+
             serializer = self.get_serializer(page)
             return Response(serializer.data)
-            
+
         except Post.DoesNotExist:
             return Response(
                 {'error': 'Page not found'},

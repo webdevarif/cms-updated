@@ -63,19 +63,19 @@ class PublicFormViewSet(TenantViewSet):
     """
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = FormTemplate.objects.filter(status='published', is_active=True)
     serializer_class = PublicFormTemplateSerializer
     search_fields = ['title', 'description']
     ordering = ['title']
-    
+
     def get_object(self):
         """Override to lookup by form_id instead of pk"""
         form_id = self.kwargs.get('pk')
         if form_id:
             return get_object_or_404(self.get_queryset(), form_id=form_id)
         return super().get_object()
-    
+
     @extend_schema(
         summary="Get Form by ID",
         description="Get form configuration by 6-digit form ID",
@@ -86,7 +86,7 @@ class PublicFormViewSet(TenantViewSet):
         form_template = self.get_object()
         serializer = self.get_serializer(form_template)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Submit Form",
         description="Submit form data using 6-digit form ID",
@@ -97,7 +97,7 @@ class PublicFormViewSet(TenantViewSet):
     def submit(self, request, pk=None):
         """Submit form data using service layer"""
         form_template = self.get_object()
-        
+
         from services.form import FormService
         try:
             submission = FormService.submit_form(
@@ -108,10 +108,10 @@ class PublicFormViewSet(TenantViewSet):
                 ip_address=request.META.get('REMOTE_ADDR'),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
-            
+
             serializer = FormSubmissionSerializer(submission)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         except ValidationError as e:
             return Response({
                 'error': 'Validation failed',
@@ -132,13 +132,13 @@ class CustomerFormViewSet(TenantViewSet):
     Requires customer authentication
     """
     permission_classes = [IsAuthenticated, IsStoreUser]
-    
+
     def get_queryset(self):
         return FormTemplate.objects.filter(
             store=self.request.store,
             created_by=self.request.user
         )
-    
+
     @extend_schema(
         summary="Create Form",
         description="Create new form template",
@@ -148,7 +148,7 @@ class CustomerFormViewSet(TenantViewSet):
     def create(self, request, *args, **kwargs):
         """Create form with automatic owner assignment"""
         return super().create(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Update Form",
         description="Update form template",
@@ -173,10 +173,10 @@ class DashboardFormViewSet(TenantViewSet):
     Requires staff authentication
     """
     permission_classes = [IsAuthenticated, IsStoreStaff]
-    
+
     def get_queryset(self):
         return FormTemplate.objects.filter(store=self.request.store)
-    
+
     @extend_schema(
         summary="List All Forms",
         description="Get all forms for the store (including drafts)"
@@ -187,7 +187,7 @@ class DashboardFormViewSet(TenantViewSet):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=True, methods=['post'])
     @extend_schema(
         summary="Publish Form",
@@ -199,12 +199,12 @@ class DashboardFormViewSet(TenantViewSet):
         form = self.get_object()
         form.status = 'published'
         form.save(update_fields=['status'])
-        
+
         return Response({
             'message': f"Form '{form.title}' published successfully",
             'form_id': form.form_id
         })
-    
+
     @action(detail=True, methods=['post'])
     @extend_schema(
         summary="Duplicate Form",
@@ -215,7 +215,7 @@ class DashboardFormViewSet(TenantViewSet):
     def duplicate(self, request, pk=None):
         """Duplicate form with all fields"""
         form = self.get_object()
-        
+
         from services.form import FormService
         new_form = FormService.duplicate_form(
             original_form=form,
@@ -223,7 +223,7 @@ class DashboardFormViewSet(TenantViewSet):
             store=form.store,
             user=request.user
         )
-        
+
         serializer = FormTemplateSerializer(new_form)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 ```
@@ -237,20 +237,20 @@ class DashboardFormViewSet(TenantViewSet):
 
 class IsFormOwner(BasePermission):
     """Allow access only to form owner"""
-    
+
     def has_object_permission(self, request, view, obj):
         return (
-            request.user and 
+            request.user and
             request.user.is_authenticated and
             obj.created_by == request.user
         )
 
 class CanPublishForm(BasePermission):
     """Allow publishing if user has permission"""
-    
+
     def has_object_permission(self, request, view, obj):
         return (
-            request.user and 
+            request.user and
             request.user.is_authenticated and
             (
                 obj.created_by == request.user or
@@ -277,7 +277,7 @@ class FormTemplateTest(TestCase):
             username='testuser',
             password='testpass123'
         )
-    
+
     def test_create_form_template(self):
         form = FormTemplate.objects.create(
             store=self.store,
@@ -285,11 +285,11 @@ class FormTemplateTest(TestCase):
             created_by=self.user,
             form_id='ABC123'
         )
-        
+
         self.assertEqual(form.title, 'Contact Form')
         self.assertEqual(form.form_id, 'ABC123')
         self.assertEqual(form.status, 'draft')
-    
+
     def test_form_id_uniqueness(self):
         FormTemplate.objects.create(
             store=self.store,
@@ -297,7 +297,7 @@ class FormTemplateTest(TestCase):
             created_by=self.user,
             form_id='ABC123'
         )
-        
+
         with self.assertRaises(ValidationError):
             FormTemplate.objects.create(
                 store=self.store,
@@ -305,14 +305,14 @@ class FormTemplateTest(TestCase):
                 created_by=self.user,
                 form_id='ABC123'  # Duplicate
             )
-    
+
     def test_auto_generate_form_id(self):
         form = FormTemplate.objects.create(
             store=self.store,
             title='Auto Form',
             created_by=self.user
         )
-        
+
         self.assertIsNotNone(form.form_id)
         self.assertEqual(len(form.form_id), 6)
         self.assertTrue(form.form_id.isalnum())
@@ -333,7 +333,7 @@ class FormServiceTest(TestCase):
             username='testuser',
             password='testpass123'
         )
-    
+
     def test_submit_form_success(self):
         form = FormTemplate.objects.create(
             store=self.store,
@@ -345,23 +345,23 @@ class FormServiceTest(TestCase):
                 {'type': 'email', 'label': 'Email', 'required': True}
             ]
         )
-        
+
         submission_data = {
             'Name': 'John Doe',
             'Email': 'john@example.com'
         }
-        
+
         submission = FormService.submit_form(
             form_template=form,
             data=submission_data,
             store=self.store,
             user=self.user
         )
-        
+
         self.assertEqual(submission.form, form)
         self.assertEqual(submission.data['Name'], 'John Doe')
         self.assertEqual(submission.status, 'submitted')
-    
+
     @patch('apps.forms.services.FormService.send_notification_email')
     def test_submit_form_with_notification(self, mock_email):
         form = FormTemplate.objects.create(
@@ -371,14 +371,14 @@ class FormServiceTest(TestCase):
             form_id='TEST123',
             send_notifications=True
         )
-        
+
         submission = FormService.submit_form(
             form_template=form,
             data={'Name': 'Test'},
             store=self.store,
             user=self.user
         )
-        
+
         mock_email.assert_called_once()
 ```
 
@@ -403,14 +403,14 @@ class FormService:
             form_id = ''.join(random.choices(string.ascii_uppercase + string.digits, 6))
             if not FormTemplate.objects.filter(form_id=form_id).exists():
                 return form_id
-    
+
     @staticmethod
     def submit_form(form_template, data, store, user=None, ip_address=None, user_agent=''):
         """Submit form data with validation"""
         with transaction.atomic():
             # Validate form fields
             validated_data = FormService.validate_form_data(form_template, data)
-            
+
             # Create submission
             submission = FormSubmission.objects.create(
                 form=form_template,
@@ -421,32 +421,32 @@ class FormService:
                 user_agent=user_agent,
                 status='submitted'
             )
-            
+
             # Send notifications if configured
             if form_template.send_notifications:
                 FormService.send_notification_email(submission)
-            
+
             # Trigger webhook if configured
             if form_template.webhook_url:
                 FormService.send_webhook(submission)
-            
+
             logger.info(f"Form submitted: {form_template.title} - {submission.id}")
             return submission
-    
+
     @staticmethod
     def validate_form_data(form_template, data):
         """Validate form data against field definitions"""
         validated_data = {}
         errors = {}
-        
+
         for field in form_template.fields:
             field_name = field.get('name')
             field_value = data.get(field_name)
-            
+
             if field.get('required', False) and not field_value:
                 errors[field_name] = f"{field.get('label', field_name)} is required"
                 continue
-            
+
             # Type validation
             field_type = field.get('type')
             if field_type == 'email' and field_value:
@@ -459,14 +459,14 @@ class FormService:
                     URLValidator()(field_value)
                 except ValidationError:
                     errors[field_name] = "Invalid URL"
-            
+
             validated_data[field_name] = field_value
-        
+
         if errors:
             raise ValidationError(errors)
-        
+
         return validated_data
-    
+
     @staticmethod
     def duplicate_form(original_form, new_title, store, user):
         """Duplicate a form template with all fields"""
@@ -484,39 +484,39 @@ class FormService:
                 success_message=original_form.success_message,
                 error_message=original_form.error_message
             )
-            
+
             # Copy fields
             for field in original_form.fields.all():
                 FormField.objects.create(
                     form=new_form,
                     **field.__dict__
                 )
-            
+
             return new_form
-    
+
     @staticmethod
     def send_notification_email(submission):
         """Send notification email to form owner"""
         from core.libs.email import EmailService
-        
+
         context = {
             'submission': submission,
             'form': submission.form,
             'store': submission.store
         }
-        
+
         EmailService.send_template_email(
             to_email=submission.form.created_by.email,
             subject=f"New Form Submission: {submission.form.title}",
             template_name='form_submission',
             context=context
         )
-    
+
     @staticmethod
     def send_webhook(submission):
         """Send webhook notification"""
         import requests
-        
+
         try:
             response = requests.post(
                 submission.form.webhook_url,
@@ -556,12 +556,12 @@ from django.db import transaction
 
 class Command(BaseCommand):
     help = 'Migrate legacy forms to new structure'
-    
+
     def handle(self, *args, **options):
         from apps.legacy.models import LegacyForm
-        
+
         queryset = LegacyForm.objects.all()
-        
+
         with transaction.atomic():
             for legacy_form in queryset:
                 # Map legacy fields to new structure
@@ -573,7 +573,7 @@ class Command(BaseCommand):
                         'required': field.required,
                         'options': field.options or []
                     })
-                
+
                 FormTemplate.objects.create(
                     store=legacy_form.store,
                     title=legacy_form.title,
@@ -584,7 +584,7 @@ class Command(BaseCommand):
                     status='published' if legacy_form.is_active else 'draft',
                     created_at=legacy_form.created_at
                 )
-        
+
         self.stdout.write(self.style.SUCCESS('Migration completed'))
 ```
 
@@ -601,16 +601,16 @@ class Command(BaseCommand):
 
 ---
 
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25
             submission = FormService.submit_form(
                 form_template, request.data, request
             )
-            
+
             serializer = FormSubmissionSerializer(submission)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-            
+
         except ValidationError as e:
             return Response(
                 {'error': str(e)},
@@ -630,14 +630,14 @@ class DashboardFormViewSet(TenantViewSet):
     """
     permission_classes = [IsAuthenticated, IsStoreOwner]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    
+
     queryset = FormTemplate.objects.all()
     serializer_class = FormTemplateSerializer
     filterset_fields = ['status', 'is_active']
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'title']
     ordering = ['-created_at']
-    
+
     @extend_schema(
         summary="Duplicate Form",
         description="Create duplicate of existing form",
@@ -647,10 +647,10 @@ class DashboardFormViewSet(TenantViewSet):
     def duplicate(self, request, pk=None):
         """Duplicate form template using service layer"""
         form_template = self.get_object()
-        
+
         from services.form import FormService
         new_form = FormService.duplicate_form(form_template, request.user)
-        
+
         serializer = self.get_serializer(new_form)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 ```
@@ -674,7 +674,7 @@ class DashboardFormViewSet(TenantViewSet):
 ## 🧪 Testing
 ### **Required Coverage**
 - **Models**: 95% code coverage
-- **Views**: 90% code coverage  
+- **Views**: 90% code coverage
 - **Services**: 100% code coverage
 - **Integration**: Critical path testing
 ### **Test Examples**
@@ -705,27 +705,27 @@ class FormServiceTest(TestCase):
                 }
             }
         )
-    
+
     def test_submit_form_valid_data(self):
         """Test form submission with valid data"""
         data = {
             'email': 'test@example.com',
             'message': 'Test message'
         }
-        
+
         submission = FormService.submit_form(self.form_template, data, self.request)
-        
+
         self.assertEqual(submission.form_template, self.form_template)
         self.assertEqual(submission.data, data)
         self.assertEqual(submission.status, 'pending')
-    
+
     def test_submit_form_invalid_data(self):
         """Test form submission with invalid data"""
         data = {
             'email': '',  # Required field missing
             'message': 'Test message'
         }
-        
+
         with self.assertRaises(ValidationError):
             FormService.submit_form(self.form_template, data, self.request)
 ```
@@ -823,25 +823,25 @@ class EmailTemplate(TenantModel):
     """
     Email templates for form notifications
     """
-    
+
     # Core fields
     title = models.CharField(max_length=255)
     subject = models.CharField(max_length=255)
     body_html = models.TextField()
     body_text = models.TextField(blank=True)
-    
+
     # Configuration
     headers = models.JSONField(default=dict, help_text="Custom email headers")
     variables = models.JSONField(default=dict, help_text="Template variables documentation")
-    
+
     # Recipients
     recipient_type = models.CharField(max_length=20, choices=RECIPIENT_CHOICES, default='admin')
     recipient_email = models.EmailField(blank=True, help_text="Custom recipient email")
     auto_detect_recipient = models.BooleanField(default=True, help_text="Auto-detect from form fields")
-    
+
     # Status
     is_active = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = 'forms_email_template'
         indexes = [
@@ -849,22 +849,22 @@ class EmailTemplate(TenantModel):
             models.Index(fields=['is_active']),
         ]
         ordering = ['title']
-    
+
     def render_with_context(self, context):
         """Render template with submission data"""
         from django.template import Template, Context
         from django.template.loader import render_to_string
-        
+
         # Simple variable replacement
         html_content = self.body_html
         text_content = self.body_text
-        
+
         for key, value in context.items():
             placeholder = f"{{ {key} }}"
             html_content = html_content.replace(placeholder, str(value))
             if text_content:
                 text_content = text_content.replace(placeholder, str(value))
-        
+
         return {
             'html': html_content,
             'text': text_content,
@@ -889,7 +889,7 @@ class FormField(models.Model):
     field_type = models.CharField(max_length=20, choices=FIELD_TYPE_CHOICES)
     allow_uploads = models.BooleanField(default=False)
     upload_max_size = models.IntegerField(default=5242880)  # 5MB
-    
+
     def get_upload_media_files(self, submission_data):
         """Get uploaded media files for this field"""
         if self.field_type == 'file' and self.allow_uploads:
@@ -900,12 +900,12 @@ class FormField(models.Model):
 # Integration with translations.md
 class FormTemplate(TenantModel):
     # ... other fields ...
-    
+
     def get_translated_field(self, field_name, language_code):
         """Get translated field configuration"""
         from services.translation import TranslationService
         return TranslationService.get_translated_field(
-            self.fields.get(field_name, {}), 
+            self.fields.get(field_name, {}),
             language_code,
             context='form_field'
         )
@@ -936,36 +936,36 @@ class FormTemplate(TenantModel):
     Store-scoped form template for dynamic form builder
     Similar to Shopify's forms with Fluent Form features
     """
-    
+
     # Core fields
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
     description = models.TextField(blank=True)
-    
+
     # Form Identification (6-digit unique ID)
     form_id = models.CharField(
-        max_length=6, 
-        unique=True, 
+        max_length=6,
+        unique=True,
         db_index=True,
         help_text="6-digit unique form identifier for HTML forms"
     )
-    
+
     # Configuration
     fields = models.JSONField(default=dict, help_text="Dynamic form fields configuration")
     settings = models.JSONField(default=dict, help_text="Form settings and options")
-    
+
     # Status and visibility
     status = models.CharField(max_length=20, choices=FORM_STATUS_CHOICES, default='draft')
     is_active = models.BooleanField(default=True)
-    
+
     # Submission handling
     save_to_database = models.BooleanField(default=True)
     send_email_notifications = models.BooleanField(default=True)
-    
+
     # SEO and meta
     seo_title = models.CharField(max_length=255, blank=True)
     seo_description = models.CharField(max_length=500, blank=True)
-    
+
     class Meta:
         db_table = 'forms_form_template'
         unique_together = [['store', 'slug']]
@@ -976,16 +976,16 @@ class FormTemplate(TenantModel):
             models.Index(fields=['form_id']),  # Add index for form_id lookups
         ]
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"{self.title} (ID: {self.form_id})"
-    
+
     def save(self, *args, **kwargs):
         """Generate 6-digit form_id if not exists"""
         if not self.form_id:
             self.form_id = self.generate_unique_form_id()
         super().save(*args, **kwargs)
-    
+
     @staticmethod
     def generate_unique_form_id():
         """Generate unique 6-digit form ID"""
@@ -993,25 +993,25 @@ class FormTemplate(TenantModel):
             # Generate 6-digit alphanumeric ID
             chars = string.ascii_uppercase + string.digits
             form_id = ''.join(random.choices(chars, k=6))
-            
+
             # Check uniqueness
             if not FormTemplate.objects.filter(form_id=form_id).exists():
                 return form_id
-    
+
     def get_field_by_name(self, field_name):
         """Get field configuration by name"""
         return self.fields.get(field_name)
-    
+
     def validate_submission_data(self, data):
         """Validate submitted data against field configuration"""
         errors = {}
-        
+
         for field_name, field_config in self.fields.items():
             if field_config.get('required', False) and not data.get(field_name):
                 errors[field_name] = f"{field_config.get('label', field_name)} is required"
-        
+
         return errors
-    
+
     def get_html_form_attributes(self):
         """Get HTML form attributes for frontend"""
         return {
@@ -1029,25 +1029,25 @@ class FormSubmission(TenantModel):
     """
     Stores submitted form data with tracking
     """
-    
+
     # Relationships
     form_template = models.ForeignKey(FormTemplate, on_delete=models.CASCADE, related_name='submissions')
-    
+
     # Submission data
     data = models.JSONField(default=dict, help_text="Submitted form data")
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
-    
+
     # Status tracking
     status = models.CharField(max_length=20, choices=SUBMISSION_STATUS_CHOICES, default='pending')
     email_sent = models.BooleanField(default=False)
     email_opened = models.BooleanField(default=False)
-    
+
     # Timestamps
     submitted_at = models.DateTimeField(auto_now_add=True)
     email_sent_at = models.DateTimeField(null=True, blank=True)
     opened_at = models.DateTimeField(null=True, blank=True)
-    
+
     class Meta:
         db_table = 'forms_form_submission'
         indexes = [
@@ -1056,10 +1056,10 @@ class FormSubmission(TenantModel):
             models.Index(fields=['email_sent']),
         ]
         ordering = ['-submitted_at']
-    
+
     def __str__(self):
         return f"Submission for {self.form_template.title} (ID: {self.form_template.form_id})"
-    
+
     def send_notification_emails(self):
         """Trigger async email sending"""
         from services.form import FormService
@@ -1072,25 +1072,25 @@ class EmailTemplate(TenantModel):
     """
     Email templates for form notifications
     """
-    
+
     # Core fields
     title = models.CharField(max_length=255)
     subject = models.CharField(max_length=255)
     body_html = models.TextField()
     body_text = models.TextField(blank=True)
-    
+
     # Configuration
     headers = models.JSONField(default=dict, help_text="Custom email headers")
     variables = models.JSONField(default=dict, help_text="Template variables documentation")
-    
+
     # Recipients
     recipient_type = models.CharField(max_length=20, choices=RECIPIENT_CHOICES, default='admin')
     recipient_email = models.EmailField(blank=True, help_text="Custom recipient email")
     auto_detect_recipient = models.BooleanField(default=True, help_text="Auto-detect from form fields")
-    
+
     # Status
     is_active = models.BooleanField(default=True)
-    
+
     class Meta:
         db_table = 'forms_email_template'
         indexes = [
@@ -1098,22 +1098,22 @@ class EmailTemplate(TenantModel):
             models.Index(fields=['is_active']),
         ]
         ordering = ['title']
-    
+
     def render_with_context(self, context):
         """Render template with submission data"""
         from django.template import Template, Context
         from django.template.loader import render_to_string
-        
+
         # Simple variable replacement
         html_content = self.body_html
         text_content = self.body_text
-        
+
         for key, value in context.items():
             placeholder = f"{{ {key} }}"
             html_content = html_content.replace(placeholder, str(value))
             if text_content:
                 text_content = text_content.replace(placeholder, str(value))
-        
+
         return {
             'html': html_content,
             'text': text_content,
@@ -1136,6 +1136,6 @@ class EmailTemplate(TenantModel):
 ---
 
 ---
-**Version**: 1.0  
+**Version**: 1.0
 **Last Updated**: 2026-01-26
 **Next Review**: 2026-02-25

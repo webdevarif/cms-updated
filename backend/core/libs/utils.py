@@ -1,15 +1,16 @@
 """
 General utilities for Digital Farmers CMS.
 """
-import uuid
-import re
-import json
 import hashlib
-from datetime import datetime, timedelta
-from django.utils.text import slugify
-from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.conf import settings
+import json
 import logging
+import re
+import uuid
+from datetime import datetime, timedelta
+
+from django.conf import settings
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.utils.text import slugify
 
 logger = logging.getLogger(__name__)
 
@@ -28,18 +29,18 @@ def generate_unique_slug(model_class, text, instance=None):
     slug = slugify(text)
     original_slug = slug
     counter = 1
-    
+
     while True:
         queryset = model_class.objects.filter(slug=slug)
         if instance:
             queryset = queryset.exclude(pk=instance.pk)
-        
+
         if not queryset.exists():
             break
-        
+
         slug = f"{original_slug}-{counter}"
         counter += 1
-    
+
     return slug
 
 
@@ -48,9 +49,9 @@ def clean_filename(filename):
     Clean filename for safe storage.
     """
     # Remove special characters
-    filename = re.sub(r'[^\w\s.-]', '', filename)
+    filename = re.sub(r"[^\w\s.-]", "", filename)
     # Replace spaces with underscores
-    filename = re.sub(r'\s+', '_', filename)
+    filename = re.sub(r"\s+", "_", filename)
     # Convert to lowercase
     filename = filename.lower()
     return filename
@@ -60,11 +61,11 @@ def get_client_ip(request):
     """
     Get client IP address from request.
     """
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
     if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
+        ip = x_forwarded_for.split(",")[0]
     else:
-        ip = request.META.get('REMOTE_ADDR')
+        ip = request.META.get("REMOTE_ADDR")
     return ip
 
 
@@ -85,21 +86,21 @@ def generate_hash(text, salt=None):
     """
     if salt is None:
         salt = settings.SECRET_KEY
-    
+
     combined = f"{text}{salt}"
     return hashlib.sha256(combined.encode()).hexdigest()
 
 
-def format_currency(amount, currency='USD'):
+def format_currency(amount, currency="USD"):
     """
     Format currency amount.
     """
     try:
-        if currency == 'USD':
+        if currency == "USD":
             return f"${amount:,.2f}"
-        elif currency == 'EUR':
+        elif currency == "EUR":
             return f"€{amount:,.2f}"
-        elif currency == 'GBP':
+        elif currency == "GBP":
             return f"£{amount:,.2f}"
         else:
             return f"{amount:,.2f} {currency}"
@@ -113,7 +114,7 @@ def truncate_text(text, max_length=100, suffix="..."):
     """
     if len(text) <= max_length:
         return text
-    return text[:max_length - len(suffix)] + suffix
+    return text[: max_length - len(suffix)] + suffix
 
 
 def parse_date_range(date_string):
@@ -122,17 +123,17 @@ def parse_date_range(date_string):
     """
     if not date_string:
         return None, None
-    
+
     try:
-        if ' to ' in date_string:
-            start_str, end_str = date_string.split(' to ')
-            start_date = datetime.strptime(start_str.strip(), '%Y-%m-%d')
-            end_date = datetime.strptime(end_str.strip(), '%Y-%m-%d')
+        if " to " in date_string:
+            start_str, end_str = date_string.split(" to ")
+            start_date = datetime.strptime(start_str.strip(), "%Y-%m-%d")
+            end_date = datetime.strptime(end_str.strip(), "%Y-%m-%d")
         else:
             # Single date
-            start_date = datetime.strptime(date_string.strip(), '%Y-%m-%d')
+            start_date = datetime.strptime(date_string.strip(), "%Y-%m-%d")
             end_date = start_date + timedelta(days=1)
-        
+
         return start_date, end_date
     except ValueError:
         return None, None
@@ -143,13 +144,13 @@ def sanitize_filename(filename):
     Sanitize filename for safe storage.
     """
     # Remove path separators
-    filename = filename.replace('/', '_').replace('\\', '_')
+    filename = filename.replace("/", "_").replace("\\", "_")
     # Remove control characters
-    filename = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', filename)
+    filename = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", filename)
     # Limit length
     if len(filename) > 255:
-        name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
-        filename = name[:255-len(ext)-1] + '.' + ext if ext else name[:255]
+        name, ext = filename.rsplit(".", 1) if "." in filename else (filename, "")
+        filename = name[: 255 - len(ext) - 1] + "." + ext if ext else name[:255]
     return filename
 
 
@@ -168,7 +169,7 @@ def get_file_extension(filename):
     """
     Get file extension from filename.
     """
-    return filename.split('.')[-1].lower() if '.' in filename else ''
+    return filename.split(".")[-1].lower() if "." in filename else ""
 
 
 def format_bytes(bytes_value):

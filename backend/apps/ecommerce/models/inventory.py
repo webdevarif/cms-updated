@@ -8,11 +8,8 @@ class Inventory(models.Model):
     """
     Inventory tracking model.
     """
-    product = models.OneToOneField(
-        'Product',
-        on_delete=models.CASCADE,
-        related_name='inventory'
-    )
+
+    product = models.OneToOneField("Product", on_delete=models.CASCADE, related_name="inventory")
     quantity = models.PositiveIntegerField(default=0)
     reserved_quantity = models.PositiveIntegerField(default=0)
     low_stock_threshold = models.PositiveIntegerField(default=10)
@@ -22,8 +19,8 @@ class Inventory(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ecommerce_inventory'
-        app_label = 'ecommerce'
+        db_table = "ecommerce_inventory"
+        app_label = "ecommerce"
 
     def __str__(self):
         return f"Inventory for {self.product.title}"

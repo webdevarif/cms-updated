@@ -8,6 +8,6 @@ class SmtpPublicViewSet(viewsets.ViewSet):
     Public smtp endpoints.
     """
     permission_classes = [permissions.AllowAny]
-    
+
     def list(self, request):
         return Response({"message": "smtp public API"})

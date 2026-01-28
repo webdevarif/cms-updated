@@ -3,25 +3,29 @@ Architectural + real implementation for dashboard metafields interface.
 
 Full admin CRUD on all metafields + bulk operations.
 """
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.throttling import UserRateThrottle
-from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-from django.contrib.contenttypes.models import ContentType
-
-from core.permissions import IsStoreOwner
-from apps.metafields.models import MetafieldDefinition, Metafield
+from apps.metafields.models import Metafield, MetafieldDefinition
 from apps.metafields.services import MetafieldService
-from .serializers import MetafieldDashboardSerializer, MetafieldDefinitionDashboardSerializer, BulkMetafieldUpdateSerializer
+from core.permissions import IsStoreOwner
+from django.contrib.contenttypes.models import ContentType
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
+
+from .serializers import (
+    BulkMetafieldUpdateSerializer,
+    MetafieldDashboardSerializer,
+    MetafieldDefinitionDashboardSerializer,
+)
 
 
 class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     """
     Architectural + real implementation for dashboard metafield definitions interface.
-    
+
     Full admin CRUD on metafield definitions.
     Store owners can manage all metafield definitions.
     """
@@ -31,13 +35,13 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'namespace', 'key']
     ordering_fields = ['created_at', 'name']
-    
+
     def get_queryset(self):
         """Filter by current user's stores"""
         return MetafieldDefinition.objects.filter(
             store__in=self.request.user.stores_owned.all()
         )
-    
+
     @extend_schema(
         summary="List metafield definitions",
         description="List all metafield definitions"
@@ -45,7 +49,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         """List metafield definitions"""
         return super().list(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Create metafield definition",
         description="Create new metafield definition"
@@ -53,7 +57,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Create metafield definition"""
         return super().create(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Get metafield definition",
         description="Get metafield definition details"
@@ -61,7 +65,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         """Get metafield definition"""
         return super().retrieve(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Update metafield definition",
         description="Update metafield definition"
@@ -69,7 +73,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         """Update metafield definition"""
         return super().update(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Partial update metafield definition",
         description="Partial update metafield definition"
@@ -77,7 +81,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         """Partial update metafield definition"""
         return super().partial_update(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Delete metafield definition",
         description="Delete metafield definition"
@@ -85,7 +89,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """Delete metafield definition"""
         return super().destroy(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Get metafield definitions by namespace",
         description="Get metafield definitions grouped by namespace"
@@ -94,15 +98,15 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def by_namespace(self, request):
         """Get metafield definitions by namespace"""
         namespace = request.query_params.get('namespace')
-        
+
         if not namespace:
             return Response(
                 {'error': 'namespace parameter is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         definitions = self.get_queryset().filter(namespace=namespace)
-        
+
         return Response([
             {
                 'id': definition.id,
@@ -117,7 +121,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
             }
             for definition in definitions
         ])
-    
+
     @extend_schema(
         summary="Validate metafield definition",
         description="Validate metafield definition structure"
@@ -126,14 +130,14 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def validate(self, request, pk=None):
         """Validate metafield definition"""
         definition = self.get_object()
-        
+
         validation_result = MetafieldService.validate_definition(definition)
-        
+
         return Response({
             'is_valid': validation_result['is_valid'],
             'errors': validation_result.get('errors', [])
         })
-    
+
     @extend_schema(
         summary="Export metafield definitions",
         description="Export metafield definitions as JSON"
@@ -142,7 +146,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def export(self, request):
         """Export metafield definitions"""
         definitions = self.get_queryset()
-        
+
         export_data = []
         for definition in definitions:
             export_data.append({
@@ -157,11 +161,11 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
                 'options': definition.options,
                 'validations': definition.validations
             })
-        
+
         return Response({
             'definitions': export_data
         })
-    
+
     @extend_schema(
         summary="Import metafield definitions",
         description="Import metafield definitions from JSON"
@@ -170,13 +174,13 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     def import_definitions(self, request):
         """Import metafield definitions from JSON"""
         definitions_data = request.data.get('definitions', [])
-        
+
         if not definitions_data:
             return Response(
                 {'error': 'definitions array is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         imported_count = 0
         for definition_data in definitions_data:
             try:
@@ -187,7 +191,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
                 imported_count += 1
             except Exception as e:
                 continue
-        
+
         return Response({
             'message': f'Imported {imported_count} metafield definitions successfully'
         })
@@ -196,7 +200,7 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
 class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     """
     Architectural + real implementation for dashboard metafields interface.
-    
+
     Full admin CRUD on all metafields + bulk operations.
     Store owners can manage all metafields in their stores.
     """
@@ -206,13 +210,13 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['value_text', 'value_number', 'value_boolean']
     ordering_fields = ['created_at', 'updated_at']
-    
+
     def get_queryset(self):
         """Filter by current user's stores"""
         return Metafield.objects.filter(
             store__in=self.request.user.stores_owned.all()
         ).select_related('definition', 'content_type')
-    
+
     @extend_schema(
         summary="List metafields",
         description="List all metafields in user's stores"
@@ -220,7 +224,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         """List metafields"""
         return super().list(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Create metafield",
         description="Create new metafield"
@@ -228,7 +232,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Create metafield"""
         return super().create(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Get metafield",
         description="Get metafield details"
@@ -236,7 +240,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         """Get metafield"""
         return super().retrieve(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Update metafield",
         description="Update metafield"
@@ -244,7 +248,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         """Update metafield"""
         return super().update(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Partial update metafield",
         description="Partial update metafield"
@@ -252,7 +256,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         """Partial update metafield"""
         return super().partial_update(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Delete metafield",
         description="Delete metafield"
@@ -260,7 +264,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         """Delete metafield"""
         return super().destroy(request, *args, **kwargs)
-    
+
     @extend_schema(
         summary="Bulk create metafields",
         description="Create multiple metafields"
@@ -274,22 +278,22 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 {'error': 'metafields array is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         created_metafields = []
         for metafield_data in metafields_data:
             # Validate store ownership
             content_type_id = metafield_data.get('content_type_id')
             object_id = metafield_data.get('object_id')
-            
+
             if not content_type_id or not object_id:
                 continue
-            
+
             # Validate user owns the content
             if not MetafieldService.user_owns_content(
                 self.request.user, content_type_id, object_id
             ):
                 continue
-            
+
             metafield = MetafieldService.create_metafield(
                 user=self.request.user,
                 definition_id=metafield_data.get('definition_id'),
@@ -298,10 +302,10 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 value=metafield_data.get('value')
             )
             created_metafields.append(metafield)
-        
+
         serializer = self.get_serializer(created_metafields, many=True)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
+
     @extend_schema(
         summary="Bulk update metafields",
         description="Update multiple metafields"
@@ -315,13 +319,13 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 {'error': 'metafields array is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         updated_metafields = []
         for metafield_data in metafields_data:
             metafield_id = metafield_data.get('id')
             if not metafield_id:
                 continue
-            
+
             try:
                 metafield = Metafield.objects.get(
                     id=metafield_id,
@@ -329,22 +333,22 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 )
             except Metafield.DoesNotExist:
                 continue
-            
+
             # Validate user owns the content
             if not MetafieldService.user_owns_content(
                 self.request.user, metafield.content_type_id, metafield.object_id
             ):
                 continue
-            
+
             updated_metafield = MetafieldService.update_metafield(
                 metafield=metafield,
                 value=metafield_data.get('value')
             )
             updated_metafields.append(updated_metafield)
-        
+
         serializer = self.get_serializer(updated_metafields, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Bulk delete metafields",
         description="Delete multiple metafields"
@@ -358,7 +362,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 {'error': 'metafield_ids array is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         deleted_count = 0
         for metafield_id in metafield_ids:
             try:
@@ -374,11 +378,11 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                     deleted_count += 1
             except Metafield.DoesNotExist:
                 continue
-        
+
         return Response({
             'message': f'Deleted {deleted_count} metafields successfully'
         })
-    
+
     @extend_schema(
         summary="Get metafields by content",
         description="Get metafields for specific content"
@@ -388,13 +392,13 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         """Get metafields by content"""
         content_type_id = request.query_params.get('content_type_id')
         object_id = request.query_params.get('object_id')
-        
+
         if not content_type_id or not object_id:
             return Response(
                 {'error': 'content_type_id and object_id are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Validate user owns the content
         if not MetafieldService.user_owns_content(
             self.request.user, content_type_id, object_id
@@ -403,16 +407,16 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 {'error': 'Content not found or access denied'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         metafields = Metafield.objects.filter(
             content_type_id=content_type_id,
             object_id=object_id,
             store__in=self.request.user.stores_owned.all()
         ).select_related('definition')
-        
+
         serializer = self.get_serializer(metafields, many=True)
         return Response(serializer.data)
-    
+
     @extend_schema(
         summary="Get metafield definitions",
         description="Get available metafield definitions"
@@ -423,7 +427,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         definitions = MetafieldDefinition.objects.filter(
             store__in=self.request.user.stores_owned.all()
         ).filter(is_visible=True)
-        
+
         return Response([
             {
                 'id': definition.id,
@@ -437,7 +441,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
             }
             for definition in definitions
         ])
-    
+
     @extend_schema(
         summary="Validate metafield",
         description="Validate metafield value against definition"
@@ -447,13 +451,13 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         """Validate metafield value"""
         definition_id = request.data.get('definition_id')
         value = request.data.get('value')
-        
+
         if not definition_id or value is None:
             return Response(
                 {'error': 'definition_id and value are required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
             definition = MetafieldDefinition.objects.get(
                 id=definition_id,
@@ -464,17 +468,17 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 {'error': 'Definition not found or access denied'},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         validation_result = MetafieldService.validate_value(
             definition=definition,
             value=value
         )
-        
+
         return Response({
             'is_valid': validation_result['is_valid'],
             'errors': validation_result.get('errors', [])
         })
-    
+
     @extend_schema(
         summary="Get metafield analytics",
         description="Get metafield analytics data"
@@ -486,7 +490,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
             stores=self.request.user.stores_owned.all()
         )
         return Response(analytics)
-    
+
     @extend_schema(
         summary="Export metafields",
         description="Export metafields as JSON"
@@ -495,7 +499,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     def export(self, request):
         """Export metafields as JSON"""
         metafields = self.get_queryset()
-        
+
         export_data = []
         for metafield in metafields:
             export_data.append({
@@ -514,11 +518,11 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 'object_id': metafield.object_id,
                 'value': MetafieldService.get_metafield_value(metafield)
             })
-        
+
         return Response({
             'metafields': export_data
         })
-    
+
     @extend_schema(
         summary="Import metafields",
         description="Import metafields from JSON"
@@ -527,13 +531,13 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     def import_metafields(self, request):
         """Import metafields from JSON"""
         metafields_data = request.data.get('metafields', [])
-        
+
         if not metafields_data:
             return Response(
                 {'error': 'metafields array is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         imported_count = 0
         for metafield_data in metafields_data:
             try:
@@ -544,11 +548,11 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 imported_count += 1
             except Exception as e:
                 continue
-        
+
         return Response({
             'message': f'Imported {imported_count} metafields successfully'
         })
-    
+
     @extend_schema(
         summary="Bulk attach metafields",
         description="Attach metafields to multiple objects"
@@ -562,22 +566,22 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 {'error': 'bulk_data array is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         attached_count = 0
         for item in bulk_data:
             content_type_id = item.get('content_type_id')
             object_id = item.get('object_id')
             metafields = item.get('metafields', {})
-            
+
             if not content_type_id or not object_id or not metafields:
                 continue
-            
+
             # Validate user owns the content
             if not MetafieldService.user_owns_content(
                 self.request.user, content_type_id, object_id
             ):
                 continue
-            
+
             for namespace_key, value in metafields.items():
                 try:
                     definition = MetafieldDefinition.objects.get(
@@ -585,7 +589,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                         key=namespace_key.split('.')[0],
                         store__in=self.request.user.stores_owned.all()
                     )
-                    
+
                     metafield = MetafieldService.create_metafield(
                         user=self.request.user,
                         definition_id=definition.id,
@@ -596,11 +600,11 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                     attached_count += 1
                 except Exception as e:
                     continue
-        
+
         return Response({
             'message': f'Attached {attached_count} metafields successfully'
         })
-    
+
     @extend_schema(
         summary="Bulk detach metafields",
         description="Detach metafields from multiple objects"
@@ -614,22 +618,22 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 {'error': 'bulk_data array is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         detached_count = 0
         for item in bulk_data:
             content_type_id = item.get('content_type_id')
             object_id = item.get('object_id')
             metafields = item.get('metafields', [])
-            
+
             if not content_type_id or not object_id or not metafields:
                 continue
-            
+
             # Validate user owns the content
             if not MetafieldService.user_owns_content(
                 self.request.user, content_type_id, object_id
             ):
                 continue
-            
+
             for namespace_key in metafields.keys():
                 try:
                     definition = MetafieldDefinition.objects.get(
@@ -637,7 +641,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                         key=namespace_key.split('.')[0],
                         store__in=self.request.user.stores_owned.all()
                     )
-                    
+
                     metafield = Metafield.objects.get(
                         definition=definition,
                         content_type_id=content_type_id,
@@ -648,7 +652,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                         detached_count += 1
                 except Exception as e:
                     continue
-        
+
         return Response({
             'message': f'Detached {detached_count} metafields successfully'
         })
@@ -657,8 +661,9 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def bulk_action(self, request):
         """Perform bulk actions on metafields (publish, unpublish, delete)"""
-        from .serializers import BulkActionSerializer
         from django.db import transaction
+
+        from .serializers import BulkActionSerializer
 
         serializer = BulkActionSerializer(data=request.data)
         if not serializer.is_valid():
@@ -738,9 +743,9 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         # Parse time range parameters
         start_date = request.GET.get('start_date')
         end_date = request.GET.get('end_date')
-        
+
         from datetime import datetime
-        
+
         date_filter = {}
         if start_date:
             try:
@@ -751,7 +756,7 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                     {'error': 'Invalid start_date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
+
         if end_date:
             try:
                 end_dt = datetime.fromisoformat(end_date.replace('Z', '+00:00'))

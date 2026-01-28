@@ -49,50 +49,50 @@ class MediaFile(models.Model):
     IMAGE_MAX_SIZE = 10 * 1024 * 1024  # 10MB
     VIDEO_MAX_SIZE = 100 * 1024 * 1024  # 100MB
     DOCUMENT_MAX_SIZE = 20 * 1024 * 1024  # 20MB
-    
+
     RESOURCE_TYPES = [
         ('image', 'Image'),
         ('video', 'Video'),
         ('document', 'Document'),
         ('other', 'Other')
     ]
-    
+
     # Core fields
     original_filename = models.CharField(max_length=255)
     file_extension = models.CharField(max_length=10)
     file_size = models.PositiveIntegerField()
     mime_type = models.CharField(max_length=100)
     resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES)
-    
+
     # R2 storage path (format: store_{id}/media/{folder_path}/filename.xxx)
     storage_path = models.CharField(max_length=512)
-    
+
     # ImageKit.io specific
     imagekit_id = models.CharField(max_length=255, blank=True, null=True)
     width = models.PositiveIntegerField(null=True, blank=True)
     height = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Metadata
     alt_text = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     metadata = models.JSONField(default=dict, blank=True)
-    
+
     # Relations
     store = models.ForeignKey('stores.Store', on_delete=models.CASCADE, related_name='media_files')
     folder = models.ForeignKey(
-        'mediaFile.MediaFolder', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True, 
+        'mediaFile.MediaFolder',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='media_files'
     )
     uploaded_by = models.ForeignKey(
-        'accounts.UserAccount', 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        'accounts.UserAccount',
+        on_delete=models.SET_NULL,
+        null=True,
         related_name='uploaded_files'
     )
-    
+
     # Reverse relationships for user media
     # These are defined here for documentation and type hinting
     user_avatars = models.ManyToManyField(
@@ -107,11 +107,11 @@ class MediaFile(models.Model):
         blank=True,
         help_text="Users who use this file as their cover photo"
     )
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -120,10 +120,10 @@ class MediaFile(models.Model):
             models.Index(fields=['created_at']),
             models.Index(fields=['file_size']),
         ]
-    
+
     def __str__(self):
         return self.original_filename
-    
+
     @property
     def file_size_formatted(self):
         """Return human-readable file size"""
@@ -132,15 +132,15 @@ class MediaFile(models.Model):
                 return f"{self.file_size:.1f} {unit}"
             self.file_size /= 1024.0
         return f"{self.file_size:.1f} GB"
-    
+
     @property
     def is_image(self):
         return self.resource_type == 'image'
-    
+
     @property
     def is_video(self):
         return self.resource_type == 'video'
-    
+
     @property
     def is_document(self):
         return self.resource_type == 'document'
@@ -148,10 +148,10 @@ class MediaFile(models.Model):
     def get_absolute_url(self, transformation=None):
         """
         Get the public URL for this media file with optional transformations
-        
+
         Args:
             transformation (str, optional): ImageKit transformation string
-            
+
         Returns:
             str: Public URL with transformations applied
         """
@@ -161,28 +161,28 @@ class MediaFile(models.Model):
     def get_thumbnail_url(self, width=200, height=200, crop='fill'):
         """
         Get a thumbnail URL for this media file
-        
+
         Args:
             width (int): Width in pixels
             height (int): Height in pixels
             crop (str): Crop mode (fill, fit, etc.)
-            
+
         Returns:
             str: Thumbnail URL or None if not applicable
         """
         if not self.is_image and not self.is_video:
             return None
-            
+
         transformation = f'tr:w-{width},h-{height},c-{crop}'
         return self.get_absolute_url(transformation)
 
     def get_presigned_url(self, expires_in=3600):
         """
         Generate a presigned URL for private file access
-        
+
         Args:
             expires_in (int): Expiration time in seconds
-            
+
         Returns:
             str: Presigned URL or None if not applicable
         """
@@ -266,11 +266,11 @@ class MediaService:
     """
     Service class for handling media file operations with Cloudflare R2 and ImageKit.io
     """
-    
+
     # Allowed MIME types and their corresponding resource types
     ALLOWED_MIME_TYPES = {
         'image': [
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
             'image/svg+xml', 'image/tiff', 'image/bmp'
         ],
         'video': [
@@ -290,7 +290,7 @@ class MediaService:
             'application/x-gzip'
         ]
     }
-    
+
     def __init__(self):
         """Initialize R2 and ImageKit clients"""
         # Initialize R2 client
@@ -302,28 +302,28 @@ class MediaService:
             region_name='auto',
             config=boto3.session.Config(signature_version='s3v4')
         )
-        
+
         # Initialize ImageKit
         self.imagekit = ImageKit(
             private_key=settings.IMAGEKIT_PRIVATE_KEY,
             public_key=settings.IMAGEKIT_PUBLIC_KEY,
             url_endpoint=settings.IMAGEKIT_URL_ENDPOINT
         )
-    
+
     def upload_file(self, file_obj, store, user, folder=None, metadata=None):
         """
         Upload a file to R2 and create a MediaFile record
-        
+
         Args:
             file_obj: File object or InMemoryUploadedFile
             store: Store instance
             user: UserAccount instance
             folder: Optional MediaFolder instance
             metadata: Optional dict of metadata
-            
+
         Returns:
             MediaFile: Created media file instance
-            
+
         Raises:
             InvalidFileTypeError: If file type is not allowed
             FileTooLargeError: If file exceeds size limits
@@ -334,13 +334,13 @@ class MediaService:
             # Validate file
             if not file_obj or not hasattr(file_obj, 'name'):
                 raise MediaUploadError("Invalid file object")
-                
+
             # Get file metadata
             file_name = file_obj.name
             file_size = file_obj.size
-            mime_type = getattr(file_obj, 'content_type', 
+            mime_type = getattr(file_obj, 'content_type',
                               mimetypes.guess_type(file_name)[0] or 'application/octet-stream')
-            
+
             # Determine resource type and validate
             resource_type = self._get_resource_type(mime_type, file_name)
             if not resource_type:
@@ -348,7 +348,7 @@ class MediaService:
                     f"File type {mime_type} is not allowed. "
                     f"Allowed types: {', '.join(self.ALLOWED_MIME_TYPES.keys())}"
                 )
-            
+
             # Validate file size
             max_size = getattr(MediaFile, f"{resource_type.upper()}_MAX_SIZE")
             if file_size > max_size:
@@ -356,20 +356,20 @@ class MediaService:
                     f"{resource_type.capitalize()} exceeds maximum size of "
                     f"{max_size / (1024 * 1024):.1f}MB"
                 )
-            
+
             # Generate storage path
             file_extension = os.path.splitext(file_name)[1].lower()
             base_filename = os.path.splitext(os.path.basename(file_name))[0]
             safe_filename = f"{slugify(base_filename)}{file_extension}"
-            
+
             # Create folder path
             folder_path = f"store_{store.id}/media"
             if folder:
                 folder_path = f"{folder_path}/{folder.path}"
-            
+
             # Upload to R2
             r2_key = f"{folder_path}/{safe_filename}"
-            
+
             try:
                 if hasattr(file_obj, 'temporary_file_path'):
                     # File is stored on disk
@@ -396,7 +396,7 @@ class MediaService:
             except ClientError as e:
                 logger.error(f"Failed to upload to R2: {str(e)}")
                 raise StorageError("Failed to upload file to storage")
-            
+
             # Get file dimensions if image
             width, height = None, None
             if resource_type == 'image':
@@ -414,7 +414,7 @@ class MediaService:
                         file_obj.seek(0)
                 except Exception as e:
                     logger.warning(f"Could not get image dimensions: {str(e)}")
-            
+
             # Create MediaFile record
             media_file = MediaFile.objects.create(
                 original_filename=file_name,
@@ -430,13 +430,13 @@ class MediaService:
                 uploaded_by=user,
                 metadata=metadata or {}
             )
-            
+
             # Register with ImageKit for images and videos
             if resource_type in ['image', 'video']:
                 try:
                     # Get public URL from R2
                     public_url = f"{settings.AWS_S3_PUBLIC_URL}/{r2_key}"
-                    
+
                     # Upload to ImageKit
                     result = self.imagekit.upload(
                         file=public_url,
@@ -448,15 +448,15 @@ class MediaService:
                             'response_fields': ['url', 'fileId']
                         }
                     )
-                    
+
                     # Update MediaFile with ImageKit ID
                     media_file.imagekit_id = result['fileId']
                     media_file.save(update_fields=['imagekit_id'])
-                    
+
                 except Exception as e:
                     logger.error(f"Failed to register with ImageKit: {str(e)}")
                     # Don't fail the upload, just log the error
-            
+
             # Log the upload
             self._log_media_action(
                 action='UPLOAD',
@@ -469,29 +469,29 @@ class MediaService:
                     'folder': folder.name if folder else None
                 }
             )
-            
+
             return media_file
-            
+
         except Exception as e:
             logger.error(f"Error uploading file: {str(e)}")
             if not isinstance(e, (InvalidFileTypeError, FileTooLargeError, StorageError)):
                 raise MediaUploadError(f"Failed to upload file: {str(e)}")
             raise
-    
+
     def delete_media(self, media_file, user):
         """
         Delete a media file from storage and database
-        
+
         Args:
             media_file: MediaFile instance to delete
             user: UserAccount performing the deletion
-            
+
         Returns:
             bool: True if deletion was successful
         """
         try:
             store = media_file.store
-            
+
             # Delete from R2
             try:
                 self.s3_client.delete_object(
@@ -501,14 +501,14 @@ class MediaService:
             except ClientError as e:
                 logger.error(f"Failed to delete from R2: {str(e)}")
                 # Continue with DB deletion even if R2 delete fails
-            
+
             # Delete from ImageKit if it exists
             if media_file.imagekit_id:
                 try:
                     self.imagekit.delete_file(media_file.imagekit_id)
                 except Exception as e:
                     logger.error(f"Failed to delete from ImageKit: {str(e)}")
-            
+
             # Log before deletion (to have the ID)
             self._log_media_action(
                 action='DELETE',
@@ -516,34 +516,34 @@ class MediaService:
                 store=store,
                 media_file=media_file
             )
-            
+
             # Delete from database
             media_file.delete()
-            
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Error deleting media file {media_file.id}: {str(e)}")
             raise MediaUploadError(f"Failed to delete media file: {str(e)}")
-    
+
     def get_media_url(self, media_file, transformation=None):
         """
         Get URL for a media file with optional transformations
-        
+
         Args:
             media_file: MediaFile instance
             transformation: Optional transformation string for ImageKit
-            
+
         Returns:
             str: Public URL to the media file
         """
         if not media_file:
             return None
-            
+
         # For private files, generate a presigned URL
         if media_file.resource_type not in ['image', 'video']:
             return self.get_presigned_url(media_file)
-            
+
         # For public files, use ImageKit if available
         if media_file.imagekit_id:
             try:
@@ -554,18 +554,18 @@ class MediaService:
             except Exception as e:
                 logger.warning(f"Failed to get ImageKit URL: {str(e)}")
                 # Fall back to R2 URL
-        
+
         # Fallback to R2 public URL
         return f"{settings.AWS_S3_PUBLIC_URL}/{media_file.storage_path}"
-    
+
     def get_presigned_url(self, media_file, expires_in=3600):
         """
         Generate a presigned URL for private file access
-        
+
         Args:
             media_file: MediaFile instance
             expires_in: Expiration time in seconds
-            
+
         Returns:
             str: Presigned URL or None if not applicable
         """
@@ -584,34 +584,34 @@ class MediaService:
         except ClientError as e:
             logger.error(f"Failed to generate presigned URL: {str(e)}")
             return None
-    
+
     def get_thumbnail_url(self, media_file, width=200, height=200, crop='fill'):
         """
         Get a thumbnail URL for a media file
-        
+
         Args:
             media_file: MediaFile instance
             width: Thumbnail width in pixels
             height: Thumbnail height in pixels
             crop: Crop mode (fill, fit, etc.)
-            
+
         Returns:
             str: Thumbnail URL or None if not applicable
         """
         if not media_file or media_file.resource_type not in ['image', 'video']:
             return None
-            
+
         transformation = f'w-{width},h-{height},c-{crop}'
         return self.get_media_url(media_file, transformation)
-    
+
     def _get_resource_type(self, mime_type, file_name):
         """
         Determine resource type from MIME type and file name
-        
+
         Args:
             mime_type: MIME type string
             file_name: Original file name
-            
+
         Returns:
             str: Resource type (image, video, document, other) or None if not allowed
         """
@@ -619,17 +619,17 @@ class MediaService:
             # Try to determine from file extension as fallback
             ext = os.path.splitext(file_name)[1].lower().lstrip('.')
             mime_type = mimetypes.guess_type(file_name)[0] or 'application/octet-stream'
-        
+
         for resource_type, allowed_mimes in self.ALLOWED_MIME_TYPES.items():
             if mime_type in allowed_mimes:
                 return resource_type
-        
+
         return None
-    
+
     def _log_media_action(self, action, user, store, media_file, metadata=None):
         """
         Log media-related actions to the activity log
-        
+
         Args:
             action: Action type (UPLOAD, DELETE, etc.)
             user: UserAccount performing the action
@@ -638,7 +638,7 @@ class MediaService:
             metadata: Additional metadata to include in the log
         """
         from logs.services.log_service import log_event_async
-        
+
         log_data = {
             'event_type': 'MEDIA_' + action,
             'message': f"Media file {action.lower()}: {media_file.original_filename}",
@@ -654,7 +654,7 @@ class MediaService:
                 **(metadata or {})
             }
         }
-        
+
         log_event_async.delay(log_data)
 ```
 
@@ -671,23 +671,23 @@ class ImageKitService:
     """
     Service class for advanced ImageKit.io operations
     """
-    
+
     def __init__(self):
         self.client = ImageKit(
             private_key=settings.IMAGEKIT_PRIVATE_KEY,
             public_key=settings.IMAGEKIT_PUBLIC_KEY,
             url_endpoint=settings.IMAGEKIT_URL_ENDPOINT
         )
-    
+
     def get_transformed_url(self, image_url, transformations):
         """
         Get URL for an image with transformations applied
-        
+
         Args:
             image_url: Source image URL
             transformations: List of transformation dicts
                 Example: [{"height": 300, "width": 400}]
-                
+
         Returns:
             str: Transformed image URL
         """
@@ -699,16 +699,16 @@ class ImageKitService:
         except Exception as e:
             logger.error(f"Failed to generate transformed URL: {str(e)}")
             return image_url
-    
+
     def get_video_thumbnail(self, video_url, width=320, height=180):
         """
         Generate a thumbnail for a video
-        
+
         Args:
             video_url: Source video URL
             width: Thumbnail width
             height: Thumbnail height
-            
+
         Returns:
             str: URL to the generated thumbnail
         """
@@ -729,15 +729,15 @@ class ImageKitService:
         except Exception as e:
             logger.error(f"Failed to generate video thumbnail: {str(e)}")
             return None
-    
+
     def bulk_optimize(self, file_ids, transformations=None):
         """
         Optimize multiple images in bulk
-        
+
         Args:
             file_ids: List of ImageKit file IDs
             transformations: Optional transformations to apply
-            
+
         Returns:
             dict: Result of the bulk operation
         """
@@ -844,12 +844,12 @@ class MediaFileViewSet(viewsets.ModelViewSet):
     search_fields = ['original_filename', 'alt_text', 'description']
     ordering_fields = ['created_at', 'file_size', 'original_filename']
     ordering = ['-created_at']
-    
+
     def get_queryset(self):
         """Return media files for the current store"""
         store = self.request.store
         queryset = MediaFile.objects.filter(store=store)
-        
+
         # Filter by folder
         folder_id = self.request.query_params.get('folder_id')
         if folder_id:
@@ -861,26 +861,26 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                     queryset = queryset.filter(folder=folder)
                 except (ValueError, MediaFolder.DoesNotExist):
                     queryset = queryset.none()
-        
+
         # Filter by resource type
         resource_type = self.request.query_params.get('type')
         if resource_type in dict(MediaFile.RESOURCE_TYPES):
             queryset = queryset.filter(resource_type=resource_type)
-        
+
         return queryset
-    
+
     def get_serializer_class(self):
         """Return appropriate serializer class based on action"""
         if self.action == 'create':
             return MediaFileUploadSerializer
         return MediaFileSerializer
-    
+
     def perform_create(self, serializer):
         """Handle file upload and create MediaFile instance"""
         file_obj = self.request.FILES.get('file')
         if not file_obj:
             raise ValidationError({"file": ["No file was submitted."]})
-        
+
         folder_id = self.request.data.get('folder')
         folder = None
         if folder_id:
@@ -888,7 +888,7 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                 folder = MediaFolder.objects.get(id=folder_id, store=self.request.store)
             except (ValueError, MediaFolder.DoesNotExist):
                 raise ValidationError({"folder": ["Invalid folder ID."]})
-        
+
         media_service = MediaService()
         try:
             media_file = media_service.upload_file(
@@ -902,16 +902,16 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                     'ip_address': self.get_client_ip()
                 }
             )
-            
+
             # Set the instance for the serializer
             serializer.instance = media_file
-            
+
         except (InvalidFileTypeError, FileTooLargeError, StorageError) as e:
             raise ValidationError({"file": [str(e)]})
         except Exception as e:
             logger.error(f"Error uploading file: {str(e)}")
             raise ValidationError({"detail": "An error occurred while uploading the file."})
-    
+
     @action(detail=True, methods=['get'])
     def thumbnail(self, request, pk=None):
         """Get a thumbnail URL for the media file"""
@@ -919,7 +919,7 @@ class MediaFileViewSet(viewsets.ModelViewSet):
         width = request.query_params.get('width', 200)
         height = request.query_params.get('height', 200)
         crop = request.query_params.get('crop', 'fill')
-        
+
         try:
             thumbnail_url = media_file.get_thumbnail_url(
                 width=int(width),
@@ -932,25 +932,25 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                 {"detail": "Invalid width/height parameters"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-    
+
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
         """Get a presigned URL for downloading the file"""
         media_file = self.get_object()
         expires_in = min(int(request.query_params.get('expires_in', 3600)), 86400)  # Max 24 hours
-        
+
         download_url = media_file.get_presigned_url(expires_in=expires_in)
         if not download_url:
             return Response(
                 {"detail": "Could not generate download URL"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            
+
         return Response({
             'url': download_url,
             'expires_in': expires_in
         })
-    
+
     @action(detail=False, methods=['post'])
     def bulk_delete(self, request):
         """Bulk delete media files"""
@@ -960,11 +960,11 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                 {"ids": ["Expected a list of media IDs"]},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         store = request.store
         media_service = MediaService()
         deleted_count = 0
-        
+
         for media_id in media_ids:
             try:
                 media_file = MediaFile.objects.get(id=media_id, store=store)
@@ -972,12 +972,12 @@ class MediaFileViewSet(viewsets.ModelViewSet):
                     deleted_count += 1
             except (MediaFile.DoesNotExist, MediaUploadError):
                 continue
-        
+
         return Response({
             'deleted_count': deleted_count,
             'total_count': len(media_ids)
         })
-    
+
     def get_client_ip(self):
         """Get the client's IP address"""
         x_forwarded_for = self.request.META.get('HTTP_X_FORWARDED_FOR')
@@ -1004,42 +1004,42 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
     """
     serializer_class = MediaFolderSerializer
     permission_classes = [IsStoreStaffOrReadOnly]
-    
+
     def get_queryset(self):
         """Return folders for the current store"""
         store = self.request.store
         return MediaFolder.objects.filter(store=store).select_related('parent')
-    
+
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
         if self.action == 'tree':
             return MediaFolderTreeSerializer
         return MediaFolderSerializer
-    
+
     def perform_create(self, serializer):
         """Set the store and created_by fields"""
         serializer.save(
             store=self.request.store,
             created_by=self.request.user
         )
-    
+
     @action(detail=False, methods=['get'])
     def tree(self, request):
         """Get folder hierarchy as a tree"""
         store = request.store
         folders = MediaFolder.objects.filter(store=store)
-        
+
         # Get count of files in each folder
         from ...models.media_file import MediaFile
         file_counts = MediaFile.objects.filter(store=store).values('folder').annotate(
             file_count=Count('id')
         )
         file_count_map = {fc['folder']: fc['file_count'] for fc in file_counts if fc['folder']}
-        
+
         # Build tree
         folder_map = {}
         root_folders = []
-        
+
         # First pass: create all folder nodes
         for folder in folders:
             folder_map[folder.id] = {
@@ -1050,7 +1050,7 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
                 'file_count': file_count_map.get(folder.id, 0),
                 'children': []
             }
-        
+
         # Second pass: build hierarchy
         for folder_id, folder_data in folder_map.items():
             if folder_data['parent_id'] is None:
@@ -1059,30 +1059,30 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
                 parent = folder_map.get(folder_data['parent_id'])
                 if parent:
                     parent['children'].append(folder_data)
-        
+
         # Add uncategorized count
         uncategorized_count = MediaFile.objects.filter(
             store=store,
             folder__isnull=True
         ).count()
-        
+
         return Response({
             'folders': root_folders,
             'uncategorized_count': uncategorized_count
         })
-    
+
     @action(detail=True, methods=['post'])
     def move(self, request, pk=None):
         """Move a folder to a new parent"""
         folder = self.get_object()
         parent_id = request.data.get('parent_id')
-        
+
         if parent_id == str(folder.id):
             return Response(
                 {"parent_id": ["A folder cannot be its own parent"]},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         if parent_id is None:
             folder.parent = None
         else:
@@ -1100,10 +1100,10 @@ class MediaFolderViewSet(viewsets.ModelViewSet):
                     {"parent_id": ["Invalid parent folder"]},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-        
+
         folder.save()
         return Response(self.get_serializer(folder).data)
-    
+
     def _is_descendant(self, parent, child):
         """Check if child is a descendant of parent"""
         if not child.parent:
@@ -1126,7 +1126,7 @@ class MediaFileSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
     file_size_formatted = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = MediaFile
         fields = [
@@ -1139,15 +1139,15 @@ class MediaFileSerializer(serializers.ModelSerializer):
             'mime_type', 'resource_type', 'width', 'height', 'created_at', 'updated_at',
             'url', 'thumbnail_url'
         ]
-    
+
     def get_url(self, obj):
         """Get public URL for the media file"""
         return obj.get_absolute_url()
-    
+
     def get_thumbnail_url(self, obj):
         """Get thumbnail URL for the media file"""
         return obj.get_thumbnail_url()
-    
+
     def get_file_size_formatted(self, obj):
         """Get human-readable file size"""
         return obj.file_size_formatted
@@ -1161,7 +1161,7 @@ class MediaFileUploadSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-    
+
     class Meta:
         model = MediaFile
         fields = ['file', 'folder', 'alt_text', 'description']
@@ -1177,12 +1177,12 @@ from ...models.media_folder import MediaFolder
 class MediaFolderSerializer(serializers.ModelSerializer):
     """Serializer for MediaFolder model"""
     file_count = serializers.IntegerField(read_only=True)
-    
+
     class Meta:
         model = MediaFolder
         fields = ['id', 'name', 'slug', 'parent', 'file_count', 'created_at', 'updated_at']
         read_only_fields = ['slug', 'file_count', 'created_at', 'updated_at']
-    
+
     def validate_parent(self, value):
         """Validate that parent folder belongs to the same store"""
         if value and value.store != self.context['request'].store:
@@ -1193,11 +1193,11 @@ class MediaFolderSerializer(serializers.ModelSerializer):
 class MediaFolderTreeSerializer(serializers.ModelSerializer):
     """Serializer for folder tree view"""
     children = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = MediaFolder
         fields = ['id', 'name', 'slug', 'file_count', 'children']
-    
+
     def get_children(self, obj):
         """Recursively serialize children"""
         serializer = self.__class__(obj.children.all(), many=True, context=self.context)
@@ -1224,7 +1224,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = 'Migrate media files from Cloudinary to Cloudflare R2 + ImageKit.io'
-    
+
     def add_arguments(self, parser):
         parser.add_argument(
             '--store-id',
@@ -1242,65 +1242,65 @@ class Command(BaseCommand):
             action='store_true',
             help='Run without making any changes'
         )
-    
+
     def handle(self, *args, **options):
         store_id = options.get('store_id')
         limit = options.get('limit')
         dry_run = options.get('dry_run')
-        
+
         self.stdout.write(self.style.SUCCESS(
             f'Starting media migration for store {store_id or "all"} (dry run: {dry_run})'
         ))
-        
+
         # Configure Cloudinary
         cloudinary.config(
             cloud_name=settings.CLOUDINARY_CLOUD_NAME,
             api_key=settings.CLOUDINARY_API_KEY,
             api_secret=settings.CLOUDINARY_API_SECRET
         )
-        
+
         # Get media files to migrate
         queryset = MediaFile.objects.all()
         if store_id:
             queryset = queryset.filter(store_id=store_id)
-        
+
         total_count = queryset.count()
         self.stdout.write(f'Found {total_count} media files to migrate')
-        
+
         if not total_count:
             self.stdout.write(self.style.SUCCESS('No media files to migrate'))
             return
-        
+
         if dry_run:
             self.stdout.write(self.style.WARNING('Dry run - no changes will be made'))
-        
+
         migrated_count = 0
         skipped_count = 0
         error_count = 0
-        
+
         media_service = MediaService()
-        
+
         for media_file in queryset[:limit]:
             try:
                 self.stdout.write(f'Processing {media_file.original_filename}... ', ending='')
-                
+
                 # Skip if already migrated
                 if media_file.storage_path and media_file.storage_path.startswith('store_'):
                     self.stdout.write(self.style.WARNING('Already migrated'))
                     skipped_count += 1
                     continue
-                
+
                 # Download from Cloudinary
                 try:
                     cloudinary_url = f"v{media_file.version}/{media_file.public_id}.{media_file.format}"
                     temp_file = f'/tmp/{media_file.public_id}.{media_file.format}'
-                    
+
                     if not dry_run:
                         # Download the file
                         with open(temp_file, 'wb') as f:
                             result = cloudinary.utils.cloudinary_url(cloudinary_url)[0]
                             f.write(requests.get(result).content)
-                        
+
                         # Upload to R2 + ImageKit
                         with open(temp_file, 'rb') as f:
                             uploaded_file = SimpleUploadedFile(
@@ -1308,7 +1308,7 @@ class Command(BaseCommand):
                                 content=f.read(),
                                 content_type=media_file.mime_type
                             )
-                            
+
                             # Get folder if exists
                             folder = None
                             if media_file.folder_id:
@@ -1316,7 +1316,7 @@ class Command(BaseCommand):
                                     folder = MediaFolder.objects.get(id=media_file.folder_id)
                                 except MediaFolder.DoesNotExist:
                                     pass
-                            
+
                             # Upload the file
                             media_service.upload_file(
                                 file_obj=uploaded_file,
@@ -1328,30 +1328,30 @@ class Command(BaseCommand):
                                     'cloudinary_public_id': media_file.public_id
                                 }
                             )
-                        
+
                         # Delete local temp file
                         os.remove(temp_file)
-                        
+
                         # Delete from Cloudinary if migration is successful
                         if not dry_run and settings.CLOUDINARY_DELETE_AFTER_MIGRATE:
                             try:
                                 uploader.destroy(media_file.public_id)
                             except Exception as e:
                                 logger.error(f"Failed to delete from Cloudinary: {str(e)}")
-                
+
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f'Error: {str(e)}'))
                     error_count += 1
                     continue
-                
+
                 migrated_count += 1
                 self.stdout.write(self.style.SUCCESS('Done'))
-                
+
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Unexpected error: {str(e)}'))
                 error_count += 1
                 continue
-        
+
         # Print summary
         self.stdout.write('\n' + '=' * 50)
         self.stdout.write(self.style.SUCCESS('Migration complete!'))
@@ -1359,7 +1359,7 @@ class Command(BaseCommand):
         self.stdout.write(f'Successfully migrated: {migrated_count}')
         self.stdout.write(f'Skipped (already migrated): {skipped_count}')
         self.stdout.write(f'Errors: {error_count}')
-        
+
         if dry_run:
             self.stdout.write(self.style.WARNING('\nThis was a dry run. No changes were made.'))
 ```

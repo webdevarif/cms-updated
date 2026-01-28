@@ -1,8 +1,8 @@
 """
 Dashboard cache serializers - full cache administration and monitoring.
 """
-from rest_framework import serializers
 from apps.cache.models import Cache, CacheStats
+from rest_framework import serializers
 
 
 class CacheSerializer(serializers.ModelSerializer):
@@ -14,11 +14,23 @@ class CacheSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cache
         fields = [
-            'id', 'key', 'cache_type', 'store', 'content_type', 'object_id',
-            'tags', 'size_bytes', 'hits', 'misses', 'hit_ratio', 'is_expired',
-            'expires_at', 'created_at', 'updated_at'
+            "id",
+            "key",
+            "cache_type",
+            "store",
+            "content_type",
+            "object_id",
+            "tags",
+            "size_bytes",
+            "hits",
+            "misses",
+            "hit_ratio",
+            "is_expired",
+            "expires_at",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ["id", "created_at", "updated_at"]
 
     def get_hit_ratio(self, obj):
         """Calculate and return hit ratio"""
@@ -38,10 +50,20 @@ class CacheStatsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CacheStats
         fields = [
-            'store', 'interval', 'period_start', 'total_keys', 'total_size_bytes',
-            'expired_keys', 'total_hits', 'total_misses', 'hit_ratio',
-            'avg_response_time_ms', 'memory_usage', 'cpu_usage_percent',
-            'connections_active', 'created_at'
+            "store",
+            "interval",
+            "period_start",
+            "total_keys",
+            "total_size_bytes",
+            "expired_keys",
+            "total_hits",
+            "total_misses",
+            "hit_ratio",
+            "avg_response_time_ms",
+            "memory_usage",
+            "cpu_usage_percent",
+            "connections_active",
+            "created_at",
         ]
 
     def get_hit_ratio(self, obj):

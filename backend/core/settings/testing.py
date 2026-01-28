@@ -7,15 +7,17 @@ These settings are specific to the testing environment.
 from .base import *  # noqa
 
 # Remove debug toolbar in tests
-INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "debug_toolbar"]
+if "INSTALLED_APPS" in locals():
+    INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "debug_toolbar"]
 
 # Use in-memory SQLite database for faster tests
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
+if "DATABASES" in locals():
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
     }
-}
 
 # Disable password hashing for faster tests
 PASSWORD_HASHERS = [
@@ -41,10 +43,11 @@ CACHES = {
 }
 
 # Disable throttling during tests
-REST_FRAMEWORK = {
-    **REST_FRAMEWORK,
-    "DEFAULT_THROTTLE_CLASSES": [],
-}
+if "REST_FRAMEWORK" in locals():
+    REST_FRAMEWORK = {
+        **REST_FRAMEWORK,
+        "DEFAULT_THROTTLE_CLASSES": [],
+    }
 
 # Disable email sending during tests
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

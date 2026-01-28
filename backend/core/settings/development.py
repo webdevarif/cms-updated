@@ -16,9 +16,10 @@ ALLOWED_HOSTS = ["*"]
 SECURE_SSL_REDIRECT = False
 
 # Database
-DATABASES["default"]["TEST"] = {
-    "NAME": f"test_{DATABASES['default']['NAME']}",
-}
+if "DATABASES" in locals():
+    DATABASES["default"]["TEST"] = {
+        "NAME": f"test_{DATABASES['default']['NAME']}",
+    }
 
 # Cache - Use Redis for development (consistent with production)
 # django-ratelimit requires shared cache with atomic increment support
@@ -75,15 +76,16 @@ DEBUG_TOOLBAR_CONFIG = {
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Logging
-LOGGING["loggers"] = {
-    "django": {
-        "handlers": ["console"],
-        "level": "DEBUG",
-        "propagate": True,
-    },
-    "core": {
-        "handlers": ["console"],
-        "level": "DEBUG",
-        "propagate": True,
-    },
-}
+if "LOGGING" in locals():
+    LOGGING["loggers"] = {
+        "django": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+        "core": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": True,
+        },
+    }

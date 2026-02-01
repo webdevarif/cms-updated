@@ -9,7 +9,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..models.store import Store
-from ..models.store_settings import StoreSettings
+
+# StoreSettings import removed - model doesn't exist
 
 logger = logging.getLogger(__name__)
 

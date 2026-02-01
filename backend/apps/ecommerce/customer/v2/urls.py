@@ -14,7 +14,6 @@ from .views import (
     PaymentMethodCustomerViewSet,
     ProductCategoryCustomerViewSet,
     ProductCustomerViewSet,
-    ReviewCustomerViewSet,
 )
 
 # Customer router
@@ -32,7 +31,6 @@ router.register(
     r"payment-methods", PaymentMethodCustomerViewSet, basename="customer-payment-methods"
 )
 router.register(r"payments", PaymentCustomerViewSet, basename="customer-payments")
-router.register(r"reviews", ReviewCustomerViewSet, basename="customer-reviews")
 
 urlpatterns = [
     path("", include(router.urls)),

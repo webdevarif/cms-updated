@@ -358,3 +358,94 @@ class BackgroundTestRunner:
         cls._active_runs[test_run_id] = thread
         thread.start()
         return thread
+
+
+@background
+def warmup_cache():
+    """Warm up cache with frequently accessed data."""
+    try:
+        logger.info("Starting cache warmup")
+
+        from core.services.cache_service import CacheService
+
+        # Warm up common cache keys
+        cache_service = CacheService()
+
+        # Get all active stores and warm up their caches
+        from apps.stores.models import Store
+
+        stores = Store.objects.filter(is_active=True)
+
+        warmed_count = 0
+        for store in stores:
+            try:
+                # Warm up store-specific cache
+                cache_service.warm_store_cache(store)
+                warmed_count += 1
+                logger.info(f"Warmed cache for store: {store.name}")
+            except Exception as e:
+                logger.warning(f"Failed to warm cache for store {store.id}: {e}")
+
+        logger.info(f"Cache warmup completed: {warmed_count} stores processed")
+
+        return {"warmed_stores": warmed_count, "success": True}
+
+    except Exception as e:
+        logger.error(f"Cache warmup failed: {e}")
+        return {"warmed_stores": 0, "success": False, "error": str(e)}
+
+
+@background
+def sync_translations():
+    """Sync and check translations weekly."""
+    try:
+        logger.info("Starting weekly translation sync")
+
+        from apps.translations.services.translation_service import TranslationService
+
+        translation_service = TranslationService()
+
+        # Sync translations for all active stores
+        from apps.stores.models import Store
+
+        stores = Store.objects.filter(is_active=True)
+
+        sync_results = []
+        for store in stores:
+            try:
+                result = translation_service.sync_store_translations(store)
+                sync_results.append(
+                    {
+                        "store_id": store.id,
+                        "store_name": store.name,
+                        "success": result.get("success", False),
+                        "translations_count": result.get("translations_count", 0),
+                    }
+                )
+                logger.info(f"Synced translations for store: {store.name}")
+            except Exception as e:
+                logger.warning(f"Failed to sync translations for store {store.id}: {e}")
+                sync_results.append(
+                    {
+                        "store_id": store.id,
+                        "store_name": store.name,
+                        "success": False,
+                        "error": str(e),
+                    }
+                )
+
+        successful_syncs = sum(1 for r in sync_results if r.get("success", False))
+
+        logger.info(
+            f"Weekly translation sync completed: {successful_syncs}/{len(sync_results)} stores successful"
+        )
+
+        return {
+            "total_stores": len(sync_results),
+            "successful_syncs": successful_syncs,
+            "results": sync_results,
+        }
+
+    except Exception as e:
+        logger.error(f"Translation sync failed: {e}")
+        return {"total_stores": 0, "successful_syncs": 0, "error": str(e)}

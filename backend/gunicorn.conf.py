@@ -1,18 +1,17 @@
 # Gunicorn configuration for Digital Farmers CMS
 # Production-ready configuration with optimal worker/thread settings
 
-import multiprocessing
 import os
 
 # Server socket
-bind = "127.0.0.1:8000"
+bind = "0.0.0.0:8000"
 backlog = 2048
 
 # Worker processes
-workers = multiprocessing.cpu_count() * 2 + 1
+workers = 4
 worker_class = "gthread"
 worker_connections = 1000
-threads = 2  # Only used with gthread worker class
+threads = 2
 
 # Restart workers after this many requests, this can help prevent memory leaks
 max_requests = 1000

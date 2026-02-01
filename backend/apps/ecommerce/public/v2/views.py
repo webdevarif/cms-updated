@@ -5,7 +5,8 @@ from apps.ecommerce.models.cart import Cart, CartItem
 from apps.ecommerce.models.collections import ProductCollection
 from apps.ecommerce.models.customers import CustomerProfile
 from apps.ecommerce.models.products import Product, ProductCategory, ProductVariant
-from apps.ecommerce.models.reviews import Review
+
+# Review model import removed - model doesn't exist
 from apps.ecommerce.services.ecommerce_service import EcommerceService
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, status, viewsets

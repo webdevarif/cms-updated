@@ -1,0 +1,19 @@
+[Unit]
+Description=Digital Farmers CMS Background Tasks Processor
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/cms/backend
+Environment=DJANGO_SETTINGS_MODULE=core.settings.production
+Environment=PYTHONPATH=/var/www/cms/backend
+ExecStart=/var/www/cms/venv/bin/python manage.py process_tasks
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+[Unit]
+Description=Digital Farmers CMS Gunicorn Application Server
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/cms/backend
+Environment=DJANGO_SETTINGS_MODULE=core.settings.production
+Environment=PYTHONPATH=/var/www/cms/backend
+ExecStart=/var/www/cms/venv/bin/gunicorn --config gunicorn.conf.py core.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

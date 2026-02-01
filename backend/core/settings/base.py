@@ -3,6 +3,7 @@ Base settings for Digital Farmers CMS.
 
 These settings are common to all environments.
 """
+import logging
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -12,10 +13,16 @@ from dotenv import load_dotenv
 # Sentry imports (conditionally loaded)
 try:
     import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
 except ImportError:
     sentry_sdk = None
     DjangoIntegration = None
+    CeleryIntegration = None
+    RedisIntegration = None
+    LoggingIntegration = None
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -531,10 +538,92 @@ SPECTACULAR_SETTINGS = {
 # =============================================================================
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 
+
+def _filter_sentry_event(event, hint):
+    """
+    Filter Sentry events before sending.
+
+    This function allows you to modify or filter events before they are sent to Sentry.
+    You can use it to:
+    - Add custom tags
+    - Filter out certain errors
+    - Modify event data
+    """
+    # Skip certain expected errors in development
+    if os.getenv("SENTRY_ENVIRONMENT", "development") == "development":
+        # Filter out 404 errors in development
+        if event.get("exception", {}).get("values", []):
+            for value in event["exception"]["values"]:
+                if "404" in str(value.get("value", "")):
+                    return None
+
+    # Add custom tags
+    if "tags" not in event:
+        event["tags"] = {}
+
+    event["tags"].update(
+        {
+            "django_version": "4.2",
+            "python_version": "3.14",
+            "environment": os.getenv("SENTRY_ENVIRONMENT", "development"),
+        }
+    )
+
+    # Add custom context
+    if "contexts" not in event:
+        event["contexts"] = {}
+
+    event["contexts"]["app"] = {
+        "app_name": "Digital Farmers CMS",
+        "version": os.getenv("SENTRY_RELEASE", "1.0.0"),
+    }
+
+    return event
+
+
 if SENTRY_DSN and sentry_sdk and DjangoIntegration:
+    # Configure integrations
+    integrations = [
+        DjangoIntegration(
+            transaction_style="url",
+            middleware_spans=True,
+            signals_spans=True,
+            tracing=True,
+        ),
+        CeleryIntegration(
+            monitor_beat_tasks=True,
+            propagate_traces=True,
+            tracing=True,
+        ),
+        RedisIntegration(
+            redis_monitoring_enabled=True,
+            tracing=True,
+        ),
+        LoggingIntegration(
+            level=logging.INFO,
+            event_level=logging.ERROR,
+        ),
+    ]
+
+    # Initialize Sentry with full monitoring
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        integrations=[DjangoIntegration()],
-        traces_sample_rate=0.1,
+        integrations=integrations,
+        # Performance monitoring
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.1")),
+        # Environment and release
+        environment=os.getenv("SENTRY_ENVIRONMENT", "development"),
+        release=os.getenv("SENTRY_RELEASE", "1.0.0"),
+        # Privacy settings
         send_default_pii=False,
+        send_request_pii=False,
+        send_user_pii=False,
+        # Error reporting settings
+        attach_stacktrace=True,
+        max_breadcrumbs=100,
+        # Debug mode (disable in production)
+        debug=os.getenv("SENTRY_DEBUG", "False").lower() == "true",
+        # Before send callback for filtering
+        before_send=lambda event, hint: _filter_sentry_event(event, hint),
     )

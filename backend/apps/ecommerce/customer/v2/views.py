@@ -8,7 +8,6 @@ from apps.ecommerce.models.customers import CustomerProfile
 from apps.ecommerce.models.orders import Order, OrderItem
 from apps.ecommerce.models.payments import Payment, PaymentMethod
 from apps.ecommerce.models.products import Product, ProductCategory, ProductVariant
-from apps.ecommerce.models.reviews import Review
 from apps.ecommerce.services.ecommerce_service import EcommerceService
 from core.permissions import IsStoreUser
 from drf_spectacular.utils import extend_schema
@@ -29,7 +28,6 @@ from .serializers import (
     PaymentMethodCustomerSerializer,
     ProductCategoryCustomerSerializer,
     ProductCustomerSerializer,
-    ReviewCustomerSerializer,
 )
 
 
@@ -222,99 +220,3 @@ class PaymentCustomerViewSet(viewsets.ReadOnlyModelViewSet):
         return Payment.objects.filter(order__customer=self.request.user).select_related(
             "order", "payment_method"
         )
-
-
-class ReviewCustomerViewSet(viewsets.ModelViewSet):
-    """Customer review API - manage own reviews and replies"""
-
-    permission_classes = [IsAuthenticated, IsStoreUser]
-    serializer_class = ReviewCustomerSerializer
-
-    def get_queryset(self):
-        """Get reviews for current user"""
-        return Review.objects.filter(
-            user=self.request.user, parent__isnull=True  # Only top-level reviews, not replies
-        ).select_related("product", "user")
-
-    def perform_create(self, serializer):
-        """Create review is handled in serializer"""
-        pass
-
-    def update(self, request, *args, **kwargs):
-        """Update own review"""
-        instance = self.get_object()
-
-        # Check ownership
-        if instance.user != request.user:
-            return Response(
-                {"error": "You can only edit your own reviews"}, status=status.HTTP_403_FORBIDDEN
-            )
-
-        # Check if already approved (can't edit approved reviews)
-        if instance.is_approved:
-            return Response(
-                {"error": "Cannot edit approved reviews"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        return Response(serializer.data)
-
-    def destroy(self, request, *args, **kwargs):
-        """Delete own review"""
-        instance = self.get_object()
-
-        # Check ownership
-        if instance.user != request.user:
-            return Response(
-                {"error": "You can only delete your own reviews"}, status=status.HTTP_403_FORBIDDEN
-            )
-
-        try:
-            from apps.ecommerce.services.review_service import ReviewService
-
-            ReviewService.delete_review(instance, request.user)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except ValidationError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=True, methods=["post"])
-    def reply(self, request, pk=None):
-        """Reply to a review (if user is seller/admin)"""
-        parent_review = self.get_object()
-
-        # Check if user can reply
-        if not parent_review.can_reply(request.user):
-            return Response(
-                {"error": "You cannot reply to this review"}, status=status.HTTP_403_FORBIDDEN
-            )
-
-        serializer = ReplyCreateSerializer(
-            data=request.data,
-            context={
-                "request": request,
-                "parent_id": parent_review.id,
-                "product_id": parent_review.product.id,
-            },
-        )
-        serializer.is_valid(raise_exception=True)
-        reply = serializer.save()
-
-        # Return the created reply
-        response_serializer = ReviewCustomerSerializer(reply, context={"request": request})
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=["post"])
-    def helpful(self, request, pk=None):
-        """Mark review as helpful"""
-        review = self.get_object()
-
-        try:
-            from apps.ecommerce.services.review_service import ReviewService
-
-            ReviewService.add_helpful_vote(review, request.user, helpful=True)
-            return Response({"message": "Review marked as helpful"})
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

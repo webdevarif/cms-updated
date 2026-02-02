@@ -3,6 +3,7 @@ URL configuration for stores public API v2.
 Stores V2 API URLs.
 Consolidated URL patterns for all store operations.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 

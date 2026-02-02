@@ -1,6 +1,7 @@
 """
 Email utilities for core module.
 """
+
 import logging
 
 from django.conf import settings
@@ -89,7 +90,10 @@ class EmailService:
 
             # Send email
             return send_email(
-                subject=subject, to=to_email, text_content=text_content, from_email=from_email
+                subject=subject,
+                to=to_email,
+                text_content=text_content,
+                from_email=from_email,
             )
 
         except Exception as e:

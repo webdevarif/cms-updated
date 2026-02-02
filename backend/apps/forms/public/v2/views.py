@@ -1,6 +1,7 @@
 """
 Public API views for forms module.
 """
+
 from apps.forms.models import FormSubmission, FormTemplate
 from apps.forms.services import FormService
 from django.http import StreamingHttpResponse
@@ -52,7 +53,8 @@ class PublicFormViewSet(viewsets.ModelViewSet):
         # Validate form is accepting submissions
         if not form.is_accepting_submissions:
             return Response(
-                {"error": "Form is not accepting submissions"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Form is not accepting submissions"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = FormSubmissionSerializer(data=request.data)
@@ -73,7 +75,8 @@ class PublicFormViewSet(viewsets.ModelViewSet):
         # Check if form allows public downloads
         if not form.allow_public_downloads:
             return Response(
-                {"error": "Public downloads not allowed"}, status=status.HTTP_403_FORBIDDEN
+                {"error": "Public downloads not allowed"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         csv_content = FormService.generate_submissions_csv(form)

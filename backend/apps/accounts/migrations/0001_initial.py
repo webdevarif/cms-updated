@@ -15,7 +15,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -32,10 +35,22 @@ class Migration(migrations.Migration):
                         verbose_name="name",
                     ),
                 ),
-                ("permissions", models.JSONField(default=dict, verbose_name="permissions")),
-                ("is_active", models.BooleanField(default=True, verbose_name="is active")),
-                ("created_at", models.DateTimeField(auto_now_add=True, verbose_name="created at")),
-                ("updated_at", models.DateTimeField(auto_now=True, verbose_name="updated at")),
+                (
+                    "permissions",
+                    models.JSONField(default=dict, verbose_name="permissions"),
+                ),
+                (
+                    "is_active",
+                    models.BooleanField(default=True, verbose_name="is active"),
+                ),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="updated at"),
+                ),
             ],
             options={
                 "verbose_name": "role",
@@ -50,7 +65,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -81,7 +99,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("password", models.CharField(max_length=128, verbose_name="password")),
@@ -110,7 +131,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -132,13 +156,19 @@ class Migration(migrations.Migration):
                         verbose_name="action",
                     ),
                 ),
-                ("details", models.JSONField(blank=True, default=dict, verbose_name="details")),
+                (
+                    "details",
+                    models.JSONField(blank=True, default=dict, verbose_name="details"),
+                ),
                 (
                     "ip_address",
                     models.GenericIPAddressField(blank=True, null=True, verbose_name="IP address"),
                 ),
                 ("user_agent", models.TextField(blank=True, verbose_name="user agent")),
-                ("created_at", models.DateTimeField(auto_now_add=True, verbose_name="created at")),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
+                ),
             ],
             options={
                 "verbose_name": "user activity",
@@ -153,7 +183,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -283,13 +316,22 @@ class Migration(migrations.Migration):
                         verbose_name="language",
                     ),
                 ),
-                ("show_email", models.BooleanField(default=False, verbose_name="show email")),
+                (
+                    "show_email",
+                    models.BooleanField(default=False, verbose_name="show email"),
+                ),
                 (
                     "show_online_status",
                     models.BooleanField(default=True, verbose_name="show online status"),
                 ),
-                ("created_at", models.DateTimeField(auto_now_add=True, verbose_name="created at")),
-                ("updated_at", models.DateTimeField(auto_now=True, verbose_name="updated at")),
+                (
+                    "created_at",
+                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
+                ),
+                (
+                    "updated_at",
+                    models.DateTimeField(auto_now=True, verbose_name="updated at"),
+                ),
             ],
             options={
                 "verbose_name": "user preferences",

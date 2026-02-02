@@ -1,6 +1,7 @@
 """
 Management command to bootstrap test.py files in all apps.
 """
+
 from django.core.management.base import BaseCommand
 
 

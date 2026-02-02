@@ -1,6 +1,7 @@
 """
 Posts models - PostType, Post, Taxonomy, Term, PostRevision.
 """
+
 from core.models import TenantModel
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -122,9 +123,10 @@ class Post(TenantModel):
     @classmethod
     def set_featured_image_from_upload(cls, post, uploaded_file, uploaded_by=None):
         """Set featured image using MediaService upload"""
-        from core.media_utils import upload_to_mediafile
+        from apps.mediafile.services.media_service import MediaService
 
-        media_file = upload_to_mediafile(
+        media_service = MediaService()
+        media_file = media_service.upload_from_request(
             store=post.store,
             file_obj=uploaded_file,
             uploaded_by=uploaded_by,

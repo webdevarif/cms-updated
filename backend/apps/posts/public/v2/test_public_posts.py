@@ -1,6 +1,7 @@
 """
 Public posts API tests - endpoint-focused only.
 """
+
 import json
 
 from django.contrib.auth import get_user_model
@@ -107,7 +108,10 @@ class PublicPostsAPITests(APITestCase):
 
         # Create a media file
         media_file = MediaFile.objects.create(
-            store=self.store, file_type="image", title="Test Image", alt_text="Test alt text"
+            store=self.store,
+            file_type="image",
+            title="Test Image",
+            alt_text="Test alt text",
         )
 
         # Update post with featured image
@@ -126,12 +130,18 @@ class PublicPostsAPITests(APITestCase):
 
         # Create category taxonomy
         category_taxonomy = Taxonomy.objects.create(
-            name="Categories", slug="categories", taxonomy_type="category", store=self.store
+            name="Categories",
+            slug="categories",
+            taxonomy_type="category",
+            store=self.store,
         )
 
         # Create category term
         category = Term.objects.create(
-            name="Test Category", slug="test-category", taxonomy=category_taxonomy, store=self.store
+            name="Test Category",
+            slug="test-category",
+            taxonomy=category_taxonomy,
+            store=self.store,
         )
 
         # Add category to post

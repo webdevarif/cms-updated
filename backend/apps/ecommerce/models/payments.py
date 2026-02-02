@@ -1,6 +1,7 @@
 """
 Payment models for ecommerce app.
 """
+
 import uuid
 
 from django.conf import settings
@@ -150,7 +151,12 @@ class Payment(models.Model):
         if response_data:
             self.gateway_response = response_data
         self.save(
-            update_fields=["status", "completed_at", "gateway_transaction_id", "gateway_response"]
+            update_fields=[
+                "status",
+                "completed_at",
+                "gateway_transaction_id",
+                "gateway_response",
+            ]
         )
 
     def mark_as_failed(self, reason=None, response_data=None):

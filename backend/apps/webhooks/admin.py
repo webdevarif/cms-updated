@@ -1,6 +1,7 @@
 """
 Admin configuration for webhooks module.
 """
+
 from django.contrib import admin
 
 from .models import Webhook, WebhookDelivery, WebhookEvent

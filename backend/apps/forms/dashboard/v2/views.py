@@ -3,6 +3,7 @@ Dashboard Forms API Views
 
 This module provides form management functionality for store administrators.
 """
+
 from apps.forms.models import FormSubmission, FormTemplate
 from apps.forms.services import FormService
 from core.permissions import IsStoreOwner
@@ -21,7 +22,11 @@ class DashboardFormTemplateViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated, IsStoreOwner]
     serializer_class = DashboardFormTemplateSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["status", "is_active"]
     search_fields = ["title", "description"]
     ordering_fields = ["created_at", "updated_at", "title"]
@@ -39,7 +44,8 @@ class DashboardFormTemplateViewSet(viewsets.ModelViewSet):
         return Response(analytics)
 
     @extend_schema(
-        summary="Export form data", description="Export form submissions and configuration"
+        summary="Export form data",
+        description="Export form submissions and configuration",
     )
     @action(detail=True, methods=["post"])
     def export(self, request, pk=None):
@@ -49,7 +55,8 @@ class DashboardFormTemplateViewSet(viewsets.ModelViewSet):
         return Response(export_data)
 
     @extend_schema(
-        summary="Import form data", description="Import form configuration from export data"
+        summary="Import form data",
+        description="Import form configuration from export data",
     )
     @action(detail=False, methods=["post"])
     def import_form(self, request):
@@ -66,7 +73,11 @@ class DashboardFormSubmissionViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated, IsStoreOwner]
     serializer_class = DashboardFormSubmissionSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["status", "form_template", "submitted_at"]
     search_fields = ["user__username", "user__email"]
     ordering_fields = ["submitted_at", "processed_at"]
@@ -76,7 +87,8 @@ class DashboardFormSubmissionViewSet(viewsets.ModelViewSet):
         return FormSubmission.objects.filter(form_template__store=self.request.store)
 
     @extend_schema(
-        summary="Update submission status", description="Update the status of a form submission"
+        summary="Update submission status",
+        description="Update the status of a form submission",
     )
     @action(detail=True, methods=["patch"])
     def update_status(self, request, pk=None):
@@ -94,7 +106,8 @@ class DashboardFormSubmissionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
-        summary="Bulk update submissions", description="Update multiple submissions at once"
+        summary="Bulk update submissions",
+        description="Update multiple submissions at once",
     )
     @action(detail=False, methods=["post"])
     def bulk_update(self, request):

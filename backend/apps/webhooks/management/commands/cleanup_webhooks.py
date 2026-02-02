@@ -1,6 +1,7 @@
 """
 Management command to cleanup old webhook deliveries.
 """
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -10,7 +11,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--days", type=int, default=90, help="Number of days to keep deliveries (default: 90)"
+            "--days",
+            type=int,
+            default=90,
+            help="Number of days to keep deliveries (default: 90)",
         )
 
     def handle(self, *args, **options):

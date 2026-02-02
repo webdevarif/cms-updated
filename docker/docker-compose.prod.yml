@@ -1,0 +1,93 @@
+services:
+  backend:
+    build:
+      context: ../
+      dockerfile: docker/backend/Dockerfile
+    container_name: cms-backend
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.production
+      PYTHONUNBUFFERED: 1
+      RUN_MIGRATIONS: true
+    env_file:
+      - ./env/backend.env.example
+    volumes:
+      - backend_media:/app/media
+      - backend_static:/app/staticfiles
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    command: /app/entrypoint.sh
+
+  nginx:
+    build:
+      context: docker/nginx
+      dockerfile: Dockerfile
+    container_name: cms-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - backend_static:/var/www/static
+      - backend_media:/var/www/media
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    container_name: cms-db
+    environment:
+      POSTGRES_DB: cms_db
+      POSTGRES_USER: cms_user
+      POSTGRES_PASSWORD: your-db-password-here
+      POSTGRES_HOST: db
+    env_file:
+      - ./env/db.env.example
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: cms-redis
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    build:
+      context: ../
+      dockerfile: docker/worker/Dockerfile
+    container_name: cms-worker
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.production
+      PYTHONUNBUFFERED: 1
+      RUN_MIGRATIONS: false
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    env_file:
+      - ./env/backend.env.example
+    volumes:
+      - ../backend:/app
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    command: /app/entrypoint.sh
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_media:
+  backend_static:

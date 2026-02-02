@@ -1,6 +1,7 @@
 """
 Public accounts serializers.
 """
+
 from apps.accounts.models.user import User
 from rest_framework import serializers
 

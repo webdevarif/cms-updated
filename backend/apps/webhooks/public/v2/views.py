@@ -1,6 +1,7 @@
 """
 Public webhooks API.
 """
+
 import hashlib
 import hmac
 import logging
@@ -79,7 +80,8 @@ class WebhookPublicView(views.APIView):
                     webhook = Webhook.objects.get(id=webhook_id, is_active=True)
                 except Webhook.DoesNotExist:
                     return Response(
-                        {"error": "Webhook not found or inactive"}, status=status.HTTP_404_NOT_FOUND
+                        {"error": "Webhook not found or inactive"},
+                        status=status.HTTP_404_NOT_FOUND,
                     )
             else:
                 # Try to identify webhook by event type or other means
@@ -118,7 +120,8 @@ class WebhookPublicView(views.APIView):
         except Exception as e:
             logger.error(f"Error processing webhook: {str(e)}", exc_info=True)
             return Response(
-                {"error": "Internal server error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Internal server error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 

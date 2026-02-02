@@ -1,6 +1,7 @@
 """
 Customer notification views.
 """
+
 from apps.notifications.models import Notification, NotificationPreference
 from apps.notifications.services import NotificationService
 from core.permissions import IsStoreUser
@@ -56,7 +57,8 @@ class NotificationCustomerViewSet(viewsets.ReadOnlyModelViewSet):
         """Mark all user notifications as read"""
         count = NotificationService.mark_all_as_read(request.user)
         return Response(
-            {"message": f"Marked {count} notifications as read"}, status=status.HTTP_200_OK
+            {"message": f"Marked {count} notifications as read"},
+            status=status.HTTP_200_OK,
         )
 
     @extend_schema(
@@ -90,5 +92,6 @@ class NotificationPreferenceCustomerViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Set user and store on creation"""
         serializer.save(
-            user=self.request.user, store=self.request.user.stores.first()  # Default to first store
+            user=self.request.user,
+            store=self.request.user.stores.first(),  # Default to first store
         )

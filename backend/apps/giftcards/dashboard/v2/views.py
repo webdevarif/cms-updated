@@ -1,6 +1,7 @@
 """
 Dashboard gift cards views - admin interface for gift card management.
 """
+
 from datetime import timedelta
 
 from apps.giftcards.models import GiftCard, GiftCardHistory
@@ -118,31 +119,20 @@ class DashboardGiftCardViewSet(viewsets.ModelViewSet):
                     )
 
                 # Log the bulk operation
-                from apps.logs.tasks import log_event_async
+                from apps.analytics.services.event_service import EventService
 
-                log_event_async.delay(
-                    {
-                        "event_type": "GIFTCARD_BULK_UPDATE",
-                        "message": f"Bulk {action_type} operation on gift cards",
-                        "user": request.user,
-                        "store": request.store,
-                        "entity_type": "GiftCard",
-                        "metadata": {
-                            "action": action_type,
-                            "requested_count": total_requested,
-                            "found_count": total_found,
-                            "affected_count": updated
-                            if "updated" in locals()
-                            else deleted
-                            if "deleted" in locals()
-                            else extended_count
-                            if "extended_count" in locals()
-                            else voided_count
-                            if "voided_count" in locals()
-                            else 0,
-                            "extra_data": extra_data,
-                        },
-                    }
+                EventService.log_event(
+                    event_type="GIFTCARD_BULK_UPDATE",
+                    event_name=f"Bulk {action_type} operation on gift cards",
+                    properties={
+                        "user": request.user.id if request.user else None,
+                        "store": request.store.id,
+                        "action_type": action_type,
+                        "count": len(giftcard_ids),
+                        "giftcard_ids": giftcard_ids,
+                    },
+                    user=request.user,
+                    store=request.store,
                 )
 
                 return Response(
@@ -151,15 +141,19 @@ class DashboardGiftCardViewSet(viewsets.ModelViewSet):
                         "action": action_type,
                         "requested": total_requested,
                         "found": total_found,
-                        "affected": updated
-                        if "updated" in locals()
-                        else deleted
-                        if "deleted" in locals()
-                        else extended_count
-                        if "extended_count" in locals()
-                        else voided_count
-                        if "voided_count" in locals()
-                        else 0,
+                        "affected": (
+                            updated
+                            if "updated" in locals()
+                            else (
+                                deleted
+                                if "deleted" in locals()
+                                else (
+                                    extended_count
+                                    if "extended_count" in locals()
+                                    else (voided_count if "voided_count" in locals() else 0)
+                                )
+                            )
+                        ),
                     }
                 )
 
@@ -307,10 +301,25 @@ class DashboardGiftCardViewSet(viewsets.ModelViewSet):
         Returns:
             Gift card history records
         """
-        gift_card = self.get_object()
-        history = gift_card.history.all().select_related("created_by")
-        serializer = DashboardGiftCardHistorySerializer(history, many=True)
-        return Response(serializer.data)
+        try:
+            store = getattr(request, "store", None)
+            if not store:
+                return Response(
+                    {"error": "Store not specified"}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Use analytics service for history
+            from ..services.giftcard_analytics_service import get_giftcard_history
+
+            history = get_giftcard_history(store, giftcard_id=pk)
+            serializer = DashboardGiftCardHistorySerializer(history, many=True)
+            return Response(serializer.data)
+
+        except Exception as e:
+            return Response(
+                {"error": f"History retrieval failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=False, methods=["get"])
     def analytics(self, request):
@@ -331,162 +340,20 @@ class DashboardGiftCardViewSet(viewsets.ModelViewSet):
             start_date = request.GET.get("start_date")
             end_date = request.GET.get("end_date")
 
-            from datetime import datetime
-
-            date_filter = {}
+            filters = {}
             if start_date:
-                try:
-                    start_dt = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-                    date_filter["created_at__gte"] = start_dt
-                except ValueError:
-                    return Response(
-                        {
-                            "error": "Invalid start_date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)"
-                        },
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-
+                filters["start_date"] = start_date
             if end_date:
-                try:
-                    end_dt = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-                    date_filter["created_at__lte"] = end_dt
-                except ValueError:
-                    return Response(
-                        {"error": "Invalid end_date format. Use ISO format (YYYY-MM-DDTHH:MM:SSZ)"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+                filters["end_date"] = end_date
 
-            # Base queryset with date filtering
-            giftcards = self.get_queryset().filter(**date_filter)
+            # Use analytics service
+            from ..services.giftcard_analytics_service import get_giftcard_analytics
 
-            # Gift card status distribution
-            total_giftcards = giftcards.count()
-            active_giftcards = giftcards.filter(status="active").count()
-            used_giftcards = giftcards.filter(status="used").count()
-            expired_giftcards = giftcards.filter(status="expired").count()
-            voided_giftcards = giftcards.filter(status="voided").count()
-
-            # Financial metrics
-            from django.db.models import Avg, Count, Sum
-
-            total_value_created = giftcards.aggregate(total=Sum("initial_balance"))["total"] or 0
-
-            remaining_value = (
-                giftcards.filter(status="active").aggregate(total=Sum("current_balance"))["total"]
-                or 0
-            )
-
-            redeemed_value = (
-                giftcards.filter(status="used").aggregate(total=Sum("initial_balance"))["total"]
-                or 0
-            )
-
-            avg_giftcard_value = giftcards.aggregate(avg=Avg("initial_balance"))["avg"] or 0
-
-            # Redemption trends
-            redemption_trends = []
-            if start_date and end_date:
-                from django.db.models.functions import TruncDate
-
-                daily_redemptions = (
-                    giftcards.filter(status="used")
-                    .annotate(date=TruncDate("updated_at"))
-                    .values("date")
-                    .annotate(count=Count("id"), value=Sum("initial_balance"))
-                    .order_by("date")
-                )
-
-                redemption_trends = [
-                    {
-                        "date": str(item["date"]),
-                        "redemptions": item["count"],
-                        "value": float(item["value"] or 0),
-                    }
-                    for item in daily_redemptions
-                ]
-
-            # Top recipients
-            top_recipients = (
-                giftcards.values("recipient_email")
-                .annotate(count=Count("id"), total_value=Sum("initial_balance"))
-                .exclude(recipient_email="")
-                .order_by("-total_value")[:10]
-            )
-
-            recipients = []
-            for recipient in top_recipients:
-                recipients.append(
-                    {
-                        "email": recipient["recipient_email"],
-                        "giftcards_count": recipient["count"],
-                        "total_value": float(recipient["total_value"] or 0),
-                    }
-                )
-
-            # Expiry analysis
-            expiring_soon = giftcards.filter(
-                status="active",
-                expires_at__lte=timezone.now() + timedelta(days=30),
-                expires_at__gt=timezone.now(),
-            ).count()
-
-            expired_unused = giftcards.filter(
-                status="active", expires_at__lte=timezone.now()
-            ).aggregate(count=Count("id"), value=Sum("current_balance"))
-
-            # Sender analysis
-            top_senders = (
-                giftcards.values("sender_email")
-                .annotate(count=Count("id"), total_value=Sum("initial_balance"))
-                .exclude(sender_email="")
-                .order_by("-total_value")[:10]
-            )
-
-            senders = []
-            for sender in top_senders:
-                senders.append(
-                    {
-                        "email": sender["sender_email"],
-                        "giftcards_count": sender["count"],
-                        "total_value": float(sender["total_value"] or 0),
-                    }
-                )
-
-            analytics_data = {
-                "overview": {
-                    "total_giftcards": total_giftcards,
-                    "active_giftcards": active_giftcards,
-                    "used_giftcards": used_giftcards,
-                    "expired_giftcards": expired_giftcards,
-                    "voided_giftcards": voided_giftcards,
-                    "redemption_rate": (used_giftcards / total_giftcards * 100)
-                    if total_giftcards > 0
-                    else 0,
-                },
-                "financial": {
-                    "total_value_created": float(total_value_created),
-                    "remaining_value": float(remaining_value),
-                    "redeemed_value": float(redeemed_value),
-                    "expired_value": float(expired_unused["value"] or 0),
-                    "avg_giftcard_value": float(avg_giftcard_value),
-                },
-                "recipients": recipients,
-                "senders": senders,
-                "expiry_analysis": {
-                    "expiring_soon_count": expiring_soon,
-                    "expired_unused_count": expired_unused["count"],
-                    "expired_unused_value": float(expired_unused["value"] or 0),
-                },
-                "trends": {"redemptions": redemption_trends},
-                "time_range": {
-                    "start_date": start_date,
-                    "end_date": end_date,
-                    "has_date_filter": bool(start_date or end_date),
-                },
-            }
-
+            analytics_data = get_giftcard_analytics(store, filters)
             return Response(analytics_data)
 
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response(
                 {"error": f"Analytics failed: {str(e)}"},

@@ -1,6 +1,7 @@
 """
 Services for notifications app.
 """
+
 import logging
 
 from apps.notifications.models import (
@@ -18,15 +19,49 @@ logger = logging.getLogger(__name__)
 
 
 class NotificationService:
-    """Shared notification management service"""
+    """
+    Single orchestrator for all notification operations.
+
+    This service is the primary entry point for creating and managing notifications.
+    It handles notification creation, channel selection, user preferences, and delegates
+    to Celery tasks and channel implementations for actual delivery.
+
+    Core responsibilities:
+    - Creating notifications with proper store scoping and metadata
+    - Selecting appropriate channels based on user preferences
+    - Triggering async delivery via Celery tasks
+    - Providing convenient helper methods for common notification patterns
+
+    All other apps should use this service as the only entry point for notifications.
+    """
 
     @staticmethod
     @transaction.atomic
     def create_notification(
-        store, notification_type, title, message, user=None, channels=None, metadata=None
+        store,
+        notification_type,
+        title,
+        message,
+        user=None,
+        channels=None,
+        metadata=None,
     ):
         """
-        Create a new notification
+        Create a new notification and trigger async delivery.
+
+        Args:
+            store: Store instance for scoping
+            notification_type: Type of notification (e.g., 'order.created')
+            title: Notification title
+            message: Notification message content
+            user: Recipient user (optional for role/store notifications)
+            channels: List of channels to send through (default: ['in_app'])
+            metadata: Additional context data for templates
+
+        Returns:
+            Notification: Created notification instance
+
+        Note: This method triggers async delivery via Celery task.
         """
         if channels is None:
             channels = ["in_app"]
@@ -50,7 +85,18 @@ class NotificationService:
     @staticmethod
     def notify_user(user, notification_type, context, store=None):
         """
-        Helper method to notify a specific user
+        Notify a specific user respecting their preferences.
+
+        Args:
+            user: User instance to notify
+            notification_type: Type of notification (e.g., 'order.created')
+            context: Dict with notification data (title, message, etc.)
+            store: Store instance (auto-detected if not provided)
+
+        Returns:
+            Notification: Created notification instance
+
+        Note: Respects user's channel preferences and applies appropriate filtering.
         """
         if not store:
             store = user.storemembership_set.first().store
@@ -80,7 +126,17 @@ class NotificationService:
     @staticmethod
     def notify_staff(store, notification_type, context):
         """
-        Helper method to notify all staff users in a store
+        Notify all staff users (owners and staff) in a store.
+
+        Args:
+            store: Store instance
+            notification_type: Type of notification
+            context: Dict with notification data
+
+        Returns:
+            List[Notification]: Created notification instances for all staff users
+
+        Note: Respects individual staff user preferences for each notification.
         """
         from django.contrib.auth import get_user_model
 
@@ -93,7 +149,10 @@ class NotificationService:
         notifications = []
         for user in staff_users:
             notification = NotificationService.notify_user(
-                user=user, notification_type=notification_type, context=context, store=store
+                user=user,
+                notification_type=notification_type,
+                context=context,
+                store=store,
             )
             notifications.append(notification)
 
@@ -104,38 +163,39 @@ class NotificationService:
         """
         Create notification for post publish event with proper logging
         """
-        from apps.logs.tasks import log_event_async
+        from apps.analytics.services.event_service import EventService
 
         # Create notification
         notification = NotificationService.create_notification(
-            store=post.store,
-            notification_type="post.published",
-            title=f"Post Published: {post.title}",
-            message=f'Your post "{post.title}" has been published',
             user=user,
-            channels=["in_app", "email"],
-            metadata={
-                "post_id": str(post.id),
-                "post_type": post.post_type.slug,
-                "published_at": post.published_at.isoformat() if post.published_at else None,
+            notification_type="post_published",
+            title=f"New post published: {post.title}",
+            message=f"A new post '{post.title}' has been published",
+            data={
+                "post_id": post.id,
+                "post_title": post.title,
+                "post_url": post.get_absolute_url(),
+                "author": post.author.get_display_name() if post.author else "Unknown",
+                "published_at": (post.published_at.isoformat() if post.published_at else None),
             },
+            store=post.store,
         )
 
         # Log POST_PUBLISHED event
-        log_event_async.delay(
-            {
-                "event_type": "POST_PUBLISHED",
-                "message": f"Published post: {post.title}",
-                "store": post.store,
-                "user": user,
+        EventService.log_event(
+            event_type="POST_PUBLISHED",
+            event_name=f"Published post: {post.title}",
+            properties={
+                "user": user.id if user else None,
+                "store": post.store.id,
                 "entity_type": "Post",
                 "entity_id": post.id,
-                "metadata": {
-                    "post_id": str(post.id),
-                    "post_type": post.post_type.slug,
-                    "notification_id": str(notification.id),
-                },
-            }
+                "post_title": post.title,
+                "post_author": post.author.id if post.author else None,
+                "published_at": (post.published_at.isoformat() if post.published_at else None),
+            },
+            user=user,
+            store=post.store,
         )
 
         return notification
@@ -145,40 +205,41 @@ class NotificationService:
         """
         Create notification for entity action (like, favorite, etc.) with EntityService logging
         """
-        from apps.logs.tasks import log_event_async
+        from apps.analytics.services.event_service import EventService
 
         # Create notification
         notification = NotificationService.create_notification(
+            user=entity_interaction.user,
+            notification_type="entity_action",
+            title=f"{entity_interaction.action.name}: {entity_interaction.content_object}",
+            message=f"{entity_interaction.user.get_display_name()} {entity_interaction.action.name.lower()}d {entity_interaction.content_object}",
+            data={
+                "entity_interaction_id": entity_interaction.id,
+                "action_name": entity_interaction.action.name,
+                "action_slug": entity_interaction.action.slug,
+                "content_type": entity_interaction.content_type.model,
+                "object_id": entity_interaction.object_id,
+                "object_repr": str(entity_interaction.content_object),
+            },
             store=entity_interaction.store,
-            notification_type="entity.action",
-            title=f"{entity_interaction.action.name.title()} Added",
-            message=f"You {entity_interaction.action.name.lower()} {entity_interaction.content_object}",
-            user=user,
-            channels=["in_app"],
-            metadata={
-                "entity_interaction_id": str(entity_interaction.id),
+        )
+
+        # Log ENTITY_ADDED event
+        EventService.log_event(
+            event_type="ENTITY_ADDED",
+            event_name=f"Entity action added: {entity_interaction.action.name}",
+            properties={
+                "user": entity_interaction.user.id if entity_interaction.user else None,
+                "store": entity_interaction.store.id,
+                "entity_type": "entity_interaction",
+                "entity_id": entity_interaction.id,
+                "action_name": entity_interaction.action.name,
                 "action_slug": entity_interaction.action.slug,
                 "content_type": entity_interaction.content_type.model,
                 "object_id": entity_interaction.object_id,
             },
-        )
-
-        # Log ENTITY_ADDED event
-        log_event_async.delay(
-            {
-                "event_type": "ENTITY_ADDED",
-                "message": f"Entity action added: {entity_interaction.action.name}",
-                "store": entity_interaction.store,
-                "user": user,
-                "entity_type": "entity_interaction",
-                "entity_id": entity_interaction.id,
-                "metadata": {
-                    "action_slug": entity_interaction.action.slug,
-                    "content_type": entity_interaction.content_type.model,
-                    "object_id": entity_interaction.object_id,
-                    "notification_id": str(notification.id),
-                },
-            }
+            user=entity_interaction.user,
+            store=entity_interaction.store,
         )
 
         return notification

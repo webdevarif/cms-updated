@@ -1,6 +1,7 @@
 """
 Dashboard SMTP serializers.
 """
+
 from apps.smtp.models import EmailLog, SMTPConfig
 from rest_framework import serializers
 
@@ -29,7 +30,13 @@ class SMTPConfigDashboardSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "email_count", "success_rate"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "email_count",
+            "success_rate",
+        ]
         extra_kwargs = {"password": {"write_only": True}}
 
     def get_email_count(self, obj):

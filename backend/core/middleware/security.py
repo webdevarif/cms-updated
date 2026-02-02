@@ -1,6 +1,7 @@
 """
 Security middleware for Digital Farmers CMS.
 """
+
 import re
 
 from django.conf import settings

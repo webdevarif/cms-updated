@@ -1,6 +1,7 @@
 """
 Dashboard SMTP API tests.
 """
+
 import factory
 import pytest
 from django.contrib.auth import get_user_model
@@ -57,14 +58,19 @@ class DashboardSMTPConfigViewSetTests:
     def test_create_smtp_config_as_admin(self, authenticated_client):
         """Test creating SMTP config as admin"""
         response = authenticated_client.post(
-            "/v2/api/smtp/", {"name": "Test SMTP", "host": "smtp.example.com", "port": 587}
+            "/v2/api/smtp/",
+            {"name": "Test SMTP", "host": "smtp.example.com", "port": 587},
         )
-        assert response.status_code in [201, 400]  # May fail validation but should reach endpoint
+        assert response.status_code in [
+            201,
+            400,
+        ]  # May fail validation but should reach endpoint
 
     def test_create_smtp_config_as_anonymous(self, anonymous_client):
         """Test creating SMTP config as anonymous (should fail)"""
         response = anonymous_client.post(
-            "/v2/api/smtp/", {"name": "Test SMTP", "host": "smtp.example.com", "port": 587}
+            "/v2/api/smtp/",
+            {"name": "Test SMTP", "host": "smtp.example.com", "port": 587},
         )
         assert response.status_code in [401, 403]  # Should be unauthorized/forbidden
 
@@ -72,6 +78,7 @@ class DashboardSMTPConfigViewSetTests:
     def test_unauthorized_access(self, anonymous_client):
         """Test unauthorized access"""
         response = anonymous_client.post(
-            "/v2/api/smtp/", {"name": "Test SMTP", "host": "smtp.example.com", "port": 587}
+            "/v2/api/smtp/",
+            {"name": "Test SMTP", "host": "smtp.example.com", "port": 587},
         )
         assert response.status_code in [401, 403]

@@ -1,6 +1,7 @@
 """
 Public smtp serializers.
 """
+
 from apps.smtp.serializers import (
     BaseEmailLogSerializer,
     BaseEmailTemplateSerializer,

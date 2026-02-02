@@ -1,12 +1,13 @@
 """
 Async tasks for translations module.
 """
+
 import logging
 
 from celery import shared_task
 from django.core.cache import caches
 
-from .utils.translation_parser import TranslationParser
+from .utils import TranslationParser
 
 logger = logging.getLogger(__name__)
 

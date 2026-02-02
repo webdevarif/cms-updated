@@ -1,6 +1,7 @@
 """
 Dashboard posts API tests - endpoint-focused only.
 """
+
 import json
 
 from django.contrib.auth import get_user_model
@@ -30,7 +31,11 @@ class DashboardPostsAPITests(APITestCase):
         )
 
         self.page_type = PostType.objects.create(
-            name="Page", slug="page", store=self.store, is_public=True, is_hierarchical=True
+            name="Page",
+            slug="page",
+            store=self.store,
+            is_public=True,
+            is_hierarchical=True,
         )
 
         # Create test post
@@ -46,7 +51,10 @@ class DashboardPostsAPITests(APITestCase):
 
         # Create taxonomy
         self.category_taxonomy = Taxonomy.objects.create(
-            name="Categories", slug="categories", taxonomy_type="category", store=self.store
+            name="Categories",
+            slug="categories",
+            taxonomy_type="category",
+            store=self.store,
         )
 
         self.client = APIClient()
@@ -74,7 +82,11 @@ class DashboardPostsAPITests(APITestCase):
     def test_update_post(self):
         """Test updating an existing post"""
         url = reverse("dashboard-posts-detail", kwargs={"pk": self.post.id})
-        data = {"title": "Updated Admin Post", "content": "Updated content", "status": "published"}
+        data = {
+            "title": "Updated Admin Post",
+            "content": "Updated content",
+            "status": "published",
+        }
 
         response = self.client.patch(url, data, format="json")
 
@@ -146,7 +158,10 @@ class DashboardPostsAPITests(APITestCase):
         """Test deleting a post type"""
         # Create a deletable post type
         deletable_type = PostType.objects.create(
-            name="Deletable Type", slug="deletable-type", store=self.store, is_deletable=True
+            name="Deletable Type",
+            slug="deletable-type",
+            store=self.store,
+            is_deletable=True,
         )
 
         url = reverse("dashboard-post-types-detail", kwargs={"pk": deletable_type.id})
@@ -157,7 +172,12 @@ class DashboardPostsAPITests(APITestCase):
     def test_create_taxonomy(self):
         """Test creating a new taxonomy"""
         url = reverse("dashboard-taxonomies-list")
-        data = {"name": "Tags", "slug": "tags", "taxonomy_type": "tag", "description": "Post tags"}
+        data = {
+            "name": "Tags",
+            "slug": "tags",
+            "taxonomy_type": "tag",
+            "description": "Post tags",
+        }
 
         response = self.client.post(url, data, format="json")
 

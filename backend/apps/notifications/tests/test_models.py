@@ -1,6 +1,7 @@
 """
 Tests for notification models.
 """
+
 import pytest
 from django.contrib.auth import get_user_model
 

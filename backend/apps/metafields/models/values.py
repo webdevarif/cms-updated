@@ -1,6 +1,7 @@
 """
 Metafield model for metafields app.
 """
+
 from core.models import TenantModel
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -14,7 +15,9 @@ class Metafield(TenantModel):
 
     # Link to definition
     definition = models.ForeignKey(
-        "metafields.MetafieldDefinition", on_delete=models.CASCADE, related_name="values"
+        "metafields.MetafieldDefinition",
+        on_delete=models.CASCADE,
+        related_name="values",
     )
 
     # Generic relation to any model

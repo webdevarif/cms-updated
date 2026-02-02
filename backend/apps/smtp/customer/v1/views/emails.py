@@ -1,6 +1,7 @@
 """
 Customer SMTP email views.
 """
+
 from apps.smtp.models import EmailLog
 from core.permissions import IsStoreUser
 from django_filters.rest_framework import DjangoFilterBackend

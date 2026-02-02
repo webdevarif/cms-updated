@@ -3,6 +3,7 @@ URL configuration for stores app.
 
 Routes for public, customer, and dashboard stores endpoints.
 """
+
 from django.urls import include, path
 
 app_name = "stores"

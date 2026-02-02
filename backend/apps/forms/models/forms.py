@@ -1,6 +1,7 @@
 """
 FormTemplate model for forms app.
 """
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -28,7 +29,11 @@ class FormTemplate(models.Model):
     settings = models.JSONField(default=dict, help_text="Form settings and configuration")
     status = models.CharField(
         max_length=20,
-        choices=[("draft", "Draft"), ("published", "Published"), ("archived", "Archived")],
+        choices=[
+            ("draft", "Draft"),
+            ("published", "Published"),
+            ("archived", "Archived"),
+        ],
         default="draft",
     )
     is_active = models.BooleanField(default=True)
@@ -37,7 +42,11 @@ class FormTemplate(models.Model):
     seo_title = models.CharField(max_length=255, blank=True)
     seo_description = models.TextField(blank=True)
     created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_forms"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_forms",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

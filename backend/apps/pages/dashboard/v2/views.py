@@ -2,6 +2,7 @@
 Dashboard pages views - full admin interface for page management.
 Architectural + real implementation for dashboard pages interface.
 """
+
 from apps.pages.models.pages import Post, PostType, Taxonomy, Term
 from apps.stores.models import Store
 from core.permissions import IsStoreOwner
@@ -63,15 +64,27 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        """Set store when creating page."""
-        serializer.save(store=getattr(self.request, "store", None))
+        """Create page using PageService."""
+        from apps.pages.services.page_service import PageService
+
+        store = getattr(self.request, "store", None)
+        data = serializer.validated_data.copy()
+
+        # Remove fields that will be set by service
+        data.pop("store", None)
+        data.pop("author", None)
+
+        page = PageService.create_page(store=store, author=self.request.user, data=data)
+
+        # Set the instance on serializer for response
+        serializer.instance = page
 
     @action(detail=False, methods=["post"])
     def bulk_action(self, request):
         """
-        Perform bulk actions on pages (publish, unpublish, delete, tag operations).
+        Perform bulk actions on pages using PageService.
         """
-        from django.db import transaction
+        from apps.pages.services.page_service import PageService
 
         from .serializers import BulkActionSerializer
 
@@ -83,232 +96,50 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
         page_ids = serializer.validated_data["ids"]
         extra_data = serializer.validated_data.get("data", {})
 
-        # Filter pages by store and IDs
-        queryset = self.get_queryset().filter(id__in=page_ids)
-        total_requested = len(page_ids)
-        total_found = queryset.count()
-
         try:
-            with transaction.atomic():
-                if action_type == "publish":
-                    updated = queryset.update(status="published")
-                    message = f"Successfully published {updated} pages"
+            store = getattr(self.request, "store", None)
+            result = PageService.bulk_action(
+                store=store,
+                action=action_type,
+                page_ids=page_ids,
+                user=self.request.user,
+                extra_data=extra_data,
+            )
 
-                elif action_type == "unpublish":
-                    updated = queryset.update(status="draft")
-                    message = f"Successfully unpublished {updated} pages"
-
-                elif action_type == "delete":
-                    deleted = queryset.delete()[0]  # delete() returns (count, details)
-                    message = f"Successfully deleted {deleted} pages"
-
-                elif action_type == "add_tags":
-                    tags_to_add = extra_data.get("tags", [])
-                    if not tags_to_add:
-                        return Response(
-                            {"error": "No tags specified for add_tags action"},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
-                    updated_count = 0
-                    for page in queryset:
-                        current_tags = set(page.tags or [])
-                        current_tags.update(tags_to_add)
-                        page.tags = list(current_tags)
-                        page.save(update_fields=["tags"])
-                        updated_count += 1
-
-                    message = f"Successfully added tags {tags_to_add} to {updated_count} pages"
-
-                elif action_type == "remove_tags":
-                    tags_to_remove = extra_data.get("tags", [])
-                    if not tags_to_remove:
-                        return Response(
-                            {"error": "No tags specified for remove_tags action"},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
-                    results = []
-                    for page in queryset:
-                        try:
-                            current_tags = set(page.tags or [])
-                            current_tags.difference_update(tags_to_remove)
-                            page.tags = list(current_tags)
-                            page.save(update_fields=["tags"])
-                            results.append({"id": page.id, "status": "success"})
-                        except Exception as e:
-                            results.append({"id": page.id, "status": "error", "error": str(e)})
-
-                    success_count = sum(1 for r in results if r["status"] == "success")
-                    message = (
-                        f"Successfully removed tags {tags_to_remove} from {success_count} pages"
-                    )
-
-                elif action_type == "duplicate":
-                    results = []
-                    for page in queryset:
-                        try:
-                            # Create a duplicate of the page
-                            duplicate_data = {
-                                "title": f"{page.title} (Copy)",
-                                "content": page.content,
-                                "excerpt": page.excerpt,
-                                "status": "draft",  # Duplicates start as drafts
-                                "post_type": page.post_type,
-                                "author": page.author,
-                                "store": page.store,
-                                "featured_image": page.featured_image,
-                                "tags": page.tags,
-                                "custom_fields": page.custom_fields,
-                                "meta_title": page.meta_title,
-                                "meta_description": page.meta_description,
-                                "meta_keywords": page.meta_keywords,
-                            }
-                            duplicate_page = Post.objects.create(**duplicate_data)
-                            results.append(
-                                {
-                                    "id": page.id,
-                                    "status": "success",
-                                    "duplicate_id": duplicate_page.id,
-                                }
-                            )
-                        except Exception as e:
-                            results.append({"id": page.id, "status": "error", "error": str(e)})
-
-                    success_count = sum(1 for r in results if r["status"] == "success")
-                    message = f"Successfully duplicated {success_count} pages"
-
-                elif action_type == "archive":
-                    results = []
-                    for page in queryset:
-                        try:
-                            # Archive pages (could set a custom status or metadata)
-                            if not hasattr(page, "custom_fields"):
-                                page.custom_fields = {}
-                            page.custom_fields["archived"] = True
-                            page.custom_fields["archived_at"] = str(timezone.now())
-                            page.save(update_fields=["custom_fields"])
-                            results.append({"id": page.id, "status": "success"})
-                        except Exception as e:
-                            results.append({"id": page.id, "status": "error", "error": str(e)})
-
-                    success_count = sum(1 for r in results if r["status"] == "success")
-                    message = f"Successfully archived {success_count} pages"
-
-                elif action_type == "restore":
-                    results = []
-                    for page in queryset:
-                        try:
-                            # Restore archived pages
-                            if hasattr(page, "custom_fields") and page.custom_fields:
-                                page.custom_fields.pop("archived", None)
-                                page.custom_fields.pop("archived_at", None)
-                                page.save(update_fields=["custom_fields"])
-                            results.append({"id": page.id, "status": "success"})
-                        except Exception as e:
-                            results.append({"id": page.id, "status": "error", "error": str(e)})
-
-                    success_count = sum(1 for r in results if r["status"] == "success")
-                    message = f"Successfully restored {success_count} pages"
-
-                elif action_type == "status_change":
-                    new_status = extra_data.get("status")
-                    if not new_status:
-                        return Response(
-                            {"error": "No status specified for status_change action"},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
-                    valid_statuses = ["draft", "published", "scheduled", "archived"]
-                    if new_status not in valid_statuses:
-                        return Response(
-                            {
-                                "error": f'Invalid status. Must be one of: {", ".join(valid_statuses)}'
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
-                    results = []
-                    for page in queryset:
-                        try:
-                            page.status = new_status
-                            if new_status == "published" and not page.published_at:
-                                page.published_at = timezone.now()
-                            page.save(update_fields=["status", "published_at"])
-                            results.append(
-                                {"id": page.id, "status": "success", "new_status": new_status}
-                            )
-                        except Exception as e:
-                            results.append({"id": page.id, "status": "error", "error": str(e)})
-
-                    success_count = sum(1 for r in results if r["status"] == "success")
-                    message = (
-                        f"Successfully changed status to {new_status} for {success_count} pages"
-                    )
-
-                else:
-                    return Response(
-                        {"error": f"Unsupported action: {action_type}"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
-
-                # Log the bulk operation
-                from apps.logs.tasks import log_event_async
-
-                log_event_async.delay(
-                    {
-                        "event_type": "CONTENT_BULK_UPDATE",
-                        "message": f"Bulk {action_type} operation on pages",
-                        "user": request.user,
-                        "store": request.store,
-                        "entity_type": "Page",
-                        "metadata": {
-                            "action": action_type,
-                            "requested_count": total_requested,
-                            "found_count": total_found,
-                            "affected_count": sum(1 for r in results if r["status"] == "success"),
-                            "results": results,
-                            "extra_data": extra_data,
-                        },
-                    }
-                )
-
-                return Response(
-                    {
-                        "message": message,
-                        "action": action_type,
-                        "requested": total_requested,
-                        "found": total_found,
-                        "affected": sum(1 for r in results if r["status"] == "success"),
-                        "results": results,  # Detailed per-ID results
-                    }
-                )
+            return Response(result, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response(
-                {"error": f"Bulk operation failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
-        """Publish a page."""
-        page = self.get_object()
-        page.status = "published"
-        page.save()
+        """
+        Publish a page using PageService.
+        """
+        from apps.pages.services.page_service import PageService
 
-        serializer = self.get_serializer(page)
-        return Response(serializer.data)
+        page = self.get_object()
+        try:
+            updated_page = PageService.publish_page(page, user=request.user)
+            serializer = self.get_serializer(updated_page)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=["post"])
     def unpublish(self, request, pk=None):
-        """Unpublish a page (set to draft)."""
-        page = self.get_object()
-        page.status = "draft"
-        page.save()
+        """
+        Unpublish a page using PageService.
+        """
+        from apps.pages.services.page_service import PageService
 
-        serializer = self.get_serializer(page)
-        return Response(serializer.data)
+        page = self.get_object()
+        try:
+            updated_page = PageService.unpublish_page(page, user=request.user)
+            serializer = self.get_serializer(updated_page)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=["get"])
     def revisions(self, request, pk=None):
@@ -477,7 +308,9 @@ class PageDashboardViewSet(viewsets.ModelViewSet):
                     "published_pages": published_pages,
                     "draft_pages": draft_pages,
                     "scheduled_pages": scheduled_pages,
-                    "publish_rate": (published_pages / total_pages * 100) if total_pages > 0 else 0,
+                    "publish_rate": (
+                        (published_pages / total_pages * 100) if total_pages > 0 else 0
+                    ),
                 },
                 "by_type": pages_by_type,
                 "authors": authors,

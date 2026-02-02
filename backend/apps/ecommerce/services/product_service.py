@@ -1,11 +1,11 @@
 """
 Product service for ecommerce app.
 """
+
 import logging
 
 from apps.ecommerce.models import Cart, CartItem, Product, ProductVariant
 from django.conf import settings
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -44,7 +44,10 @@ class CartService:
         """Get or create cart for user/session."""
         if user:
             cart, created = Cart.objects.get_or_create(
-                store=store, user=user, status="active", defaults={"session_key": session_key}
+                store=store,
+                user=user,
+                status="active",
+                defaults={"session_key": session_key},
             )
         else:
             cart, created = Cart.objects.get_or_create(

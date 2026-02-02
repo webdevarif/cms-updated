@@ -1,6 +1,7 @@
 """
 Customer gift cards serializers - authenticated interface for gift card management.
 """
+
 from decimal import Decimal
 
 from apps.giftcards.models import GiftCard

@@ -1,6 +1,7 @@
 """
 GiftCardHistory model for giftcards app.
 """
+
 from core.models import TenantModel
 from django.db import models
 from django.utils import timezone

@@ -1,6 +1,7 @@
 """
 URL configuration for ecommerce dashboard API v2.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
@@ -29,15 +30,21 @@ router.register(r"carts", CartDashboardViewSet, basename="dashboard-carts")
 router.register(r"collections", CollectionDashboardViewSet, basename="dashboard-collections")
 router.register(r"orders", OrderDashboardViewSet, basename="dashboard-orders")
 router.register(
-    r"coupon-campaigns", CouponCampaignDashboardViewSet, basename="dashboard-coupon-campaigns"
+    r"coupon-campaigns",
+    CouponCampaignDashboardViewSet,
+    basename="dashboard-coupon-campaigns",
 )
 router.register(r"coupons", CouponDashboardViewSet, basename="dashboard-coupons")
 router.register(
-    r"payment-methods", PaymentMethodDashboardViewSet, basename="dashboard-payment-methods"
+    r"payment-methods",
+    PaymentMethodDashboardViewSet,
+    basename="dashboard-payment-methods",
 )
 router.register(r"payments", PaymentDashboardViewSet, basename="dashboard-payments")
 router.register(
-    r"customer-profiles", CustomerProfileDashboardViewSet, basename="dashboard-customer-profiles"
+    r"customer-profiles",
+    CustomerProfileDashboardViewSet,
+    basename="dashboard-customer-profiles",
 )
 
 urlpatterns = [

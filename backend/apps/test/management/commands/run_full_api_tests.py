@@ -1,6 +1,7 @@
 """
 Management command to run full API test suite with coverage.
 """
+
 import subprocess
 
 from django.core.management.base import BaseCommand
@@ -16,7 +17,9 @@ class Command(BaseCommand):
             "--app", type=str, help="Test specific app only (e.g., stores, accounts)"
         )
         parser.add_argument(
-            "--parallel", action="store_true", help="Run tests in parallel (requires pytest-xdist)"
+            "--parallel",
+            action="store_true",
+            help="Run tests in parallel (requires pytest-xdist)",
         )
 
     def handle(self, *args, **options):

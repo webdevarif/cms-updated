@@ -1,6 +1,7 @@
 """
 Dashboard pages API tests - endpoint-focused only.
 """
+
 import json
 
 from django.contrib.auth import get_user_model
@@ -26,7 +27,11 @@ class DashboardPagesAPITests(APITestCase):
 
         # Create page post type
         self.page_type = PostType.objects.create(
-            name="Page", slug="page", store=self.store, is_public=True, is_hierarchical=True
+            name="Page",
+            slug="page",
+            store=self.store,
+            is_public=True,
+            is_hierarchical=True,
         )
 
         # Create test page
@@ -82,7 +87,11 @@ class DashboardPagesAPITests(APITestCase):
     def test_update_any_page(self):
         """Test admin can update any page"""
         url = reverse("dashboard-pages-detail", kwargs={"pk": self.page.id})
-        data = {"title": "Updated Admin Page", "content": "Updated content", "status": "published"}
+        data = {
+            "title": "Updated Admin Page",
+            "content": "Updated content",
+            "status": "published",
+        }
 
         response = self.client.patch(url, data, format="json")
 
@@ -334,7 +343,10 @@ class DashboardPagesAPITests(APITestCase):
     def test_custom_fields(self):
         """Test custom fields support"""
         # Update page with custom fields
-        self.page.custom_fields = {"custom_field_1": "value1", "custom_field_2": "value2"}
+        self.page.custom_fields = {
+            "custom_field_1": "value1",
+            "custom_field_2": "value2",
+        }
         self.page.save()
 
         url = reverse("dashboard-pages-detail", kwargs={"pk": self.page.id})

@@ -1,6 +1,7 @@
 """
 Public stores API views.
 """
+
 from apps.stores.models import Store
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
@@ -60,7 +61,8 @@ class StoreVerificationViewSet(viewsets.ViewSet):
         token = request.data.get("token")
         if not token:
             return Response(
-                {"error": "Verification token is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Verification token is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:

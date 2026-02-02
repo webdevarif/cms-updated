@@ -1,6 +1,7 @@
 """
 Tasks for webhooks module.
 """
+
 import logging
 
 from celery import shared_task

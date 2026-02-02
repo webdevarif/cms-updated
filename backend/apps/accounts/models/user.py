@@ -3,6 +3,7 @@ User model for Digital Farmers CMS.
 
 Global user model - exists across all stores with JWT authentication.
 """
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
@@ -31,20 +32,18 @@ class GlobalUserManager(BaseUserManager):
         user.save(using=self._db)
 
         # Log user creation
-        from apps.logs.tasks import log_event_async
+        from apps.analytics.services.event_service import EventService
 
-        log_event_async.delay(
-            {
-                "event_type": "create_user_accounts",
-                "message": f"User created: {email}",
+        EventService.log_event(
+            event_type="USER_CREATED",
+            event_name=f"User created: {email}",
+            properties={
                 "user_id": user.id,
-                "object_id": user.id,
-                "metadata": {
-                    "email": email,
-                    "username": username,
-                    "is_superuser": extra_fields.get("is_superuser", False),
-                },
-            }
+                "email": email,
+                "username": username,
+                "is_superuser": extra_fields.get("is_superuser", False),
+            },
+            user=user,
         )
 
         return user
@@ -164,18 +163,14 @@ class User(AbstractBaseUser, PermissionsMixin):
 
         # Log user updates (but not creation - that's handled in manager)
         if not is_new and old_email != self.email:
-            from apps.logs.tasks import log_event_async
+            from apps.analytics.services.event_service import EventService
 
-            log_event_async.delay(
-                {
-                    "event_type": "update_user_accounts",
-                    "message": f"User updated: {old_email} → {self.email}",
+            EventService.log_event(
+                event_type="USER_UPDATED",
+                event_name=f"User email changed from {old_email} to {self.email}",
+                properties={
                     "user_id": self.id,
-                    "object_id": self.id,
-                    "metadata": {
-                        "old_email": old_email,
-                        "new_email": self.email,
-                        "username": self.username,
-                    },
-                }
+                    "old_email": old_email,
+                },
+                user=self,
             )

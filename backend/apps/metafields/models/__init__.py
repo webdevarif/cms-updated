@@ -1,4 +1,5 @@
 """Metafields models."""
+
 from .definitions import MetafieldDefinition
 from .values import Metafield
 

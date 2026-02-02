@@ -20,7 +20,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -42,7 +45,10 @@ class Migration(migrations.Migration):
                 ("skipped_tests", models.PositiveIntegerField(default=0)),
                 ("started_at", models.DateTimeField(auto_now_add=True)),
                 ("completed_at", models.DateTimeField(blank=True, null=True)),
-                ("duration_seconds", models.PositiveIntegerField(blank=True, null=True)),
+                (
+                    "duration_seconds",
+                    models.PositiveIntegerField(blank=True, null=True),
+                ),
                 ("html_report", models.TextField(blank=True)),
                 ("report_path", models.CharField(blank=True, max_length=255)),
                 (
@@ -91,7 +97,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("app_name", models.CharField(max_length=100)),

@@ -1,6 +1,7 @@
 """
 Admin configuration for test module.
 """
+
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
@@ -33,7 +34,14 @@ class TestRunAdmin(admin.ModelAdmin):
         ("Test Information", {"fields": ("run_type", "status", "initiated_by")}),
         (
             "Results Summary",
-            {"fields": ("total_tests", "passed_tests", "failed_tests", "success_rate_display")},
+            {
+                "fields": (
+                    "total_tests",
+                    "passed_tests",
+                    "failed_tests",
+                    "success_rate_display",
+                )
+            },
         ),
         (
             "Timing",
@@ -215,7 +223,12 @@ class TestResultInline(admin.TabularInline):
     model = TestResult
     extra = 0
     fields = ["app_name_badge", "endpoint_summary", "status_badge", "duration_display"]
-    readonly_fields = ["app_name_badge", "endpoint_summary", "status_badge", "duration_display"]
+    readonly_fields = [
+        "app_name_badge",
+        "endpoint_summary",
+        "status_badge",
+        "duration_display",
+    ]
     can_delete = False
     max_num = 10  # Limit to 10 results for performance
 
@@ -244,7 +257,10 @@ class TestResultInline(admin.TabularInline):
         if len(endpoint) > 30:
             endpoint = endpoint[:27] + "..."
         return format_html(
-            "<strong>{}</strong><br><small>{} {}</small>", endpoint, obj.method, obj.role
+            "<strong>{}</strong><br><small>{} {}</small>",
+            endpoint,
+            obj.method,
+            obj.role,
         )
 
     endpoint_summary.short_description = "Endpoint"
@@ -308,7 +324,10 @@ class TestResultAdmin(admin.ModelAdmin):
     date_hierarchy = "created_at"
 
     fieldsets = (
-        ("Test Information", {"fields": ("test_run", "app_name", "endpoint", "method", "role")}),
+        (
+            "Test Information",
+            {"fields": ("test_run", "app_name", "endpoint", "method", "role")},
+        ),
         ("Results", {"fields": ("status_badge", "duration_display", "created_at")}),
         (
             "Error Details",
@@ -350,7 +369,10 @@ class TestResultAdmin(admin.ModelAdmin):
     def endpoint_summary(self, obj):
         """Show endpoint with method and role"""
         return format_html(
-            "<strong>{}</strong><br><small>{} • {}</small>", obj.endpoint, obj.method, obj.role
+            "<strong>{}</strong><br><small>{} • {}</small>",
+            obj.endpoint,
+            obj.method,
+            obj.role,
         )
 
     endpoint_summary.short_description = "Endpoint"
@@ -381,11 +403,13 @@ class TestResultAdmin(admin.ModelAdmin):
                 )
             elif obj.duration_ms < 5000:
                 return format_html(
-                    '<span style="color: #ffc107;">{}</span>', f"{obj.duration_ms/1000:.1f}s"
+                    '<span style="color: #ffc107;">{}</span>',
+                    f"{obj.duration_ms/1000:.1f}s",
                 )
             else:
                 return format_html(
-                    '<span style="color: #dc3545;">{}</span>', f"{obj.duration_ms/1000:.1f}s"
+                    '<span style="color: #dc3545;">{}</span>',
+                    f"{obj.duration_ms/1000:.1f}s",
                 )
         return "-"
 
@@ -398,7 +422,9 @@ class TestResultAdmin(admin.ModelAdmin):
             if len(error) > 50:
                 error = error[:47] + "..."
             return format_html(
-                '<span style="color: #dc3545;" title="{}">⚠️ {}</span>', obj.error_message, error
+                '<span style="color: #dc3545;" title="{}">⚠️ {}</span>',
+                obj.error_message,
+                error,
             )
         return ""
 

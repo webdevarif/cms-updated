@@ -1,12 +1,16 @@
 """
 Dashboard stores serializers.
 """
+
+from apps.metafields.services import serialize_metafields_for_instance
 from apps.stores.models import Store, StoreSettings
 from rest_framework import serializers
 
 
 class StoreDashboardSerializer(serializers.ModelSerializer):
     """Dashboard store management"""
+
+    metafields = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Store
@@ -27,11 +31,22 @@ class StoreDashboardSerializer(serializers.ModelSerializer):
             "meta_keywords",
             "google_analytics_id",
             "facebook_pixel_id",
+            "metafields",
             "created_at",
             "updated_at",
             "last_accessed",
         ]
-        read_only_fields = ["id", "verification_token", "access_code", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "verification_token",
+            "access_code",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_metafields(self, obj):
+        """Return standardized metafields for the store"""
+        return serialize_metafields_for_instance(obj)
 
 
 class StoreSettingsSerializer(serializers.ModelSerializer):

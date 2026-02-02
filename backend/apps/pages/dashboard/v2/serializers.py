@@ -2,6 +2,7 @@
 Dashboard pages serializers - full admin interface for page management.
 Architectural + real implementation for dashboard pages interface.
 """
+
 from apps.pages.models.pages import Post, PostType, Taxonomy, Term
 from rest_framework import serializers
 
@@ -67,6 +68,34 @@ class PageDashboardSerializer(serializers.ModelSerializer):
     def get_tags(self, obj):
         """Return tags associated with the page."""
         return [{"id": tag.id, "name": tag.name, "slug": tag.slug} for tag in obj.tags.all()]
+
+    def create(self, validated_data):
+        """Create page using PageService."""
+        from apps.pages.services.page_service import PageService
+
+        request = self.context.get("request")
+        store = getattr(request, "store", None)
+
+        # Remove fields that will be set by service
+        data = validated_data.copy()
+        data.pop("store", None)
+        data.pop("author", None)
+
+        page = PageService.create_page(store=store, author=request.user, data=data)
+
+        return page
+
+    def update(self, instance, validated_data):
+        """Update page using PageService."""
+        from apps.pages.services.page_service import PageService
+
+        # Remove fields that shouldn't be updated directly
+        data = validated_data.copy()
+        data.pop("store", None)
+        data.pop("author", None)
+
+        page = PageService.update_page(instance, data)
+        return page
 
 
 class PageDashboardListSerializer(serializers.ModelSerializer):
@@ -184,7 +213,8 @@ class BulkActionSerializer(serializers.Serializer):
         ]
     )
     ids = serializers.ListField(
-        child=serializers.IntegerField(), help_text="List of page IDs to perform action on"
+        child=serializers.IntegerField(),
+        help_text="List of page IDs to perform action on",
     )
     data = serializers.DictField(
         required=False,

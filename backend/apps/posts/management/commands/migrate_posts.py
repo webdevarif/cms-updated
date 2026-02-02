@@ -1,6 +1,7 @@
 """
 Management command to migrate legacy posts.
 """
+
 from apps.stores.models import Store
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -20,7 +21,11 @@ class Command(BaseCommand):
             post_type, created = PostType.objects.get_or_create(
                 store=store,
                 slug="blog",
-                defaults={"name": "Blog Post", "is_public": True, "supports_comments": True},
+                defaults={
+                    "name": "Blog Post",
+                    "is_public": True,
+                    "supports_comments": True,
+                },
             )
 
             if created:

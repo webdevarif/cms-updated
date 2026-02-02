@@ -1,6 +1,7 @@
 """
 Endpoint-focused tests for forms API.
 """
+
 from apps.forms.models.forms import FormTemplate
 from apps.forms.models.submissions import FormSubmission
 from apps.stores.models import Store
@@ -24,7 +25,11 @@ class TestFormPublicViewSet(TestCase):
             name="Test Store", slug="test-store", domain="test.com", owner=self.user
         )
         self.form = FormTemplate.objects.create(
-            store=self.store, title="Test Form", slug="test-form", is_published=True, is_active=True
+            store=self.store,
+            title="Test Form",
+            slug="test-form",
+            is_published=True,
+            is_active=True,
         )
 
     def test_list_forms(self):

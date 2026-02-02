@@ -1,6 +1,8 @@
 import pytest
 from apps.stores.models import Store
-from apps.translations.models import Language, Translation, TranslationKey
+
+# TODO: Re-enable when translation models are implemented
+# from apps.translations.models import Language, Translation, TranslationKey
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

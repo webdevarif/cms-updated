@@ -1,6 +1,7 @@
 """
 Serializers for dashboard metafields module.
 """
+
 from apps.metafields.models import Metafield, MetafieldDefinition
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
@@ -76,7 +77,8 @@ class BulkMetafieldUpdateSerializer(serializers.Serializer):
     """Serializer for bulk updating metafields"""
 
     content_type = serializers.ChoiceField(
-        choices=[], help_text="Content type model name (e.g., 'product')"  # Will be set in __init__
+        choices=[],
+        help_text="Content type model name (e.g., 'product')",  # Will be set in __init__
     )
     object_id = serializers.IntegerField(help_text="Object ID")
     metafields = serializers.DictField(
@@ -95,7 +97,8 @@ class BulkMetafieldCreateSerializer(serializers.Serializer):
     """Serializer for bulk creating metafields"""
 
     content_type = serializers.ChoiceField(
-        choices=[], help_text="Content type model name (e.g., 'product')"  # Will be set in __init__
+        choices=[],
+        help_text="Content type model name (e.g., 'product')",  # Will be set in __init__
     )
     object_id = serializers.IntegerField(help_text="Object ID")
     metafields = serializers.DictField(
@@ -122,7 +125,8 @@ class BulkMetafieldAttachSerializer(serializers.Serializer):
     """Serializer for bulk attaching metafields"""
 
     content_type = serializers.ChoiceField(
-        choices=[], help_text="Content type model name (e.g., 'product')"  # Will be set in __init__
+        choices=[],
+        help_text="Content type model name (e.g., 'product')",  # Will be set in __init__
     )
     object_id = serializers.IntegerField(help_text="Object ID")
     metafields = serializers.DictField(
@@ -141,7 +145,8 @@ class BulkMetafieldDetachSerializer(serializers.Serializer):
     """Serializer for bulk detaching metafields"""
 
     content_type = serializers.ChoiceField(
-        choices=[], help_text="Content type model name (e.g., 'product')"  # Will be set in __init__
+        choices=[],
+        help_text="Content type model name (e.g., 'product')",  # Will be set in __init__
     )
     object_id = serializers.IntegerField(help_text="Object ID")
     metafields = serializers.ListField(

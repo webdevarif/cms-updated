@@ -1,6 +1,7 @@
 """
 Dashboard mediafile serializers.
 """
+
 from apps.mediafile.serializers import (
     BaseMediaFileSerializer,
     BaseMediaFileUploadSerializer,
@@ -90,7 +91,9 @@ class BulkMediafileOperationSerializer(serializers.Serializer):
         child=serializers.IntegerField(), help_text="List of file IDs to operate on"
     )
     folder_id = serializers.IntegerField(
-        required=False, allow_null=True, help_text="Target folder ID for move operations"
+        required=False,
+        allow_null=True,
+        help_text="Target folder ID for move operations",
     )
 
 

@@ -1,6 +1,11 @@
 """
 Celery tasks for notifications.
+
+This module contains async tasks that handle notification delivery, cleanup,
+and digest processing. These tasks are called by NotificationService to handle
+time-consuming operations asynchronously.
 """
+
 import logging
 
 from celery import shared_task
@@ -11,7 +16,22 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, max_retries=3)
 def send_notification(self, notification_id):
     """
-    Async notification sending task
+    Async notification sending task.
+
+    Called by NotificationService.create_notification() to send notifications
+    asynchronously. This task handles channel delivery and retry logic for failed
+    notifications.
+
+    Args:
+        notification_id: ID of notification to send
+
+    Returns:
+        dict: Notification ID and final status
+
+    Raises:
+        Retry: For temporary failures (max 3 retries with 60s backoff)
+
+    Note: This is the primary delivery mechanism for all notifications.
     """
     from .models import Notification
     from .services import NotificationService
@@ -50,7 +70,17 @@ def cleanup_old_notifications(days=90):
 @shared_task
 def send_digest_notifications():
     """
-    Send digest notifications for users with digest enabled
+    Send digest notifications for users with digest enabled.
+
+    Periodic task that aggregates pending notifications for users who prefer
+    digest delivery and sends them as consolidated email notifications.
+
+    This task is typically scheduled to run daily at a specific time.
+
+    Returns:
+        None: Logs completion status
+
+    Note: Creates digest notifications and marks individual notifications as delivered.
     """
     from django.utils import timezone
 
@@ -63,7 +93,10 @@ def send_digest_notifications():
         # Get pending notifications
         cutoff = timezone.now() - timezone.timedelta(hours=24)
         notifications = Notification.objects.filter(
-            user=preference.user, store=preference.store, status="pending", created_at__gte=cutoff
+            user=preference.user,
+            store=preference.store,
+            status="pending",
+            created_at__gte=cutoff,
         )
 
         if notifications.exists():

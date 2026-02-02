@@ -1,6 +1,7 @@
 """
 Management command to send digest notifications.
 """
+
 from django.core.management.base import BaseCommand
 
 

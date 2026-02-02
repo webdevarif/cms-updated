@@ -3,6 +3,7 @@ Customer account views for Digital Farmers CMS.
 
 Endpoints for customer profile and password management.
 """
+
 from apps.accounts.models.user import User
 from apps.accounts.services.account_service import CustomerAccountService
 from core.permissions import IsStoreUser

@@ -19,7 +19,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=255)),
@@ -66,7 +69,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("original_filename", models.CharField(max_length=255)),
@@ -86,7 +92,10 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("storage_path", models.CharField(max_length=512)),
-                ("imagekit_id", models.CharField(blank=True, max_length=255, null=True)),
+                (
+                    "imagekit_id",
+                    models.CharField(blank=True, max_length=255, null=True),
+                ),
                 ("width", models.PositiveIntegerField(blank=True, null=True)),
                 ("height", models.PositiveIntegerField(blank=True, null=True)),
                 ("alt_text", models.CharField(blank=True, max_length=255)),

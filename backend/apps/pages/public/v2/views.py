@@ -2,6 +2,7 @@
 Public pages views - read-only interface for published pages.
 Architectural + real implementation for public pages interface.
 """
+
 from apps.pages.models.pages import Post, PostType, Taxonomy, Term
 from apps.stores.models import Store
 from core.permissions import IsStoreOwner
@@ -49,16 +50,23 @@ class PagePublicViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=["get"])
     def by_slug(self, request):
-        """Get page by slug."""
+        """Get page by slug using PageService for caching."""
+        from apps.pages.services.page_service import PageService
+
         slug = request.query_params.get("slug")
         if not slug:
             return Response(
-                {"error": "slug parameter is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "slug parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        try:
-            page = self.get_queryset().get(slug=slug)
-            serializer = self.get_serializer(page)
-            return Response(serializer.data)
-        except Post.DoesNotExist:
+        store = getattr(request, "store", None)
+        if not store:
+            return Response({"error": "Store context required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Use PageService for caching benefits
+        page_data = PageService.get_page_by_slug(store, slug)
+        if page_data:
+            return Response(page_data)
+        else:
             return Response({"error": "Page not found"}, status=status.HTTP_404_NOT_FOUND)

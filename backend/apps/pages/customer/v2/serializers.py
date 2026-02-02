@@ -2,6 +2,7 @@
 Customer pages serializers - authenticated user manages own pages.
 Architectural + real implementation for customer pages interface.
 """
+
 from apps.pages.models.pages import Post, PostType
 from rest_framework import serializers
 
@@ -31,7 +32,13 @@ class PageCustomerSerializer(serializers.ModelSerializer):
             "updated_at",
             "author",
         ]
-        read_only_fields = ["id", "author", "created_at", "updated_at", "post_type_name"]
+        read_only_fields = [
+            "id",
+            "author",
+            "created_at",
+            "updated_at",
+            "post_type_name",
+        ]
 
     def get_featured_image(self, obj):
         """Return featured image URL or null."""
@@ -40,15 +47,30 @@ class PageCustomerSerializer(serializers.ModelSerializer):
         return None
 
     def create(self, validated_data):
-        """Create page with current user as author."""
-        # Set default post type to 'page' if not provided
-        if "post_type" not in validated_data:
-            page_type = PostType.objects.filter(slug="page").first()
-            if page_type:
-                validated_data["post_type"] = page_type
+        """Create page using PageService."""
+        from apps.pages.services.page_service import PageService
 
-        validated_data["author"] = self.context["request"].user
-        return super().create(validated_data)
+        request = self.context.get("request")
+        store = getattr(request, "store", None)
+
+        # Remove fields that will be set by service
+        data = validated_data.copy()
+        data.pop("author", None)
+
+        page = PageService.create_page(store=store, author=request.user, data=data)
+
+        return page
+
+    def update(self, instance, validated_data):
+        """Update page using PageService."""
+        from apps.pages.services.page_service import PageService
+
+        # Remove fields that shouldn't be updated directly
+        data = validated_data.copy()
+        data.pop("author", None)
+
+        page = PageService.update_page(instance, data)
+        return page
 
 
 class PageCustomerListSerializer(serializers.ModelSerializer):

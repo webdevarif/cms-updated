@@ -1,7 +1,8 @@
 """
 Signals for notifications app.
 """
-from apps.logs.tasks import log_event_async
+
+from apps.analytics.services.event_service import EventService
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -18,17 +19,17 @@ def log_notification_change(sender, instance, created, **kwargs):
         event_type = "NOTIFICATION_UPDATED"
         message = f"Notification updated: {instance.title}"
 
-    log_event_async.delay(
-        {
-            "event_type": event_type,
-            "message": message,
-            "store": instance.store,
-            "user": instance.user,
+    EventService.log_event(
+        event_type=event_type,
+        event_name=message,
+        properties={
+            "user": instance.user.id if instance.user else None,
+            "store": instance.store.id if instance.store else None,
             "entity_type": "Notification",
             "entity_id": instance.id,
-            "metadata": {
-                "notification_type": instance.notification_type,
-                "status": instance.status,
-            },
-        }
+            "notification_type": instance.notification_type,
+            "status": instance.status,
+        },
+        user=instance.user,
+        store=instance.store,
     )

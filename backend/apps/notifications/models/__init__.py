@@ -1,6 +1,7 @@
 """
 Notifications models.
 """
+
 from .models import (
     Notification,
     NotificationChannel,

@@ -1,6 +1,7 @@
 """
 Public webhooks serializers.
 """
+
 from rest_framework import serializers
 
 
@@ -22,4 +23,11 @@ class WebhookStatusSerializer(serializers.Serializer):
     """Webhook status serializer"""
 
     class Meta:
-        fields = ["webhook_id", "name", "is_active", "url", "method", "last_triggered_at"]
+        fields = [
+            "webhook_id",
+            "name",
+            "is_active",
+            "url",
+            "method",
+            "last_triggered_at",
+        ]

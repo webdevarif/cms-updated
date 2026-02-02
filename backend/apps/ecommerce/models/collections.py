@@ -1,6 +1,7 @@
 """
 Product collection models for ecommerce app.
 """
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils.text import slugify
@@ -26,7 +27,11 @@ class ProductCollection(models.Model):
         "Product", through="CollectionProduct", related_name="collections"
     )
     created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_collections"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_collections",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

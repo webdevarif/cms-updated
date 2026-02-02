@@ -1,6 +1,7 @@
 """
 Services for stores module.
 """
+
 import logging
 from datetime import timedelta
 
@@ -40,33 +41,38 @@ class StoreService:
             )
 
             # Log store creation
-            from apps.logs.tasks import log_event_async
+            from apps.analytics.services.event_service import EventService
 
-            log_event_async.delay(
-                {
-                    "event_type": "CONTENT_CREATE",
-                    "message": f"Store created: {store.name}",
-                    "user": owner,
-                    "store": store,
+            EventService.log_event(
+                event_type="CONTENT_CREATE",
+                event_name=f"Store created: {store.name}",
+                properties={
+                    "user": owner.id if owner else None,
+                    "store": store.id,
                     "entity_type": "Store",
                     "entity_id": store.id,
-                    "metadata": {"store_data": store_data},
-                }
+                    "store_data": store_data,
+                },
+                user=owner,
+                store=store,
             )
 
             return store
 
         except Exception as e:
-            from apps.logs.tasks import log_event_async
+            from apps.analytics.services.event_service import EventService
 
-            log_event_async.delay(
-                {
-                    "event_type": "SYSTEM_ERROR",
-                    "message": f"Failed to create store: {str(e)}",
-                    "user": owner,
+            EventService.log_event(
+                event_type="SYSTEM_ERROR",
+                event_name=f"Failed to create store: {str(e)}",
+                properties={
+                    "user": owner.id if owner else None,
                     "level": "ERROR",
-                    "metadata": {"error": str(e), "store_data": store_data},
-                }
+                    "error": str(e),
+                    "store_data": store_data,
+                },
+                user=owner,
+                store=None,
             )
             raise
 
@@ -87,34 +93,40 @@ class StoreService:
             store.save()
 
             # Log update
-            from apps.logs.tasks import log_event_async
+            from apps.analytics.services.event_service import EventService
 
-            log_event_async.delay(
-                {
-                    "event_type": "CONTENT_UPDATE",
-                    "message": f"Store updated: {store.name}",
-                    "user": user,
-                    "store": store,
+            EventService.log_event(
+                event_type="CONTENT_UPDATE",
+                event_name=f"Store updated: {store.name}",
+                properties={
+                    "user": user.id if user else None,
+                    "store": store.id,
                     "entity_type": "Store",
                     "entity_id": store.id,
-                    "metadata": {"old_data": old_data, "new_data": update_data},
-                }
+                    "old_data": old_data,
+                    "new_data": update_data,
+                },
+                user=user,
+                store=store,
             )
 
             return store
 
         except Exception as e:
-            from apps.logs.tasks import log_event_async
+            from apps.analytics.services.event_service import EventService
 
-            log_event_async.delay(
-                {
-                    "event_type": "SYSTEM_ERROR",
-                    "message": f"Failed to update store: {str(e)}",
-                    "user": user,
-                    "store": store,
+            EventService.log_event(
+                event_type="SYSTEM_ERROR",
+                event_name=f"Failed to update store: {str(e)}",
+                properties={
+                    "user": user.id if user else None,
                     "level": "ERROR",
-                    "metadata": {"error": str(e), "update_data": update_data},
-                }
+                    "error": str(e),
+                    "old_data": old_data,
+                    "new_data": update_data,
+                },
+                user=user,
+                store=store,
             )
             raise
 
@@ -126,17 +138,18 @@ class StoreService:
             store.verification_token = None
             store.save()
 
-            from apps.logs.tasks import log_event_async
+            from apps.analytics.services.event_service import EventService
 
-            log_event_async.delay(
-                {
-                    "event_type": "CONTENT_UPDATE",
-                    "message": f"Store verified: {store.name}",
-                    "store": store,
+            EventService.log_event(
+                event_type="CONTENT_UPDATE",
+                event_name=f"Store verified: {store.name}",
+                properties={
+                    "store": store.id,
                     "entity_type": "Store",
                     "entity_id": store.id,
-                    "metadata": {"verification": True},
-                }
+                    "verification": True,
+                },
+                store=store,
             )
 
             return True
@@ -144,25 +157,27 @@ class StoreService:
 
     @staticmethod
     def get_store_analytics(store, days=30):
-        """Get store analytics data from logs"""
-        from apps.logs.models import LogEntry
+        """Get store analytics data from analytics"""
+        from apps.analytics.models.events import EventLog
 
         since = timezone.now() - timedelta(days=days)
 
-        # Get analytics from logs app
-        page_views = LogEntry.objects.filter(
+        # Get analytics from analytics app
+        page_views = EventLog.objects.filter(
             store=store, event_type="PAGE_VIEW", created_at__gte=since
         ).count()
 
         unique_visitors = (
-            LogEntry.objects.filter(store=store, event_type="PAGE_VIEW", created_at__gte=since)
+            EventLog.objects.filter(store=store, event_type="PAGE_VIEW", created_at__gte=since)
             .values("session_id")
             .distinct()
             .count()
         )
 
-        security_events = LogEntry.objects.filter(
-            store=store, is_suspicious=True, created_at__gte=since
+        security_events = EventLog.objects.filter(
+            store=store,
+            event_type__in=["SECURITY_EVENT", "USER_AUTH"],
+            created_at__gte=since,
         ).count()
 
         return {
@@ -384,7 +399,9 @@ class StoreBootstrapService:
             from apps.accounts.models import StoreMember
 
             StoreMember.objects.get_or_create(
-                store=store, user=actor, defaults={"role": owner_role, "is_active": True}
+                store=store,
+                user=actor,
+                defaults={"role": owner_role, "is_active": True},
             )
 
         store.bootstrap_phase = "phase3_complete"
@@ -418,7 +435,7 @@ class StoreBootstrapService:
     def _phase5_theme(store):
         """Phase 5: Theme initialization"""
         try:
-            from apps.themes.v2.services import TemplateService, ThemeService
+            from apps.themes.services import ThemeService
 
             # Create default theme
             theme = ThemeService.create_theme(store, "Default Theme")
@@ -427,7 +444,8 @@ class StoreBootstrapService:
             theme.activate()
 
             # Create default templates
-            TemplateService.create_default_templates(theme)
+            # TODO: Implement template creation in consolidated services
+            # TemplateService.create_default_templates(theme)
 
         except Exception as e:
             logger.warning(f"Phase 5 skipped for store {store.slug}: {e}")
@@ -438,22 +456,9 @@ class StoreBootstrapService:
 
     @staticmethod
     def _phase6_search_index(store):
-        """Phase 6: Search index creation"""
-        try:
-            from apps.search.models import SearchIndex
-
-            # Create search index for store
-            SearchIndex.objects.get_or_create(
-                store=store,
-                name="Default Search Index",
-                defaults={
-                    "content_types": ["Page", "Post", "Product"],
-                    "search_fields": ["title", "content", "description"],
-                    "is_active": True,
-                },
-            )
-        except Exception as e:
-            logger.warning(f"Phase 6 skipped for store {store.slug}: {e}")
+        """Phase 6: Search index creation - DISABLED"""
+        # Search indexing removed - search app deleted
+        logger.info(f"Phase 6 skipped for store {store.slug}: search app removed")
 
         store.bootstrap_phase = "phase6_complete"
         store.save(update_fields=["bootstrap_phase"])
@@ -461,14 +466,10 @@ class StoreBootstrapService:
 
     @staticmethod
     def _phase7_cache_warming(store):
-        """Phase 7: Cache warming"""
-        try:
-            from core.services.cache_service import CacheWarmupService
-
-            # Warm cache for store
-            CacheWarmupService.warm_store_cache(store.slug)
-        except Exception as e:
-            logger.warning(f"Phase 7 skipped for store {store.slug}: {e}")
+        """Phase 7: Cache warming - DISABLED"""
+        # Cache warming removed to simplify cache infrastructure
+        # Store will work normally without pre-warmed cache
+        logger.info(f"Phase 7 skipped (cache warming disabled) for store: {store.slug}")
 
         store.bootstrap_phase = "phase7_complete"
         store.save(update_fields=["bootstrap_phase"])
@@ -614,12 +615,13 @@ class StoreAccessService:
     @staticmethod
     def send_verification_email(store):
         """Send store verification email"""
-        from apps.smtp.services import SmtpEmailService
+        from apps.smtp.services.smtp_service import send_email
         from django.conf import settings
 
         verification_url = f"{settings.FRONTEND_URL}/verify-store/{store.verification_token}"
 
-        SmtpEmailService.send_email(
+        send_email(
+            store=store,
             to_email=store.owner.email,
             subject=f"Verify your {store.name} store",
             html_content=f"""
@@ -629,6 +631,8 @@ class StoreAccessService:
             <p>This link will expire in 7 days.</p>
             """,
             context={"store": store, "verification_url": verification_url},
+            async_=True,
+            user=store.owner,
         )
 
     @staticmethod
@@ -650,18 +654,16 @@ class StoreAccessService:
             StoreOnboardingService.complete_onboarding(store)
 
             # Log activation
-            from apps.logs.tasks import log_event_async
+            from apps.analytics.services.event_service import EventService
 
-            log_event_async.delay(
-                {
-                    "event_type": "STORE_VERIFIED",
-                    "message": f"Store {store.name} verified and activated",
-                    "store": store,
-                    "user": store.owner,
-                    "metadata": {"store_id": store.id},
-                }
+            EventService.log_event(
+                event_type="STORE_VERIFIED",
+                event_name=f"Store {store.name} verified and activated",
+                properties={
+                    "store": store.id,
+                },
+                store=store,
             )
-
             return store
 
         except Store.DoesNotExist:
@@ -702,24 +704,25 @@ class StoreOnboardingService:
         StoreOnboardingService.send_welcome_email(store)
 
         # Log onboarding completion
-        from apps.logs.tasks import log_event_async
+        from apps.analytics.services.event_service import EventService
 
-        log_event_async.delay(
-            {
-                "event_type": "STORE_ONBOARDED",
-                "message": f"Store {store.name} onboarding completed",
-                "store": store,
-                "user": store.owner,
-            }
+        EventService.log_event(
+            event_type="STORE_ONBOARDED",
+            event_name=f"Store {store.name} onboarding completed",
+            properties={
+                "store": store.id,
+            },
+            store=store,
         )
 
     @staticmethod
     def send_welcome_email(store):
         """Send welcome email after store activation"""
-        from apps.smtp.services import SmtpEmailService
+        from apps.smtp.services.smtp_service import send_email
         from django.conf import settings
 
-        SmtpEmailService.send_email(
+        send_email(
+            store=store,
             to_email=store.owner.email,
             subject=f"Welcome to {store.name}!",
             html_content=f"""
@@ -734,4 +737,6 @@ class StoreOnboardingService:
             <a href="{settings.FRONTEND_URL}/stores/{store.slug}/dashboard">Go to Dashboard</a>
             """,
             context={"store": store},
+            async_=True,
+            user=store.owner,
         )

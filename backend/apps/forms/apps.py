@@ -1,5 +1,6 @@
 """
 Django app configuration for forms app."""
+
 from django.apps import AppConfig
 
 

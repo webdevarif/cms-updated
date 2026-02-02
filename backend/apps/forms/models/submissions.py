@@ -1,6 +1,7 @@
 """
 Form submission models for forms app.
 """
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils import timezone
@@ -21,7 +22,11 @@ class FormSubmission(models.Model):
     )
     submission_id = models.CharField(max_length=50, unique=True)
     user = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="form_submissions"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="form_submissions",
     )
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)

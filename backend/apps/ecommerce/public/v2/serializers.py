@@ -1,6 +1,7 @@
 """
 Public ecommerce serializers.
 """
+
 from apps.ecommerce.models.cart import Cart, CartItem
 from apps.ecommerce.models.collections import ProductCollection
 from apps.ecommerce.models.customers import CustomerProfile
@@ -175,7 +176,14 @@ class CartItemPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
-        fields = ["id", "product", "product_name", "quantity", "unit_price", "total_price"]
+        fields = [
+            "id",
+            "product",
+            "product_name",
+            "quantity",
+            "unit_price",
+            "total_price",
+        ]
 
 
 class CollectionPublicSerializer(serializers.ModelSerializer):
@@ -183,7 +191,15 @@ class CollectionPublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductCollection
-        fields = ["id", "title", "slug", "description", "is_featured", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "title",
+            "slug",
+            "description",
+            "is_featured",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class CustomerProfilePublicSerializer(serializers.ModelSerializer):
@@ -191,4 +207,12 @@ class CustomerProfilePublicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomerProfile
-        fields = ["id", "user", "first_name", "last_name", "phone", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "user",
+            "first_name",
+            "last_name",
+            "phone",
+            "created_at",
+            "updated_at",
+        ]

@@ -1,6 +1,7 @@
 """
 Custom fields for Digital Farmers CMS.
 """
+
 import base64
 import os
 

@@ -1,6 +1,22 @@
 # Account services module
 # Add account-related business logic here
 
+"""
+TODO: TARGET DESIGN - Single AccountService
+
+This file currently contains three separate service classes:
+- PublicAuthService: JWT tokens, user creation
+- CustomerAccountService: Profile management, password changes
+- DashboardAccountService: Store user management, role updates
+
+TARGET: Merge into a single AccountService class that internally handles:
+1. Public auth operations (login, register, tokens)
+2. Customer profile operations (update profile, password)
+3. Dashboard user management (store users, roles, permissions)
+
+This will eliminate duplication and provide a single source of truth for all account operations.
+"""
+
 import logging
 
 from django.contrib.auth import login, logout

@@ -1,6 +1,7 @@
 """
 Dashboard notification serializers.
 """
+
 from apps.notifications.models import Notification, NotificationPreference, NotificationTemplate
 from rest_framework import serializers
 

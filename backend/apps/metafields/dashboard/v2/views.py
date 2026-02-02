@@ -3,6 +3,7 @@ Architectural + real implementation for dashboard metafields interface.
 
 Full admin CRUD on all metafields + bulk operations.
 """
+
 from apps.metafields.models import Metafield, MetafieldDefinition
 from apps.metafields.services import MetafieldService
 from core.permissions import IsStoreOwner
@@ -33,7 +34,11 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsStoreOwner]
     throttle_classes = [UserRateThrottle]
     serializer_class = MetafieldDefinitionDashboardSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     search_fields = ["name", "namespace", "key"]
     ordering_fields = ["created_at", "name"]
 
@@ -42,21 +47,24 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
         return MetafieldDefinition.objects.filter(store__in=self.request.user.stores_owned.all())
 
     @extend_schema(
-        summary="List metafield definitions", description="List all metafield definitions"
+        summary="List metafield definitions",
+        description="List all metafield definitions",
     )
     def list(self, request, *args, **kwargs):
         """List metafield definitions"""
         return super().list(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Create metafield definition", description="Create new metafield definition"
+        summary="Create metafield definition",
+        description="Create new metafield definition",
     )
     def create(self, request, *args, **kwargs):
         """Create metafield definition"""
         return super().create(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Get metafield definition", description="Get metafield definition details"
+        summary="Get metafield definition",
+        description="Get metafield definition details",
     )
     def retrieve(self, request, *args, **kwargs):
         """Get metafield definition"""
@@ -91,7 +99,8 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
 
         if not namespace:
             return Response(
-                {"error": "namespace parameter is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "namespace parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         definitions = self.get_queryset().filter(namespace=namespace)
@@ -132,7 +141,8 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(
-        summary="Export metafield definitions", description="Export metafield definitions as JSON"
+        summary="Export metafield definitions",
+        description="Export metafield definitions as JSON",
     )
     @action(detail=False, methods=["get"])
     def export(self, request):
@@ -159,7 +169,8 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
         return Response({"definitions": export_data})
 
     @extend_schema(
-        summary="Import metafield definitions", description="Import metafield definitions from JSON"
+        summary="Import metafield definitions",
+        description="Import metafield definitions from JSON",
     )
     @action(detail=False, methods=["post"])
     def import_definitions(self, request):
@@ -168,7 +179,8 @@ class MetafieldDefinitionDashboardViewSet(viewsets.ModelViewSet):
 
         if not definitions_data:
             return Response(
-                {"error": "definitions array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "definitions array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         imported_count = 0
@@ -197,7 +209,11 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsStoreOwner]
     throttle_classes = [UserRateThrottle]
     serializer_class = MetafieldDashboardSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     search_fields = ["value_text", "value_number", "value_boolean"]
     ordering_fields = ["created_at", "updated_at"]
 
@@ -244,7 +260,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         metafields_data = request.data.get("metafields", [])
         if not metafields_data:
             return Response(
-                {"error": "metafields array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "metafields array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         created_metafields = []
@@ -281,7 +298,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         metafields_data = request.data.get("metafields", [])
         if not metafields_data:
             return Response(
-                {"error": "metafields array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "metafields array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         updated_metafields = []
@@ -318,7 +336,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         metafield_ids = request.data.get("metafield_ids", [])
         if not metafield_ids:
             return Response(
-                {"error": "metafield_ids array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "metafield_ids array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         deleted_count = 0
@@ -339,7 +358,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         return Response({"message": f"Deleted {deleted_count} metafields successfully"})
 
     @extend_schema(
-        summary="Get metafields by content", description="Get metafields for specific content"
+        summary="Get metafields by content",
+        description="Get metafields for specific content",
     )
     @action(detail=False, methods=["get"])
     def by_content(self, request):
@@ -356,7 +376,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         # Validate user owns the content
         if not MetafieldService.user_owns_content(self.request.user, content_type_id, object_id):
             return Response(
-                {"error": "Content not found or access denied"}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Content not found or access denied"},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         metafields = Metafield.objects.filter(
@@ -369,7 +390,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
-        summary="Get metafield definitions", description="Get available metafield definitions"
+        summary="Get metafield definitions",
+        description="Get available metafield definitions",
     )
     @action(detail=False, methods=["get"])
     def definitions(self, request):
@@ -395,7 +417,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(
-        summary="Validate metafield", description="Validate metafield value against definition"
+        summary="Validate metafield",
+        description="Validate metafield value against definition",
     )
     @action(detail=False, methods=["post"])
     def validate(self, request):
@@ -415,7 +438,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
             )
         except MetafieldDefinition.DoesNotExist:
             return Response(
-                {"error": "Definition not found or access denied"}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Definition not found or access denied"},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         validation_result = MetafieldService.validate_value(definition=definition, value=value)
@@ -473,7 +497,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
 
         if not metafields_data:
             return Response(
-                {"error": "metafields array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "metafields array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         imported_count = 0
@@ -489,7 +514,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         return Response({"message": f"Imported {imported_count} metafields successfully"})
 
     @extend_schema(
-        summary="Bulk attach metafields", description="Attach metafields to multiple objects"
+        summary="Bulk attach metafields",
+        description="Attach metafields to multiple objects",
     )
     @action(detail=False, methods=["post"])
     def bulk_attach(self, request):
@@ -497,7 +523,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         bulk_data = request.data.get("bulk_data", [])
         if not bulk_data:
             return Response(
-                {"error": "bulk_data array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "bulk_data array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         attached_count = 0
@@ -537,7 +564,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         return Response({"message": f"Attached {attached_count} metafields successfully"})
 
     @extend_schema(
-        summary="Bulk detach metafields", description="Detach metafields from multiple objects"
+        summary="Bulk detach metafields",
+        description="Detach metafields from multiple objects",
     )
     @action(detail=False, methods=["post"])
     def bulk_detach(self, request):
@@ -545,7 +573,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         bulk_data = request.data.get("bulk_data", [])
         if not bulk_data:
             return Response(
-                {"error": "bulk_data array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "bulk_data array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         detached_count = 0
@@ -572,7 +601,9 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                     )
 
                     metafield = Metafield.objects.get(
-                        definition=definition, content_type_id=content_type_id, object_id=object_id
+                        definition=definition,
+                        content_type_id=content_type_id,
+                        object_id=object_id,
                     )
                     if metafield:
                         metafield.delete()
@@ -625,27 +656,20 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                     )
 
                 # Log the bulk operation
-                from apps.logs.tasks import log_event_async
+                from apps.analytics.services.event_service import EventService
 
-                log_event_async.delay(
-                    {
-                        "event_type": "METAFIELD_BULK_UPDATE",
-                        "message": f"Bulk {action_type} operation on metafields",
-                        "user": request.user,
-                        "store": request.store,
-                        "entity_type": "Metafield",
-                        "metadata": {
-                            "action": action_type,
-                            "requested_count": total_requested,
-                            "found_count": total_found,
-                            "affected_count": updated
-                            if "updated" in locals()
-                            else deleted
-                            if "deleted" in locals()
-                            else 0,
-                            "extra_data": extra_data,
-                        },
-                    }
+                EventService.log_event(
+                    event_type="METAFIELD_BULK_UPDATE",
+                    event_name=f"Bulk {action_type} operation on metafields",
+                    properties={
+                        "user": request.user.id if request.user else None,
+                        "store": request.store.id,
+                        "action_type": action_type,
+                        "count": len(metafield_ids),
+                        "metafield_ids": metafield_ids,
+                    },
+                    user=request.user,
+                    store=request.store,
                 )
 
                 response_data = {
@@ -653,11 +677,13 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                     "action": action_type,
                     "requested": total_requested,
                     "found": total_found,
-                    "affected": updated
-                    if "updated" in locals()
-                    else deleted
-                    if "deleted" in locals()
-                    else 0,
+                    "affected": (
+                        updated
+                        if "updated" in locals()
+                        else deleted
+                        if "deleted" in locals()
+                        else 0
+                    ),
                 }
                 return Response(response_data)
 
@@ -673,7 +699,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
         user = request.user
         if not user:
             return Response(
-                {"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED
+                {"error": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED,
             )
 
         # Parse time range parameters
@@ -719,7 +746,10 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
 
             content_types = (
                 base_queryset.values("content_type__model")
-                .annotate(count=Count("id"), visible_count=Count("id", filter=Q(is_visible=True)))
+                .annotate(
+                    count=Count("id"),
+                    visible_count=Count("id", filter=Q(is_visible=True)),
+                )
                 .order_by("-count")
             )
 
@@ -730,9 +760,9 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                         "model": ct["content_type__model"],
                         "total_metafields": ct["count"],
                         "visible_metafields": ct["visible_count"],
-                        "visibility_rate": (ct["visible_count"] / ct["count"] * 100)
-                        if ct["count"] > 0
-                        else 0,
+                        "visibility_rate": (
+                            (ct["visible_count"] / ct["count"] * 100) if ct["count"] > 0 else 0
+                        ),
                     }
                 )
 
@@ -742,7 +772,8 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                     "definition__namespace", "definition__key", "definition__field_type"
                 )
                 .annotate(
-                    total_usage=Count("id"), visible_usage=Count("id", filter=Q(is_visible=True))
+                    total_usage=Count("id"),
+                    visible_usage=Count("id", filter=Q(is_visible=True)),
                 )
                 .order_by("-total_usage")[:20]
             )
@@ -787,9 +818,9 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 base_queryset.values("definition__field_type")
                 .annotate(
                     count=Count("id"),
-                    percentage=(Count("id") * 100.0 / total_metafields)
-                    if total_metafields > 0
-                    else 0,
+                    percentage=(
+                        (Count("id") * 100.0 / total_metafields) if total_metafields > 0 else 0
+                    ),
                 )
                 .order_by("-count")
             )
@@ -853,9 +884,9 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                     "total_metafields": total_metafields,
                     "visible_metafields": visible_metafields,
                     "hidden_metafields": hidden_metafields,
-                    "visibility_rate": (visible_metafields / total_metafields * 100)
-                    if total_metafields > 0
-                    else 0,
+                    "visibility_rate": (
+                        (visible_metafields / total_metafields * 100) if total_metafields > 0 else 0
+                    ),
                     "total_content_types": len(content_type_data),
                     "total_stores": len(store_data),
                     "total_namespaces": len(namespace_data),
@@ -867,11 +898,11 @@ class MetafieldDashboardViewSet(viewsets.ModelViewSet):
                 "namespaces": namespace_data,
                 "trends": {"activity": activity_trends},
                 "usage_metrics": {
-                    "avg_metafields_per_content_type": total_metafields / len(content_type_data)
-                    if content_type_data
-                    else 0,
-                    "most_used_definitions": definition_data[:5] if definition_data else [],
-                    "most_active_namespaces": namespace_data[:5] if namespace_data else [],
+                    "avg_metafields_per_content_type": (
+                        total_metafields / len(content_type_data) if content_type_data else 0
+                    ),
+                    "most_used_definitions": (definition_data[:5] if definition_data else []),
+                    "most_active_namespaces": (namespace_data[:5] if namespace_data else []),
                 },
                 "time_range": {
                     "start_date": start_date,

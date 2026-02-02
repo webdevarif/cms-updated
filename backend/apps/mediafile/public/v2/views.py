@@ -1,6 +1,7 @@
 """
 Public mediafile API views.
 """
+
 import logging
 
 from apps.mediafile.models import MediaFile, MediaFolder
@@ -30,8 +31,10 @@ class MediafilePublicViewSet(viewsets.ReadOnlyModelViewSet):
         store = getattr(self.request, "store", None)
         if store:
             queryset = queryset.filter(store=store)
-        # Only return files that are marked as public (if such a field exists)
-        # For now, return all files since the model doesn't have a public field
+
+        # Only return files that are marked as public
+        queryset = queryset.filter(visibility=MediaFile.VISIBILITY_PUBLIC)
+
         return queryset.select_related("folder", "uploaded_by")
 
     @action(detail=True, methods=["get"])
@@ -56,7 +59,8 @@ class MediafilePublicViewSet(viewsets.ReadOnlyModelViewSet):
         except Exception as e:
             logger.error(f"Error getting thumbnail: {e}")
             return Response(
-                {"error": "Failed to get thumbnail"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to get thumbnail"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=True, methods=["get"])
@@ -142,7 +146,8 @@ class MediafolderPublicViewSet(viewsets.ReadOnlyModelViewSet):
         except Exception as e:
             logger.error(f"Error getting folder tree: {e}")
             return Response(
-                {"error": "Failed to get folder tree"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to get folder tree"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["get"])

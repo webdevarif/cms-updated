@@ -2,6 +2,7 @@
 Public gift cards serializers - read-only interface for gift card balance checks.
 Architectural + real implementation for public gift cards interface.
 """
+
 from apps.giftcards.models import GiftCard
 from rest_framework import serializers
 

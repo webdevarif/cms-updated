@@ -1,59 +1,42 @@
 """
 Management command to test scheduled tasks.
 """
-from background_task.models import Task
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 
 class Command(BaseCommand):
-    help = "Test and display scheduled background tasks"
+    help = "Test and display Celery scheduled tasks"
 
     def handle(self, *args, **options):
-        self.stdout.write("📋 Testing Scheduled Background Tasks")
+        self.stdout.write("📋 Testing Celery Scheduled Tasks")
         self.stdout.write("=" * 50)
 
-        # Show all scheduled tasks
-        tasks = Task.objects.all().order_by("run_at")
+        # Import Celery app to inspect scheduled tasks
+        try:
+            from core.celery import app
 
-        if not tasks:
-            self.stdout.write("❌ No scheduled tasks found")
-            return
+            # Get beat schedule
+            beat_schedule = app.conf.beat_schedule
 
-        self.stdout.write(f"📊 Total scheduled tasks: {tasks.count()}")
-        self.stdout.write()
+            if not beat_schedule:
+                self.stdout.write("❌ No scheduled tasks found in Celery beat schedule")
+                return
 
-        for task in tasks:
-            status = (
-                "🟢 Pending"
-                if task.attempts == 0 and not task.failed_at
-                else "🔴 Failed"
-                if task.failed_at
-                else "🟡 Running"
-            )
-
-            self.stdout.write(f"📌 {task.task_name}")
-            self.stdout.write(f"   Status: {status}")
-            self.stdout.write(f"   Queue: {task.queue}")
-            self.stdout.write(f"   Next Run: {task.run_at}")
-            self.stdout.write(f"   Attempts: {task.attempts}")
-
-            if task.failed_at:
-                self.stdout.write(f"   Last Error: {task.last_error}")
-
+            self.stdout.write(f"📊 Total scheduled tasks: {len(beat_schedule)}")
             self.stdout.write()
 
-        # Test one task immediately
-        self.stdout.write("🧪 Testing cache warmup task...")
-        try:
-            from core.background_tasks import warmup_cache
+            for task_name, task_config in beat_schedule.items():
+                self.stdout.write(f"📌 {task_name}")
+                self.stdout.write(f"   Task: {task_config['task']}")
+                self.stdout.write(f"   Schedule: {task_config['schedule']}")
+                if "options" in task_config:
+                    self.stdout.write(f"   Options: {task_config['options']}")
+                self.stdout.write()
 
-            # Schedule immediate test
-            test_task = warmup_cache(queue="test")
-            self.stdout.write(f"✅ Test task scheduled: {test_task.id}")
+            self.stdout.write()
+            self.stdout.write("✅ Celery scheduled tasks test completed!")
 
         except Exception as e:
-            self.stdout.write(f"❌ Failed to test task: {e}")
-
-        self.stdout.write()
-        self.stdout.write("✅ Scheduled tasks test completed!")
+            self.stdout.write(f"❌ Error testing scheduled tasks: {e}")

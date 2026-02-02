@@ -1,6 +1,7 @@
 """
 Webhooks models.
 """
+
 import secrets
 
 from django.contrib.auth import get_user_model
@@ -65,39 +66,37 @@ class Webhook(models.Model):
 
         super().save(*args, **kwargs)
 
-        from apps.logs.tasks import log_event_async
+        from apps.analytics.services.event_service import EventService
 
         if is_new:
-            log_event_async.delay(
-                {
-                    "event_type": "create_webhook_webhooks",
-                    "message": f"Webhook created: {self.name}",
-                    "store_id": self.store.id,
-                    "user_id": self.created_by.id if self.created_by else None,
-                    "object_id": self.id,
-                    "metadata": {
-                        "name": self.name,
-                        "url": self.url,
-                        "method": self.method,
-                        "events": self.events,
-                        "is_active": self.is_active,
-                    },
-                }
+            EventService.log_event(
+                event_type="USER_ACTION",
+                event_name=f"Webhook created: {self.name}",
+                properties={
+                    "entity_type": "Webhook",
+                    "entity_id": self.id,
+                    "name": self.name,
+                    "url": self.url,
+                    "method": self.method,
+                    "events": self.event_types,
+                    "is_active": self.is_active,
+                },
+                user=self.created_by,
+                store=self.store,
             )
         elif old_active != self.is_active:
-            log_event_async.delay(
-                {
-                    "event_type": "update_webhook_webhooks",
-                    "message": f"Webhook status changed: {self.name} from {old_active} to {self.is_active}",
-                    "store_id": self.store.id,
-                    "user_id": self.created_by.id if self.created_by else None,
-                    "object_id": self.id,
-                    "metadata": {
-                        "name": self.name,
-                        "old_active": old_active,
-                        "new_active": self.is_active,
-                    },
-                }
+            EventService.log_event(
+                event_type="USER_ACTION",
+                event_name=f"Webhook status changed: {self.name} from {old_active} to {self.is_active}",
+                properties={
+                    "entity_type": "Webhook",
+                    "entity_id": self.id,
+                    "name": self.name,
+                    "old_active": old_active,
+                    "new_active": self.is_active,
+                },
+                user=self.created_by,
+                store=self.store,
             )
 
     def generate_signature(self, payload):
@@ -252,37 +251,35 @@ class WebhookDelivery(models.Model):
 
         super().save(*args, **kwargs)
 
-        from apps.logs.tasks import log_event_async
+        from apps.analytics.services.event_service import EventService
 
         if is_new:
-            log_event_async.delay(
-                {
-                    "event_type": "create_webhookdelivery_webhooks",
-                    "message": f"Webhook delivery created: {self.webhook.name} - {self.event_type}",
-                    "store_id": self.store.id,
-                    "object_id": self.id,
-                    "metadata": {
-                        "webhook_name": self.webhook.name,
-                        "event_type": self.event_type,
-                        "event_id": self.event_id,
-                        "status": self.status,
-                        "attempt_number": self.attempt_number,
-                    },
-                }
+            EventService.log_event(
+                event_type="USER_ACTION",
+                event_name=f"Webhook delivery created: {self.webhook.name} - {self.event_type}",
+                properties={
+                    "entity_type": "WebhookDelivery",
+                    "entity_id": self.id,
+                    "webhook_name": self.webhook.name,
+                    "event_type": self.event_type,
+                    "event_id": self.event_id,
+                    "status": self.status,
+                    "attempt_number": self.attempt_number,
+                },
+                store=self.store,
             )
         elif old_status != self.status:
-            log_event_async.delay(
-                {
-                    "event_type": "update_webhookdelivery_webhooks",
-                    "message": f"Webhook delivery status changed: {self.webhook.name} - {self.event_type} from {old_status} to {self.status}",
-                    "store_id": self.store.id,
-                    "object_id": self.id,
-                    "metadata": {
-                        "webhook_name": self.webhook.name,
-                        "event_type": self.event_type,
-                        "event_id": self.event_id,
-                        "old_status": old_status,
-                        "new_status": self.status,
-                    },
-                }
+            EventService.log_event(
+                event_type="USER_ACTION",
+                event_name=f"Webhook delivery status changed: {self.webhook.name} - {self.event_type} from {old_status} to {self.status}",
+                properties={
+                    "entity_type": "WebhookDelivery",
+                    "entity_id": self.id,
+                    "webhook_name": self.webhook.name,
+                    "event_type": self.event_type,
+                    "event_id": self.event_id,
+                    "old_status": old_status,
+                    "new_status": self.status,
+                },
+                store=self.store,
             )

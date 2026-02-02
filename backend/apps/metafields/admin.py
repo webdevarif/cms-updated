@@ -1,4 +1,5 @@
 """Django admin bindings for metafields."""
+
 from django.contrib import admin
 
 from .models import Metafield, MetafieldDefinition

@@ -1,6 +1,7 @@
 """
 Django app configuration for ecommerce app.
 """
+
 from django.apps import AppConfig
 
 

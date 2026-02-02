@@ -3,6 +3,7 @@ Core models for Digital Farmers CMS.
 
 This module contains base models that are used across all apps.
 """
+
 from django.db import models
 
 

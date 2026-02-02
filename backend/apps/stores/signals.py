@@ -1,7 +1,8 @@
 """
 Signals for stores app.
 """
-from apps.logs.tasks import log_event_async
+
+from apps.analytics.services.event_service import EventService
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -18,27 +19,28 @@ def log_store_change(sender, instance, created, **kwargs):
         event_type = "CONTENT_UPDATE"
         message = f"Store updated: {instance.name}"
 
-    log_event_async.delay(
-        {
-            "event_type": event_type,
-            "message": message,
-            "store": instance,
+    EventService.log_event(
+        event_type=event_type,
+        event_name=message,
+        properties={
             "entity_type": "Store",
             "entity_id": instance.id,
-            "metadata": {"created": created},
-        }
+            "created": created,
+        },
+        store=instance,
     )
 
 
 @receiver(post_delete, sender=Store)
 def log_store_deletion(sender, instance, **kwargs):
     """Log store deletion"""
-    log_event_async.delay(
-        {
-            "event_type": "CONTENT_DELETE",
-            "message": f"Store deleted: {instance.name}",
+    EventService.log_event(
+        event_type="CONTENT_DELETE",
+        event_name=f"Store deleted: {instance.name}",
+        properties={
             "entity_type": "Store",
             "entity_id": instance.id,
-            "metadata": {"store_name": instance.name},
-        }
+            "store_name": instance.name,
+        },
+        store=instance,
     )

@@ -1,6 +1,7 @@
 """
 URL configuration for entities public API v2.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
@@ -10,7 +11,9 @@ from .views import PublicEntityActionViewSet, PublicEntityInteractionViewSet
 router = DefaultRouter()
 router.register(r"actions", PublicEntityActionViewSet, basename="public-entity-actions")
 router.register(
-    r"interactions", PublicEntityInteractionViewSet, basename="public-entity-interactions"
+    r"interactions",
+    PublicEntityInteractionViewSet,
+    basename="public-entity-interactions",
 )
 
 urlpatterns = [

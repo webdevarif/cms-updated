@@ -18,7 +18,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(default="Default Theme", max_length=100)),
@@ -44,13 +47,17 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 (
                     "base_font_size",
                     models.PositiveSmallIntegerField(
-                        default=16, help_text="Base font size in pixels (16px is recommended)"
+                        default=16,
+                        help_text="Base font size in pixels (16px is recommended)",
                     ),
                 ),
                 (
@@ -132,7 +139,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=100)),
@@ -152,11 +162,16 @@ class Migration(migrations.Migration):
                         max_length=20,
                     ),
                 ),
-                ("content", models.TextField(help_text="Template content (HTML or JSON)")),
+                (
+                    "content",
+                    models.TextField(help_text="Template content (HTML or JSON)"),
+                ),
                 (
                     "content_type",
                     models.CharField(
-                        choices=[("html", "HTML"), ("json", "JSON")], default="html", max_length=10
+                        choices=[("html", "HTML"), ("json", "JSON")],
+                        default="html",
+                        max_length=10,
                     ),
                 ),
                 ("is_active", models.BooleanField(default=True)),
@@ -183,7 +198,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=100)),
@@ -192,7 +210,8 @@ class Migration(migrations.Migration):
                 (
                     "default_css",
                     models.JSONField(
-                        default=dict, help_text="Default CSS properties for this style class"
+                        default=dict,
+                        help_text="Default CSS properties for this style class",
                     ),
                 ),
                 (
@@ -234,7 +253,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=100)),

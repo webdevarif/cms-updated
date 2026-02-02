@@ -1,6 +1,7 @@
 """
 General utilities for Digital Farmers CMS.
 """
+
 import hashlib
 import json
 import logging

@@ -1,6 +1,7 @@
 """
 Apps configuration for posts app.
 """
+
 from django.apps import AppConfig
 
 

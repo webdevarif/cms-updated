@@ -3,6 +3,7 @@ StoreUser model for Digital Farmers CMS.
 
 Store-specific user roles and permissions.
 """
+
 from django.contrib.auth import get_user_model
 from django.db import models
 

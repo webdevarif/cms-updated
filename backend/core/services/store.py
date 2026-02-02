@@ -3,6 +3,7 @@ Store management services for Digital Farmers CMS.
 
 Shared store management service.
 """
+
 import logging
 
 from django.core.exceptions import ValidationError

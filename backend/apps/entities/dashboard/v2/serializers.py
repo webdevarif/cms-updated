@@ -1,6 +1,7 @@
 """
 Dashboard entities serializers - admin interface for entity management.
 """
+
 from apps.entities.models import EntityAction, EntityInteraction
 from rest_framework import serializers
 
@@ -124,7 +125,13 @@ class DashboardEntityInteractionSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "ip_address", "user_agent"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "ip_address",
+            "user_agent",
+        ]
 
 
 class DashboardEntityAnalyticsSerializer(serializers.Serializer):

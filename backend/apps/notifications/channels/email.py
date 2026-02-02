@@ -1,6 +1,7 @@
 """
 Email channel for notifications.
 """
+
 import logging
 
 from .base import BaseChannel
@@ -18,7 +19,7 @@ class EmailChannel(BaseChannel):
             logger.warning(f"No email for notification #{notification.id}")
             return
 
-        from apps.smtp.services import SmtpEmailService
+        from apps.smtp.services.smtp_service import send_email
 
         from ..models import NotificationTemplate
 
@@ -35,16 +36,17 @@ class EmailChannel(BaseChannel):
             subject = notification.title
             body = notification.message
 
-        # Send via SMTP service
-        SmtpEmailService.send_email_async.delay(
-            {
-                "to_email": notification.user.email,
-                "subject": subject,
-                "html_content": body,
-                "text_content": notification.message,
-                "store": notification.store,
-                "template_id": template.id if template else None,
-            }
+        # Send via unified SMTP service
+        send_email(
+            store=notification.store,
+            to_email=notification.user.email,
+            subject=subject,
+            html_content=body,
+            text_content=notification.message,
+            template_slug=template.name if template else None,
+            context=notification.metadata,
+            async_=True,
+            user=notification.user,
         )
 
         logger.info(f"Email notification sent to {notification.user.email}")

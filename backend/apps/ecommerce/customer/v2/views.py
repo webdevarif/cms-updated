@@ -1,6 +1,7 @@
 """
 Customer ecommerce API.
 """
+
 from apps.ecommerce.models.cart import Cart, CartItem
 from apps.ecommerce.models.collections import ProductCollection
 from apps.ecommerce.models.coupons import Coupon, CouponCampaign
@@ -8,7 +9,6 @@ from apps.ecommerce.models.customers import CustomerProfile
 from apps.ecommerce.models.orders import Order, OrderItem
 from apps.ecommerce.models.payments import Payment, PaymentMethod
 from apps.ecommerce.models.products import Product, ProductCategory, ProductVariant
-from apps.ecommerce.services.ecommerce_service import EcommerceService
 from core.permissions import IsStoreUser
 from drf_spectacular.utils import extend_schema
 from rest_framework import status, viewsets
@@ -174,7 +174,8 @@ class CustomerProfileCustomerViewSet(viewsets.ModelViewSet):
     def get_object(self):
         """Get or create customer profile"""
         profile, created = CustomerProfile.objects.get_or_create(
-            user=self.request.user, defaults={"phone": "", "address": "", "city": "", "country": ""}
+            user=self.request.user,
+            defaults={"phone": "", "address": "", "city": "", "country": ""},
         )
         return profile
 

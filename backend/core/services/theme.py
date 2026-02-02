@@ -3,6 +3,7 @@ Theme management services for Digital Farmers CMS.
 
 Shared theme management service.
 """
+
 import logging
 
 from django.core.exceptions import ValidationError

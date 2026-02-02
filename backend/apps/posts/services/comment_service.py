@@ -1,6 +1,8 @@
 """
 Comment service for managing comments and replies.
 """
+
+from apps.analytics.services.event_service import EventService
 from apps.notifications.services import NotificationService
 from apps.posts.models import Comment
 from django.core.exceptions import ValidationError
@@ -13,9 +15,33 @@ class CommentService:
 
     @staticmethod
     def create_comment(
-        post, user, content, parent=None, user_ip=None, user_agent=None, referrer=None
+        post,
+        user,
+        content,
+        parent=None,
+        user_ip=None,
+        user_agent=None,
+        referrer=None,
+        auto_approve=False,
     ):
-        """Create a new comment or reply"""
+        """
+        Create a comment (or reply) with all side effects:
+        - Validation and parent checking
+        - Spam detection
+        - Moderation defaults
+        - Notifications
+        - Logging
+
+        Args:
+            post: The post the comment belongs to
+            user: The user creating the comment
+            content: Comment content
+            parent: Parent comment for replies (optional)
+            user_ip: User IP address (optional)
+            user_agent: User agent string (optional)
+            referrer: Referrer URL (optional)
+            auto_approve: Whether to auto-approve the comment (for admin replies)
+        """
         with transaction.atomic():
             comment = Comment(
                 post=post,
@@ -41,8 +67,11 @@ class CommentService:
             # Auto-approve comments from authenticated users if configured
             if user.is_authenticated and post.post_type.supports_comments:
                 # Check if auto-approval is enabled for this post type
-                # For now, we'll leave comments pending approval
-                pass
+                # For now, we'll leave comments pending approval unless auto_approve is True
+                if auto_approve:
+                    comment.moderation_status = "approved"
+                    comment.is_approved = True
+                    comment.approved_at = timezone.now()
 
             # Run spam detection
             spam_result = CommentService._check_spam(comment)
@@ -60,6 +89,23 @@ class CommentService:
             # Send real-time WebSocket notification
             CommentService._send_websocket_comment_created(comment)
 
+            # Log comment creation
+            EventService.log_event(
+                event_type="COMMENT_CREATED",
+                event_name=f'Comment created on "{post.title}"',
+                properties={
+                    "user": user.id if user else None,
+                    "store": post.store.id,
+                    "entity_type": "Comment",
+                    "entity_id": comment.id,
+                    "post_id": post.id,
+                    "post_title": post.title,
+                    "comment_content": content[:100],
+                },
+                user=user,
+                store=post.store,
+            )
+
             return comment
 
     @staticmethod
@@ -71,9 +117,28 @@ class CommentService:
         if comment.is_deleted:
             raise ValidationError("Cannot edit deleted comment")
 
+        old_content = comment.content
         comment.content = content.strip()
         comment.full_clean()
         comment.save(update_fields=["content", "updated_at"])
+
+        # Log comment update
+        EventService.log_event(
+            event_type="COMMENT_UPDATED",
+            event_name=f'Comment updated on "{comment.post.title}"',
+            properties={
+                "user": user.id if user else None,
+                "store": comment.post.store.id,
+                "entity_type": "Comment",
+                "entity_id": comment.id,
+                "post_id": comment.post.id,
+                "post_title": comment.post.title,
+                "old_content": old_content[:100],
+                "new_content": comment.content[:100],
+            },
+            user=user,
+            store=comment.post.store,
+        )
 
         return comment
 
@@ -90,6 +155,23 @@ class CommentService:
         else:
             # Hard delete - remove from database
             comment.delete()
+
+        # Log comment deletion
+        EventService.log_event(
+            event_type="COMMENT_DELETED",
+            event_name=f'Comment {"soft deleted" if soft_delete else "hard deleted"} from "{comment.post.title}"',
+            properties={
+                "user": user.id if user else None,
+                "store": comment.post.store.id,
+                "entity_type": "Comment",
+                "entity_id": comment.id,
+                "post_id": comment.post.id,
+                "post_title": comment.post.title,
+                "soft_delete": soft_delete,
+            },
+            user=user,
+            store=comment.post.store,
+        )
 
         return True
 
@@ -114,6 +196,25 @@ class CommentService:
             raise ValidationError("Invalid moderation action")
 
         comment.save(update_fields=["moderation_status", "is_approved", "approved_at"])
+
+        # Log comment moderation
+        EventService.log_event(
+            event_type="COMMENT_MODERATED",
+            event_name=f'Comment {action}ed on "{comment.post.title}"',
+            properties={
+                "user": moderator.id if moderator else None,
+                "store": comment.post.store.id,
+                "entity_type": "Comment",
+                "entity_id": comment.id,
+                "post_id": comment.post.id,
+                "post_title": comment.post.title,
+                "moderation_action": action,
+                "reason": reason,
+            },
+            user=moderator,
+            store=comment.post.store,
+        )
+
         return comment
 
     @staticmethod
@@ -288,7 +389,11 @@ class CommentService:
                 notification_type="comment.rejected",  # Use string constant
                 title="Your comment was not approved",
                 message=f'Your comment on "{comment.post.title}" was not approved. Reason: {reason}',
-                data={"post_id": comment.post.id, "comment_id": comment.id, "reason": reason},
+                data={
+                    "post_id": comment.post.id,
+                    "comment_id": comment.id,
+                    "reason": reason,
+                },
                 store=comment.store,
             )
         except Exception as e:
@@ -297,10 +402,13 @@ class CommentService:
     @staticmethod
     def _check_spam(comment):
         """Run spam detection on comment"""
-        from services.spam_detection_service import SpamDetectionService
+        from core.services.spam_detection import SpamDetectionService
 
         spam_result = SpamDetectionService.check_content(
-            content=comment.content, user=comment.user, content_type="comment", store=comment.store
+            content=comment.content,
+            user=comment.user,
+            content_type="comment",
+            store=comment.store,
         )
 
         # Log spam attempts

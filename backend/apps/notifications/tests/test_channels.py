@@ -1,6 +1,7 @@
 """
 Tests for notification channels.
 """
+
 import pytest
 from django.contrib.auth import get_user_model
 
@@ -16,9 +17,8 @@ class TestEmailChannel:
         from apps.notifications.channels.email import EmailChannel
         from apps.notifications.models import Notification
         from apps.stores.models import Store
-        from core.services.user import UserService
 
-        user = UserService.create_user(email="test@example.com", password="pass")
+        user = User.objects.create_user(email="test@example.com", password="pass")
         store = Store.objects.create(name="Test Store", owner=user)
 
         notification = Notification.objects.create(
@@ -41,9 +41,8 @@ class TestInAppChannel:
         from apps.notifications.channels.in_app import InAppChannel
         from apps.notifications.models import Notification
         from apps.stores.models import Store
-        from core.services.user import UserService
 
-        user = UserService.create_user(email="test@example.com", password="pass")
+        user = User.objects.create_user(email="test@example.com", password="pass")
         store = Store.objects.create(name="Test Store", owner=user)
 
         notification = Notification.objects.create(

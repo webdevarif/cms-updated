@@ -1,6 +1,7 @@
 """
 Customer stores API views.
 """
+
 from apps.stores.models import Store
 from apps.stores.services import StoreAccessService, StoreService
 from core.permissions import IsStoreUser

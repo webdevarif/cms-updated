@@ -1,6 +1,7 @@
 """
 Public test serializers.
 """
+
 from apps.webhooks.serializers import BaseWebhookDeliverySerializer, BaseWebhookSerializer
 from rest_framework import serializers
 

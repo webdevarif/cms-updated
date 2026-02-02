@@ -1,6 +1,7 @@
 """
 Customer posts API tests - endpoint-focused only.
 """
+
 import json
 
 from django.contrib.auth import get_user_model

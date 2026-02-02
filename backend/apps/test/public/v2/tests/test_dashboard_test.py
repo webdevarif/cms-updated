@@ -1,6 +1,7 @@
 """
 Dashboard Test API tests.
 """
+
 import factory
 import pytest
 from django.contrib.auth import get_user_model
@@ -59,7 +60,10 @@ class DashboardTestRunViewSetTests:
         response = authenticated_client.post(
             "/v2/api/test/", {"run_type": "api", "status": "pending"}
         )
-        assert response.status_code in [201, 400]  # May fail validation but should reach endpoint
+        assert response.status_code in [
+            201,
+            400,
+        ]  # May fail validation but should reach endpoint
 
     def test_create_test_run_as_anonymous(self, anonymous_client):
         """Test creating test run as anonymous (should fail)"""

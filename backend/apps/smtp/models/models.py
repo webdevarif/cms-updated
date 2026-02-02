@@ -1,6 +1,7 @@
 """
 SMTP models for email configuration.
 """
+
 from core.fields import EncryptedCharField
 from django.db import models
 from django.utils import timezone
@@ -120,6 +121,10 @@ class EmailLog(models.Model):
     subject = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="queued")
 
+    # Content
+    html_content = models.TextField(blank=True)
+    text_content = models.TextField(blank=True)
+
     # Tracking
     tracking_id = models.UUIDField(unique=True, default=timezone.now)
     message_id = models.CharField(max_length=255, blank=True)
@@ -130,6 +135,14 @@ class EmailLog(models.Model):
 
     # Template
     template = models.ForeignKey(EmailTemplate, on_delete=models.SET_NULL, null=True)
+
+    # User reference
+    user = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Retry tracking
+    retry_count = models.PositiveIntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    scheduled_at = models.DateTimeField(null=True, blank=True)
 
     # Timestamps
     sent_at = models.DateTimeField(null=True, blank=True)

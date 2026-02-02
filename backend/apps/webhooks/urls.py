@@ -3,6 +3,7 @@ URL configuration for webhooks app.
 
 Routes for public, customer, and dashboard webhook endpoints.
 """
+
 from django.urls import include, path
 
 app_name = "webhooks"

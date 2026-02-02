@@ -1,6 +1,7 @@
 """
 Serializers for public metafields module.
 """
+
 from apps.metafields.models import Metafield, MetafieldDefinition
 from rest_framework import serializers
 

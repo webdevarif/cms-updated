@@ -1,6 +1,7 @@
 """
 Inventory models for ecommerce app.
 """
+
 from django.db import models
 
 

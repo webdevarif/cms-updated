@@ -3,6 +3,7 @@ URL configuration for test app.
 
 Routes for public test endpoints.
 """
+
 from django.urls import include, path
 
 app_name = "test"

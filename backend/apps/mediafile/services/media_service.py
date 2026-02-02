@@ -1,6 +1,7 @@
 """
 MediaService for handling media file operations with Cloudflare R2 and ImageKit.io.
 """
+
 import logging
 import mimetypes
 import os
@@ -178,9 +179,11 @@ class MediaService:
                             r2_key,
                             ExtraArgs={
                                 "ContentType": mime_type,
-                                "ACL": "public-read"
-                                if determined_type in ["image", "video"]
-                                else "private",
+                                "ACL": (
+                                    "public-read"
+                                    if determined_type in ["image", "video"]
+                                    else "private"
+                                ),
                             },
                         )
                     else:
@@ -191,9 +194,11 @@ class MediaService:
                             r2_key,
                             ExtraArgs={
                                 "ContentType": mime_type,
-                                "ACL": "public-read"
-                                if determined_type in ["image", "video"]
-                                else "private",
+                                "ACL": (
+                                    "public-read"
+                                    if determined_type in ["image", "video"]
+                                    else "private"
+                                ),
                             },
                         )
                 except Exception as e:
@@ -226,16 +231,16 @@ class MediaService:
                     # Reset file pointer for ImageKit upload
                     file_obj.seek(0)
                     result = self.imagekit.upload_file(
-                        file=file_obj, file_name=safe_filename, use_unique_file_name=False
+                        file=file_obj,
+                        file_name=safe_filename,
+                        use_unique_file_name=False,
                     )
                     imagekit_id = result.file_id
                 except Exception as e:
                     logger.warning(f"Failed to upload to ImageKit: {str(e)}")
 
-            # Create MediaFile record using centralized service
-            from core.services.base import MediaCRUDService
-
-            media_file = MediaCRUDService.create_media_file(
+            # Create MediaFile record directly
+            media_file = MediaFile.objects.create(
                 original_filename=file_name,
                 file_extension=file_extension.lstrip("."),
                 file_size=file_size,
@@ -247,10 +252,10 @@ class MediaService:
                 height=height,
                 alt_text=alt_text,
                 description=description,
+                metadata=metadata or {},
                 store=store,
                 folder=folder,
                 uploaded_by=uploaded_by,
-                metadata=metadata or {},
             )
 
             # Log the upload
@@ -309,10 +314,8 @@ class MediaService:
             # Log before deletion (to have the ID)
             self._log_media_action(action="DELETE", user=user, store=store, media_file=media_file)
 
-            # Delete from database using centralized service
-            from core.services.base import MediaCRUDService
-
-            MediaCRUDService.delete_media_file(media_file)
+            # Delete from database directly
+            media_file.delete()
 
             return True
 
@@ -460,11 +463,8 @@ class MediaService:
             errors["file_size"] = "File is empty"
 
         # Check store quota
-        from core.services.base import MediaCRUDService
-
-        MediaCRUDService.model_class = MediaFile
         current_usage = (
-            MediaCRUDService.filter(store=store).aggregate(total=models.Sum("file_size"))["total"]
+            MediaFile.objects.filter(store=store).aggregate(total=models.Sum("file_size"))["total"]
             or 0
         )
 
@@ -490,18 +490,22 @@ class MediaService:
 
         # Check for duplicate files in same folder
         if folder:
-            existing_files = MediaCRUDService.filter(
+            existing_files = MediaFile.objects.filter(
                 store=store, folder=folder, original_filename=file_name
             )
         else:
-            existing_files = MediaCRUDService.filter(
+            existing_files = MediaFile.objects.filter(
                 store=store, folder__isnull=True, original_filename=file_name
             )
 
         if existing_files.exists():
             errors["duplicate"] = "File with this name already exists in this location"
 
-        return {"valid": len(errors) == 0, "errors": errors, "resource_type": resource_type}
+        return {
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "resource_type": resource_type,
+        }
 
     @staticmethod
     def bulk_upload_files(store, files_data, uploaded_by=None):
@@ -525,7 +529,11 @@ class MediaService:
                 validation = MediaService.validate_file_upload(file_obj, store, folder)
                 if not validation["valid"]:
                     results["errors"].append(
-                        {"index": i, "filename": file_obj.name, "errors": validation["errors"]}
+                        {
+                            "index": i,
+                            "filename": file_obj.name,
+                            "errors": validation["errors"],
+                        }
                     )
                     continue
 
@@ -557,10 +565,6 @@ class MediaService:
         Returns:
             QuerySet: Filtered media files
         """
-        from core.services.base import MediaCRUDService
-
-        MediaCRUDService.model_class = MediaFile
-
         filters = {"store": store, "resource_type": resource_type}
 
         if folder:
@@ -568,7 +572,7 @@ class MediaService:
         else:
             filters["folder__isnull"] = True
 
-        return MediaCRUDService.filter(**filters).order_by("-created_at")
+        return MediaFile.objects.filter(**filters).order_by("-created_at")
 
     @staticmethod
     def search_media_files(store, query, resource_type=None, folder=None):
@@ -584,10 +588,6 @@ class MediaService:
         Returns:
             QuerySet: Search results
         """
-        from core.services.base import MediaCRUDService
-
-        MediaCRUDService.model_class = MediaFile
-
         filters = {"store": store}
 
         if resource_type:
@@ -601,7 +601,7 @@ class MediaService:
         from django.db.models import Q
 
         return (
-            MediaCRUDService.filter(**filters)
+            MediaFile.objects.filter(**filters)
             .filter(
                 Q(original_filename__icontains=query)
                 | Q(alt_text__icontains=query)
@@ -621,12 +621,9 @@ class MediaService:
         Returns:
             dict: Storage usage data
         """
-        from core.services.base import MediaCRUDService
         from django.db.models import Count, Sum
 
-        MediaCRUDService.model_class = MediaFile
-
-        files = MediaCRUDService.filter(store=store)
+        files = MediaFile.objects.filter(store=store)
 
         # Total usage
         total_usage = files.aggregate(total_size=Sum("file_size"), total_files=Count("id"))
@@ -682,11 +679,7 @@ class MediaService:
         Returns:
             dict: Optimization results
         """
-        from core.services.base import MediaCRUDService
-
-        MediaCRUDService.model_class = MediaFile
-
-        images = MediaCRUDService.filter(store=store, resource_type="image")
+        images = MediaFile.objects.filter(store=store, resource_type="image")
         results = {"optimized": 0, "errors": 0, "total_size_saved": 0}
 
         for image in images:
@@ -745,7 +738,7 @@ class MediaService:
             Key=r2_key,
             ExpiresIn=expires_in,
             Conditions=[
-                {"acl": "public-read" if resource_type in ["image", "video"] else "private"},
+                {"acl": ("public-read" if resource_type in ["image", "video"] else "private")},
                 [
                     "content-length-range",
                     1,
@@ -773,22 +766,128 @@ class MediaService:
             media_file: MediaFile being acted upon
             metadata: Additional metadata to include in the log
         """
-        from apps.logs.tasks import log_event_async
+        from apps.analytics.services.event_service import EventService
 
-        log_data = {
-            "event_type": f"MEDIA_{action}",
-            "message": f"Media file {action.lower()}: {media_file.original_filename}",
-            "user": user,
-            "store": store,
-            "entity_type": "MediaFile",
-            "entity_id": media_file.id,
-            "metadata": {
+        EventService.log_event(
+            event_type=f"MEDIA_{action}",
+            event_name=f"Media file {action}: {media_file.name}",
+            properties={
+                "user": user.id if user else None,
+                "store": store.id if store else None,
+                "media_file_id": media_file.id,
+                "media_type": media_file.media_type,
                 "file_size": media_file.file_size,
-                "mime_type": media_file.mime_type,
-                "resource_type": media_file.resource_type,
-                "folder": media_file.folder.name if media_file.folder else None,
-                **(metadata or {}),
+                "action": action,
+                "metadata": metadata,
             },
-        }
+            user=user,
+            store=store,
+        )
 
-        log_event_async.delay(log_data)
+    def upload_from_request(
+        self,
+        store,
+        file_obj,
+        uploaded_by=None,
+        folder_name=None,
+        alt_text="",
+        description="",
+        metadata=None,
+    ):
+        """
+        Centralized helper to upload files from request data.
+
+        This method consolidates the logic from core/media_utils.py upload_to_mediafile.
+
+        Args:
+            store: Store instance
+            file_obj: UploadedFile instance
+            uploaded_by: User instance (optional)
+            folder_name: Folder name to organize files (optional)
+            alt_text: Alt text for images (optional)
+            description: File description (optional)
+            metadata: Additional metadata (optional)
+
+        Returns:
+            MediaFile: Created media file instance
+        """
+        try:
+            # Get or create folder
+            folder = None
+            if folder_name:
+                folder, created = MediaFolder.objects.get_or_create(
+                    store=store,
+                    name=folder_name,
+                    defaults={
+                        "created_by": uploaded_by,
+                        "slug": folder_name.lower().replace(" ", "-"),
+                    },
+                )
+
+            # Determine resource type
+            resource_type = self._determine_resource_type(file_obj.content_type)
+
+            # Upload via existing upload_file method
+            media_file = self.upload_file(
+                store=store,
+                file_obj=file_obj,
+                uploaded_by=uploaded_by,
+                folder=folder,
+                resource_type=resource_type,
+                alt_text=alt_text,
+                description=description,
+                metadata=metadata or {},
+            )
+
+            logger.info(f"Uploaded media file: {media_file.original_filename} for store {store.id}")
+            return media_file
+
+        except Exception as e:
+            logger.error(f"Failed to upload media file: {e}")
+            raise
+
+    def get_media_url(self, media_file, transformation=None):
+        """
+        Get public URL for a MediaFile with optional transformations.
+
+        This method consolidates the logic from core/media_utils.py get_mediafile_url.
+
+        Args:
+            media_file: MediaFile instance
+            transformation: ImageKit transformation string (optional)
+
+        Returns:
+            str: Public URL
+        """
+        if not media_file:
+            return None
+
+        try:
+            return self.get_file_url(media_file, transformation)
+        except Exception as e:
+            logger.error(f"Failed to get media URL: {e}")
+            return None
+
+    def get_thumbnail_url(self, media_file, width=200, height=200, crop="fill"):
+        """
+        Get thumbnail URL for a MediaFile.
+
+        This method consolidates the logic from core/media_utils.py get_mediafile_thumbnail.
+
+        Args:
+            media_file: MediaFile instance
+            width: Thumbnail width
+            height: Thumbnail height
+            crop: Crop mode
+
+        Returns:
+            str: Thumbnail URL or None
+        """
+        if not media_file or not media_file.is_image:
+            return None
+
+        try:
+            return self.get_file_url(media_file, f"w-{width},h-{height},c-{crop},q-80,pr-true")
+        except Exception as e:
+            logger.error(f"Failed to get thumbnail URL: {e}")
+            return None

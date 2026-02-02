@@ -1,6 +1,7 @@
 """
 Dashboard mediafile API views.
 """
+
 import logging
 
 from apps.mediafile.exceptions import (
@@ -92,7 +93,8 @@ class MediafileDashboardViewSet(viewsets.ModelViewSet):
             media_file = self.get_object()
             MediaService.regenerate_thumbnails(media_file)
             return Response(
-                {"message": "Thumbnails regenerated successfully"}, status=status.HTTP_200_OK
+                {"message": "Thumbnails regenerated successfully"},
+                status=status.HTTP_200_OK,
             )
         except Exception as e:
             logger.error(f"Error regenerating thumbnails: {e}")
@@ -131,7 +133,8 @@ class MediafileDashboardViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error in bulk upload: {e}")
             return Response(
-                {"error": "Bulk upload failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Bulk upload failed"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["post"])
@@ -153,7 +156,8 @@ class MediafileDashboardViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error in bulk delete: {e}")
             return Response(
-                {"error": "Failed to delete files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to delete files"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["post"])
@@ -178,7 +182,8 @@ class MediafileDashboardViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error in bulk move: {e}")
             return Response(
-                {"error": "Failed to move files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to move files"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["get"])
@@ -196,7 +201,8 @@ class MediafileDashboardViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error getting analytics: {e}")
             return Response(
-                {"error": "Failed to get analytics"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to get analytics"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["get"])
@@ -253,7 +259,8 @@ class MediafolderDashboardViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error getting folder tree: {e}")
             return Response(
-                {"error": "Failed to get folder tree"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to get folder tree"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=True, methods=["post"])
@@ -266,7 +273,8 @@ class MediafolderDashboardViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error in bulk delete folder: {e}")
             return Response(
-                {"error": "Failed to delete folder"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to delete folder"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["get"])

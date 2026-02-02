@@ -1,6 +1,7 @@
 """
 Customer notification serializers.
 """
+
 from apps.notifications.models import Notification, NotificationPreference
 from rest_framework import serializers
 

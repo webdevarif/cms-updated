@@ -3,6 +3,7 @@ URL configuration for ecommerce app.
 
 Routes for public, customer, and dashboard ecommerce endpoints.
 """
+
 from django.urls import include, path
 
 app_name = "ecommerce"

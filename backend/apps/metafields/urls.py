@@ -3,6 +3,7 @@ URL configuration for metafields app.
 
 Routes for public, customer, and dashboard metafields endpoints.
 """
+
 from django.urls import include, path
 
 app_name = "metafields"

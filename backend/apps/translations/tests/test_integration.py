@@ -1,9 +1,12 @@
 """
 Integration tests for translations module.
 """
+
 from apps.stores.models import Store
-from apps.translations.models import Language, Translation, TranslationKey
-from apps.translations.services import TranslationService
+
+# TODO: Re-enable when translation models are implemented
+# from apps.translations.models import Language, Translation, TranslationKey
+# from apps.translations.services import TranslationService
 from django.contrib.auth import get_user_model
 from django.core.cache import caches
 from django.test import TestCase
@@ -36,11 +39,17 @@ class TranslationIntegrationTest(TestCase):
 
         # Create test translations
         self.en_translation = Translation.objects.create(
-            key=self.trans_key, language=self.en_lang, store=self.store, text="Hello World"
+            key=self.trans_key,
+            language=self.en_lang,
+            store=self.store,
+            text="Hello World",
         )
 
         self.es_translation = Translation.objects.create(
-            key=self.trans_key, language=self.es_lang, store=self.store, text="Hola Mundo"
+            key=self.trans_key,
+            language=self.es_lang,
+            store=self.store,
+            text="Hola Mundo",
         )
 
     def test_translation_service_get_with_cache(self):

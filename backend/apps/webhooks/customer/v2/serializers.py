@@ -1,6 +1,7 @@
 """
 Customer webhooks serializers.
 """
+
 from apps.webhooks.models import Webhook, WebhookDelivery
 from rest_framework import serializers
 
@@ -28,7 +29,13 @@ class WebhookCustomerSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "delivery_count", "last_triggered_at"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "delivery_count",
+            "last_triggered_at",
+        ]
 
     def get_delivery_count(self, obj):
         """Get total delivery count"""

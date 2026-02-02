@@ -1,6 +1,7 @@
 """
 Customer SMTP configuration views.
 """
+
 from apps.smtp.models import SmtpConfiguration
 from apps.smtp.services import SmtpEmailService
 from core.permissions import IsStoreUser

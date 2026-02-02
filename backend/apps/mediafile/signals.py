@@ -1,7 +1,8 @@
 """
 Signals for media app.
 """
-from apps.logs.tasks import log_event_async
+
+from apps.analytics.services.event_service import EventService
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
@@ -19,38 +20,35 @@ def log_media_file_change(sender, instance, created, **kwargs):
         event_type = "MEDIA_UPDATE"
         message = f"Media file updated: {instance.original_filename}"
 
-    log_event_async.delay(
-        {
-            "event_type": event_type,
-            "message": message,
-            "store": instance.store,
-            "user": instance.uploaded_by,
+    EventService.log_event(
+        event_type=event_type,
+        event_name=message,
+        properties={
             "entity_type": "MediaFile",
             "entity_id": instance.id,
-            "metadata": {
-                "file_size": instance.file_size,
-                "mime_type": instance.mime_type,
-                "resource_type": instance.resource_type,
-            },
-        }
+            "file_size": instance.file_size,
+            "mime_type": instance.mime_type,
+            "resource_type": instance.resource_type,
+        },
+        user=instance.uploaded_by,
+        store=instance.store,
     )
 
 
 @receiver(post_delete, sender=MediaFile)
 def log_media_file_deletion(sender, instance, **kwargs):
     """Log media file deletion"""
-    log_event_async.delay(
-        {
-            "event_type": "MEDIA_DELETE",
-            "message": f"Media file deleted: {instance.original_filename}",
+    EventService.log_event(
+        event_type="MEDIA_DELETE",
+        event_name=f"Media file deleted: {instance.original_filename}",
+        properties={
             "entity_type": "MediaFile",
             "entity_id": instance.id,
-            "metadata": {
-                "file_size": instance.file_size,
-                "mime_type": instance.mime_type,
-                "resource_type": instance.resource_type,
-            },
-        }
+            "file_size": instance.file_size,
+            "mime_type": instance.mime_type,
+            "resource_type": instance.resource_type,
+        },
+        store=instance.store,
     )
 
 
@@ -64,14 +62,14 @@ def log_folder_change(sender, instance, created, **kwargs):
         event_type = "FOLDER_UPDATE"
         message = f"Folder updated: {instance.name}"
 
-    log_event_async.delay(
-        {
-            "event_type": event_type,
-            "message": message,
-            "store": instance.store,
-            "user": instance.created_by,
+    EventService.log_event(
+        event_type=event_type,
+        event_name=message,
+        properties={
             "entity_type": "MediaFolder",
             "entity_id": instance.id,
-            "metadata": {"folder_name": instance.name},
-        }
+            "folder_name": instance.name,
+        },
+        user=instance.created_by,
+        store=instance.store,
     )

@@ -3,6 +3,7 @@ URL configuration for entities app.
 
 Routes for public, customer, and dashboard entities endpoints.
 """
+
 from django.urls import include, path
 
 app_name = "entities"

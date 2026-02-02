@@ -1,6 +1,7 @@
 """
 Admin configuration for ecommerce app.
 """
+
 from django.contrib import admin
 
 from .models import (
@@ -34,7 +35,15 @@ class ProductCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ["title", "store", "category", "price", "status", "is_featured", "created_at"]
+    list_display = [
+        "title",
+        "store",
+        "category",
+        "price",
+        "status",
+        "is_featured",
+        "created_at",
+    ]
     list_filter = ["status", "is_featured", "created_at", "store", "category"]
     search_fields = ["title", "sku", "description"]
     readonly_fields = ["created_at", "updated_at"]
@@ -84,7 +93,14 @@ class CartItemAdmin(admin.ModelAdmin):
 
 @admin.register(CustomerProfile)
 class CustomerProfileAdmin(admin.ModelAdmin):
-    list_display = ["user", "store", "phone", "total_orders", "total_spent", "created_at"]
+    list_display = [
+        "user",
+        "store",
+        "phone",
+        "total_orders",
+        "total_spent",
+        "created_at",
+    ]
     list_filter = ["created_at", "gender", "marketing_consent", "store"]
     search_fields = ["user__email", "user__first_name", "user__last_name", "phone"]
     readonly_fields = ["created_at", "updated_at"]
@@ -103,10 +119,23 @@ class InventoryAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ["order_number", "customer", "store", "status", "total_amount", "created_at"]
+    list_display = [
+        "order_number",
+        "customer",
+        "store",
+        "status",
+        "total_amount",
+        "created_at",
+    ]
     list_filter = ["status", "created_at", "store"]
     search_fields = ["order_number", "customer_email", "customer_phone"]
-    readonly_fields = ["created_at", "updated_at", "confirmed_at", "shipped_at", "delivered_at"]
+    readonly_fields = [
+        "created_at",
+        "updated_at",
+        "confirmed_at",
+        "shipped_at",
+        "delivered_at",
+    ]
     date_hierarchy = "created_at"
     raw_id_fields = ["store", "customer"]
 
@@ -159,7 +188,14 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentMethod)
 class PaymentMethodAdmin(admin.ModelAdmin):
-    list_display = ["name", "store", "method_type", "is_active", "is_default", "created_at"]
+    list_display = [
+        "name",
+        "store",
+        "method_type",
+        "is_active",
+        "is_default",
+        "created_at",
+    ]
     list_filter = ["method_type", "is_active", "is_default", "created_at", "store"]
     search_fields = ["name", "display_name"]
     readonly_fields = ["created_at", "updated_at"]
@@ -169,7 +205,15 @@ class PaymentMethodAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ["id", "order", "payment_method", "amount", "currency", "status", "created_at"]
+    list_display = [
+        "id",
+        "order",
+        "payment_method",
+        "amount",
+        "currency",
+        "status",
+        "created_at",
+    ]
     list_filter = ["status", "currency", "created_at", "payment_method"]
     search_fields = ["gateway_transaction_id", "customer_email"]
     readonly_fields = ["created_at", "updated_at", "completed_at", "failed_at"]

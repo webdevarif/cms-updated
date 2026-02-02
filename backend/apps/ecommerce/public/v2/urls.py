@@ -1,6 +1,7 @@
 """
 URL configuration for ecommerce public API v2.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
@@ -21,7 +22,9 @@ router.register(r"categories", ProductCategoryPublicViewSet, basename="public-ca
 router.register(r"carts", CartPublicViewSet, basename="public-carts")
 router.register(r"collections", CollectionPublicViewSet, basename="public-collections")
 router.register(
-    r"customer-profiles", CustomerProfilePublicViewSet, basename="public-customer-profiles"
+    r"customer-profiles",
+    CustomerProfilePublicViewSet,
+    basename="public-customer-profiles",
 )
 
 # Nested router for reviews under products

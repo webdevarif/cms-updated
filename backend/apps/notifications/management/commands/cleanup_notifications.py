@@ -1,6 +1,7 @@
 """
 Management command to cleanup old notifications.
 """
+
 from django.core.management.base import BaseCommand
 
 

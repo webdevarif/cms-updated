@@ -1,6 +1,7 @@
 """
 Public Entities API tests.
 """
+
 import factory
 import pytest
 from django.contrib.auth import get_user_model
@@ -57,12 +58,18 @@ class PublicEntityViewSetTests:
     def test_retrieve_entity_as_admin(self, authenticated_client):
         """Test retrieving entity as admin"""
         response = authenticated_client.get("/v2/api/entities/1/")
-        assert response.status_code in [200, 404]  # May not exist but should reach endpoint
+        assert response.status_code in [
+            200,
+            404,
+        ]  # May not exist but should reach endpoint
 
     def test_retrieve_entity_as_anonymous(self, anonymous_client):
         """Test retrieving entity as anonymous"""
         response = anonymous_client.get("/v2/api/entities/1/")
-        assert response.status_code in [200, 404]  # May not exist but should reach endpoint
+        assert response.status_code in [
+            200,
+            404,
+        ]  # May not exist but should reach endpoint
 
     # Permission tests
     def test_unauthorized_create(self, anonymous_client):

@@ -1,7 +1,8 @@
 """Themes admin configuration."""
+
 from django.contrib import admin
 
-from .models import ColorScheme, StyleClass, Template, Theme, Typography
+from .models import ColorScheme, Layout, StyleClass, Template, Theme, Typography
 
 
 @admin.register(Theme)
@@ -13,6 +14,25 @@ class ThemeAdmin(admin.ModelAdmin):
     search_fields = ["name"]
     readonly_fields = ["created_at", "updated_at"]
     ordering = ["-is_active", "name"]
+
+
+@admin.register(Layout)
+class LayoutAdmin(admin.ModelAdmin):
+    """Layout admin"""
+
+    list_display = [
+        "name",
+        "theme",
+        "store",
+        "is_default",
+        "is_active",
+        "created_at",
+        "updated_at",
+    ]
+    list_filter = ["is_default", "is_active", "theme"]
+    search_fields = ["name", "key"]
+    readonly_fields = ["created_at", "updated_at"]
+    ordering = ["name"]
 
 
 @admin.register(ColorScheme)
@@ -30,7 +50,13 @@ class ColorSchemeAdmin(admin.ModelAdmin):
 class TypographyAdmin(admin.ModelAdmin):
     """Typography admin"""
 
-    list_display = ["theme", "base_font_size", "font_smoothing", "created_at", "updated_at"]
+    list_display = [
+        "theme",
+        "base_font_size",
+        "font_smoothing",
+        "created_at",
+        "updated_at",
+    ]
     list_filter = ["theme", "font_smoothing"]
     search_fields = ["theme__name"]
     readonly_fields = ["created_at", "updated_at"]

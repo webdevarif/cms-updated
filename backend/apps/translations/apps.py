@@ -1,6 +1,7 @@
 """
 Apps configuration for translations module.
 """
+
 from django.apps import AppConfig
 
 
@@ -11,5 +12,5 @@ class TranslationsConfig(AppConfig):
     verbose_name = "Translations"
 
     def ready(self):
-        """Import signals for automatic translation key creation"""
-        from . import signals
+        """App ready - signals module was removed, no imports needed"""
+        pass

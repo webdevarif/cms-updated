@@ -1,6 +1,7 @@
 """
 Customer gift cards views - authenticated interface for gift card management.
 """
+
 from apps.giftcards.models import GiftCard
 from apps.giftcards.services.giftcard_service import GiftCardService
 from django_filters.rest_framework import DjangoFilterBackend
@@ -96,7 +97,8 @@ class CustomerGiftCardViewSet(viewsets.ReadOnlyModelViewSet):
             GiftCardService.send_gift_card_email(gift_card)
 
             return Response(
-                CustomerGiftCardSerializer(gift_card).data, status=status.HTTP_201_CREATED
+                CustomerGiftCardSerializer(gift_card).data,
+                status=status.HTTP_201_CREATED,
             )
 
         except Exception as e:
@@ -119,7 +121,8 @@ class CustomerGiftCardViewSet(viewsets.ReadOnlyModelViewSet):
 
         if not gift_card.is_redeemable:
             return Response(
-                {"error": "Gift card is not redeemable"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Gift card is not redeemable"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = CustomerGiftCardRedeemSerializer(data=request.data)

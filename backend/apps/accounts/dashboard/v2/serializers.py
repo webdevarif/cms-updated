@@ -1,6 +1,7 @@
 """
 Dashboard accounts serializers.
 """
+
 from apps.accounts.models.store_user import StoreUser
 from apps.accounts.models.user import User
 from rest_framework import serializers
@@ -45,5 +46,13 @@ class StoreUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StoreUser
-        fields = ["id", "user", "user_email", "user_name", "role", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "user",
+            "user_email",
+            "user_name",
+            "role",
+            "created_at",
+            "updated_at",
+        ]
         read_only_fields = ["id", "created_at", "updated_at"]

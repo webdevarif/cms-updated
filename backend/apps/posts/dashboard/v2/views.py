@@ -319,7 +319,11 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
                                 post.published_at = timezone.now()
                             post.save(update_fields=["status", "published_at"])
                             results.append(
-                                {"id": post.id, "status": "success", "new_status": new_status}
+                                {
+                                    "id": post.id,
+                                    "status": "success",
+                                    "new_status": new_status,
+                                }
                             )
                         except Exception as e:
                             results.append({"id": post.id, "status": "error", "error": str(e)})
@@ -336,24 +340,20 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
                     )
 
                 # Log the bulk operation
-                from apps.logs.tasks import log_event_async
+                from apps.analytics.services.event_service import EventService
 
-                log_event_async.delay(
-                    {
-                        "event_type": "CONTENT_BULK_UPDATE",
-                        "message": f"Bulk {action_type} operation on posts",
-                        "user": request.user,
-                        "store": request.store,
-                        "entity_type": "Post",
-                        "metadata": {
-                            "action": action_type,
-                            "requested_count": total_requested,
-                            "found_count": total_found,
-                            "affected_count": sum(1 for r in results if r["status"] == "success"),
-                            "results": results,
-                            "extra_data": extra_data,
-                        },
-                    }
+                EventService.log_event(
+                    event_type="CONTENT_BULK_UPDATE",
+                    event_name=f"Bulk {action_type} operation on posts",
+                    properties={
+                        "user": request.user.id if request.user else None,
+                        "store": request.store.id,
+                        "action_type": action_type,
+                        "count": len(post_ids),
+                        "post_ids": post_ids,
+                    },
+                    user=request.user,
+                    store=request.store,
                 )
 
                 return Response(
@@ -536,7 +536,9 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
                     "published_posts": published_posts,
                     "draft_posts": draft_posts,
                     "scheduled_posts": scheduled_posts,
-                    "publish_rate": (published_posts / total_posts * 100) if total_posts > 0 else 0,
+                    "publish_rate": (
+                        (published_posts / total_posts * 100) if total_posts > 0 else 0
+                    ),
                 },
                 "by_type": posts_by_type,
                 "authors": authors,
@@ -565,7 +567,12 @@ class DashboardPostViewSet(viewsets.ModelViewSet):
 
 
 class CommentDashboardViewSet(viewsets.ModelViewSet):
-    """Dashboard comment API - full moderation and analytics"""
+    """
+    Admin-only comment moderation and management.
+
+    Handles bulk operations, approval, rejection, spam marking, and analytics.
+    All moderation actions use CommentService methods for consistent behavior.
+    """
 
     permission_classes = [IsAuthenticated, IsStoreAdmin]
     serializer_class = CommentDashboardSerializer
@@ -663,7 +670,12 @@ class CommentDashboardViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"])
     def moderate(self, request):
-        """Bulk moderation actions"""
+        """
+        Bulk moderation actions (admin-only).
+
+        Handles bulk approve, reject, mark_spam, and delete operations
+        on multiple comments using CommentService for consistency.
+        """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -888,7 +900,7 @@ class CommentDashboardViewSet(viewsets.ModelViewSet):
                 {
                     "action": "approved",
                     "moderator": request.user.get_display_name(),
-                    "timestamp": comment.approved_at.isoformat() if comment.approved_at else None,
+                    "timestamp": (comment.approved_at.isoformat() if comment.approved_at else None),
                     "reason": None,
                 }
             ]

@@ -1,6 +1,7 @@
 """
 Dashboard webhooks API.
 """
+
 from apps.webhooks.models import Webhook, WebhookDelivery
 from apps.webhooks.services import WebhookService
 from core.permissions import IsStoreOwner
@@ -78,7 +79,8 @@ class WebhookDashboardViewSet(viewsets.ModelViewSet):
 
         if not webhook_ids or not action_type:
             return Response(
-                {"error": "webhook_ids and action are required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "webhook_ids and action are required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         webhooks = self.get_queryset().filter(id__in=webhook_ids)

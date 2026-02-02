@@ -1,6 +1,7 @@
 """
 Admin configuration for forms app.
 """
+
 from django.contrib import admin
 
 from .models.forms import FormTemplate

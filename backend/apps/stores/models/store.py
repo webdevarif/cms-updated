@@ -3,6 +3,7 @@ Store model for Digital Farmers CMS.
 
 Multi-tenant store model for store-scoped data.
 """
+
 import secrets
 
 from django.contrib.auth import get_user_model
@@ -71,7 +72,8 @@ class Store(models.Model):
 
     # Bootstrap tracking fields
     bootstrap_completed = models.BooleanField(
-        default=False, help_text="Indicates if bootstrap process has completed successfully"
+        default=False,
+        help_text="Indicates if bootstrap process has completed successfully",
     )
     bootstrap_phase = models.CharField(
         max_length=50, blank=True, help_text="Current phase of the bootstrap process"
@@ -133,24 +135,37 @@ class Store(models.Model):
         """Get store URL"""
         return f"/store/{self.slug}"
 
-    def get_metafield(self, namespace, key):
-        """Helper to get a metafield value"""
+    def get_metafield(self, namespace, key, default=None):
+        """
+        Helper to get a metafield value.
+
+        This is a thin wrapper around MetafieldService.get_metafield().
+        For advanced operations, use MetafieldService directly.
+        """
         from apps.metafields.services import MetafieldService
 
-        return MetafieldService.get_metafield(self, namespace=namespace, key=key)
+        return MetafieldService.get_metafield(self, namespace=namespace, key=key, default=default)
 
-    def set_metafield(self, namespace, key, value):
-        """Helper to set a metafield value"""
+    def set_metafield(self, namespace, key, value, **options):
+        """
+        Helper to set a metafield value.
+
+        This is a thin wrapper around MetafieldService.set_metafield().
+        For advanced operations, use MetafieldService directly.
+        """
         from apps.metafields.services import MetafieldService
 
-        return MetafieldService.set_metafield(self, namespace=namespace, key=key, value=value)
+        return MetafieldService.set_metafield(
+            self, namespace=namespace, key=key, value=value, **options
+        )
 
     def get_all_metafields(self):
-        """Get all metafields as a dictionary"""
+        """
+        Get all metafields as a dictionary.
+
+        This is a thin wrapper around MetafieldService.get_all_metafields().
+        For advanced operations, use MetafieldService directly.
+        """
         from apps.metafields.services import MetafieldService
 
-        metafields = {}
-        for metafield in MetafieldService.get_metafields_for_object(self):
-            key = f"{metafield.definition.namespace}.{metafield.definition.key}"
-            metafields[key] = metafield.get_value()
-        return metafields
+        return MetafieldService.get_all_metafields(self)

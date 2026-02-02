@@ -1,6 +1,7 @@
 """
 Signals for webhooks module.
 """
+
 import logging
 
 from django.db.models.signals import post_delete, post_save
@@ -23,7 +24,10 @@ def trigger_webhooks_for_event(store, event_type, event_data):
 
         for webhook in webhooks:
             WebhookService.trigger_webhook(
-                webhook=webhook, event_type=event_type, event_data=event_data, store=store
+                webhook=webhook,
+                event_type=event_type,
+                event_data=event_data,
+                store=store,
             )
 
     except Exception as exc:
@@ -43,17 +47,25 @@ def trigger_order_webhooks(sender, instance, created, **kwargs):
         "order_number": instance.order_number,
         "status": instance.status,
         "total": float(instance.total) if instance.total else None,
-        "subtotal": float(instance.subtotal)
-        if hasattr(instance, "subtotal") and instance.subtotal
-        else None,
-        "tax": float(instance.tax) if hasattr(instance, "tax") and instance.tax else None,
-        "shipping": float(instance.shipping)
-        if hasattr(instance, "shipping") and instance.shipping
-        else None,
+        "subtotal": (
+            float(instance.subtotal)
+            if hasattr(instance, "subtotal") and instance.subtotal
+            else None
+        ),
+        "tax": (float(instance.tax) if hasattr(instance, "tax") and instance.tax else None),
+        "shipping": (
+            float(instance.shipping)
+            if hasattr(instance, "shipping") and instance.shipping
+            else None
+        ),
         "currency": getattr(instance, "currency", "USD"),
         "customer_email": getattr(instance, "customer_email", ""),
-        "created_at": instance.created_at.isoformat() if hasattr(instance, "created_at") else None,
-        "updated_at": instance.updated_at.isoformat() if hasattr(instance, "updated_at") else None,
+        "created_at": (
+            instance.created_at.isoformat() if hasattr(instance, "created_at") else None
+        ),
+        "updated_at": (
+            instance.updated_at.isoformat() if hasattr(instance, "updated_at") else None
+        ),
     }
 
     trigger_webhooks_for_event(instance.store, event_type, event_data)
@@ -71,20 +83,26 @@ def trigger_product_webhooks(sender, instance, created, **kwargs):
         "id": str(instance.id),
         "title": getattr(instance, "title", ""),
         "description": getattr(instance, "description", ""),
-        "price": float(instance.price) if hasattr(instance, "price") and instance.price else None,
-        "compare_at_price": float(instance.compare_at_price)
-        if hasattr(instance, "compare_at_price") and instance.compare_at_price
-        else None,
+        "price": (float(instance.price) if hasattr(instance, "price") and instance.price else None),
+        "compare_at_price": (
+            float(instance.compare_at_price)
+            if hasattr(instance, "compare_at_price") and instance.compare_at_price
+            else None
+        ),
         "sku": getattr(instance, "sku", ""),
         "barcode": getattr(instance, "barcode", ""),
         "track_inventory": getattr(instance, "track_inventory", False),
         "inventory_quantity": getattr(instance, "inventory_quantity", 0),
-        "weight": float(instance.weight)
-        if hasattr(instance, "weight") and instance.weight
-        else None,
+        "weight": (
+            float(instance.weight) if hasattr(instance, "weight") and instance.weight else None
+        ),
         "status": getattr(instance, "status", "active"),
-        "created_at": instance.created_at.isoformat() if hasattr(instance, "created_at") else None,
-        "updated_at": instance.updated_at.isoformat() if hasattr(instance, "updated_at") else None,
+        "created_at": (
+            instance.created_at.isoformat() if hasattr(instance, "created_at") else None
+        ),
+        "updated_at": (
+            instance.updated_at.isoformat() if hasattr(instance, "updated_at") else None
+        ),
     }
 
     trigger_webhooks_for_event(instance.store, event_type, event_data)
@@ -120,14 +138,22 @@ def trigger_post_webhooks(sender, instance, created, **kwargs):
         "excerpt": getattr(instance, "excerpt", ""),
         "slug": getattr(instance, "slug", ""),
         "status": getattr(instance, "status", "draft"),
-        "author": getattr(instance.author, "email", "")
-        if hasattr(instance, "author") and instance.author
-        else "",
-        "published_at": instance.published_at.isoformat()
-        if hasattr(instance, "published_at") and instance.published_at
-        else None,
-        "created_at": instance.created_at.isoformat() if hasattr(instance, "created_at") else None,
-        "updated_at": instance.updated_at.isoformat() if hasattr(instance, "updated_at") else None,
+        "author": (
+            getattr(instance.author, "email", "")
+            if hasattr(instance, "author") and instance.author
+            else ""
+        ),
+        "published_at": (
+            instance.published_at.isoformat()
+            if hasattr(instance, "published_at") and instance.published_at
+            else None
+        ),
+        "created_at": (
+            instance.created_at.isoformat() if hasattr(instance, "created_at") else None
+        ),
+        "updated_at": (
+            instance.updated_at.isoformat() if hasattr(instance, "updated_at") else None
+        ),
     }
 
     trigger_webhooks_for_event(instance.store, event_type, event_data)
@@ -150,12 +176,16 @@ def trigger_post_published_webhooks(sender, instance, **kwargs):
                     "id": str(instance.id),
                     "title": getattr(instance, "title", ""),
                     "slug": getattr(instance, "slug", ""),
-                    "author": getattr(instance.author, "email", "")
-                    if hasattr(instance, "author") and instance.author
-                    else "",
-                    "published_at": instance.published_at.isoformat()
-                    if hasattr(instance, "published_at") and instance.published_at
-                    else timezone.now().isoformat(),
+                    "author": (
+                        getattr(instance.author, "email", "")
+                        if hasattr(instance, "author") and instance.author
+                        else ""
+                    ),
+                    "published_at": (
+                        instance.published_at.isoformat()
+                        if hasattr(instance, "published_at") and instance.published_at
+                        else timezone.now().isoformat()
+                    ),
                 }
 
                 trigger_webhooks_for_event(instance.store, event_type, event_data)
@@ -186,13 +216,19 @@ def trigger_form_submission_webhooks(sender, instance, created, **kwargs):
 
         event_data = {
             "id": str(instance.id),
-            "form_name": getattr(instance.form, "name", "")
-            if hasattr(instance, "form") and instance.form
-            else "",
-            "form_id": str(instance.form.id) if hasattr(instance, "form") and instance.form else "",
-            "submitted_at": instance.created_at.isoformat()
-            if hasattr(instance, "created_at")
-            else timezone.now().isoformat(),
+            "form_name": (
+                getattr(instance.form, "name", "")
+                if hasattr(instance, "form") and instance.form
+                else ""
+            ),
+            "form_id": (
+                str(instance.form.id) if hasattr(instance, "form") and instance.form else ""
+            ),
+            "submitted_at": (
+                instance.created_at.isoformat()
+                if hasattr(instance, "created_at")
+                else timezone.now().isoformat()
+            ),
             "data": getattr(instance, "data", {}),
             "ip_address": getattr(instance, "ip_address", ""),
             "user_agent": getattr(instance, "user_agent", ""),
@@ -215,12 +251,14 @@ def trigger_user_webhooks(sender, instance, created, **kwargs):
         "first_name": getattr(instance, "first_name", ""),
         "last_name": getattr(instance, "last_name", ""),
         "is_active": getattr(instance, "is_active", True),
-        "date_joined": instance.date_joined.isoformat()
-        if hasattr(instance, "date_joined")
-        else None,
-        "last_login": instance.last_login.isoformat()
-        if hasattr(instance, "last_login") and instance.last_login
-        else None,
+        "date_joined": (
+            instance.date_joined.isoformat() if hasattr(instance, "date_joined") else None
+        ),
+        "last_login": (
+            instance.last_login.isoformat()
+            if hasattr(instance, "last_login") and instance.last_login
+            else None
+        ),
     }
 
     # For user events, trigger on all stores (global event)
@@ -248,12 +286,16 @@ def trigger_notification_webhooks(sender, instance, created, **kwargs):
             "title": getattr(instance, "title", ""),
             "message": getattr(instance, "message", ""),
             "type": getattr(instance, "type", "info"),
-            "recipient_email": getattr(instance.recipient, "email", "")
-            if hasattr(instance, "recipient") and instance.recipient
-            else "",
-            "created_at": instance.created_at.isoformat()
-            if hasattr(instance, "created_at")
-            else timezone.now().isoformat(),
+            "recipient_email": (
+                getattr(instance.recipient, "email", "")
+                if hasattr(instance, "recipient") and instance.recipient
+                else ""
+            ),
+            "created_at": (
+                instance.created_at.isoformat()
+                if hasattr(instance, "created_at")
+                else timezone.now().isoformat()
+            ),
         }
 
         # Get store from notification or recipient

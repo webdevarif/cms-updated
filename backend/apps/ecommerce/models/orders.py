@@ -1,6 +1,7 @@
 """
 Order models for ecommerce app.
 """
+
 import uuid
 
 from django.conf import settings

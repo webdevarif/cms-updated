@@ -69,6 +69,41 @@ class CommentCustomerSerializer(serializers.ModelSerializer):
             return False
         return obj.user == request.user and not obj.is_deleted
 
+    def create(self, validated_data):
+        """Create a comment using CommentService"""
+        from apps.posts.models import Post
+        from apps.posts.services.comment_service import CommentService
+
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            raise ValidationError("Authentication required")
+
+        # Get post from context or validated_data
+        post_id = self.context.get("post_id")
+        if not post_id:
+            raise ValidationError("Post ID is required")
+
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            raise ValidationError("Post not found")
+
+        # Extract additional data from request
+        user_ip = self._get_client_ip(request)
+        user_agent = request.META.get("HTTP_USER_AGENT", "")
+        referrer = request.META.get("HTTP_REFERER", "")
+
+        comment = CommentService.create_comment(
+            post=post,
+            user=request.user,
+            content=validated_data["content"],
+            user_ip=user_ip,
+            user_agent=user_agent,
+            referrer=referrer,
+        )
+
+        return comment
+
     def update(self, instance, validated_data):
         """Update comment using CommentService"""
         from apps.posts.services.comment_service import CommentService
@@ -80,6 +115,15 @@ class CommentCustomerSerializer(serializers.ModelSerializer):
         return CommentService.update_comment(
             comment=instance, user=request.user, content=validated_data["content"]
         )
+
+    def _get_client_ip(self, request):
+        """Get client IP address from request"""
+        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(",")[0]
+        else:
+            ip = request.META.get("REMOTE_ADDR")
+        return ip
 
 
 class ReplyCreateSerializer(serializers.ModelSerializer):

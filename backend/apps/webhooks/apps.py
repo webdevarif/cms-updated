@@ -1,6 +1,7 @@
 """
 Apps configuration for webhooks module.
 """
+
 from django.apps import AppConfig
 
 

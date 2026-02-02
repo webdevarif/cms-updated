@@ -1,6 +1,7 @@
 """
 Pages models - using posts models for page content.
 """
+
 # Pages app uses the posts models for page content
 # Import from posts app to maintain consistency
 from apps.posts.models import Post, PostRevision, PostType, Taxonomy, Term

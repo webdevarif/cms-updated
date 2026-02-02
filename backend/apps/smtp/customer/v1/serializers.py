@@ -1,6 +1,7 @@
 """
 Customer SMTP serializers.
 """
+
 from apps.smtp.models import EmailLog, SMTPConfig
 from rest_framework import serializers
 

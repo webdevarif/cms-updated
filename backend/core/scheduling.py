@@ -1,6 +1,7 @@
 """
 Simple scheduling helpers for background tasks.
 """
+
 import logging
 
 from django.utils import timezone
@@ -19,8 +20,8 @@ def schedule_task(task_name, args=None, kwargs=None, delay_seconds=0, queue="def
         # Calculate run time
         run_at = timezone.now() + timezone.timedelta(seconds=delay_seconds)
 
-        # Schedule the task
-        task = task_func(args=args or [], kwargs=kwargs or [], queue=queue, schedule=run_at)
+        # Schedule the task using Celery
+        task = task_func.apply_async(args=args or [], kwargs=kwargs or [], queue=queue, eta=run_at)
 
         logger.info(f"Scheduled task '{task_name}' to run in {delay_seconds} seconds")
         return task
@@ -31,7 +32,13 @@ def schedule_task(task_name, args=None, kwargs=None, delay_seconds=0, queue="def
 
 
 def schedule_daily_task(
-    task_func, hour=0, minute=0, args=None, kwargs=None, queue="default", verbose_name=None
+    task_func,
+    hour=0,
+    minute=0,
+    args=None,
+    kwargs=None,
+    queue="default",
+    verbose_name=None,
 ):
     """Schedule a daily recurring task."""
     try:
@@ -43,8 +50,10 @@ def schedule_daily_task(
         if next_run <= now:
             next_run += timezone.timedelta(days=1)
 
-        # Schedule the task
-        task = task_func(args=args or [], kwargs=kwargs or [], queue=queue, schedule=next_run)
+        # Schedule the task using Celery
+        task = task_func.apply_async(
+            args=args or [], kwargs=kwargs or [], queue=queue, eta=next_run
+        )
 
         task_name = verbose_name or task_func.__name__
         logger.info(f"Scheduled daily task '{task_name}' at {hour:02d}:{minute:02d}")
@@ -68,8 +77,10 @@ def schedule_hourly_task(
         if next_run <= now:
             next_run += timezone.timedelta(hours=1)
 
-        # Schedule the task
-        task = task_func(args=args or [], kwargs=kwargs or [], queue=queue, schedule=next_run)
+        # Schedule the task using Celery
+        task = task_func.apply_async(
+            args=args or [], kwargs=kwargs or [], queue=queue, eta=next_run
+        )
 
         task_name = verbose_name or task_func.__name__
         logger.info(f"Scheduled hourly task '{task_name}' at minute {minute}")
@@ -101,11 +112,21 @@ def schedule_weekly_task(
         next_run = now + timezone.timedelta(days=days_ahead)
         next_run = next_run.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
-        # Schedule the task
-        task = task_func(args=args or [], kwargs=kwargs or [], queue=queue, schedule=next_run)
+        # Schedule the task using Celery
+        task = task_func.apply_async(
+            args=args or [], kwargs=kwargs or [], queue=queue, eta=next_run
+        )
 
         task_name = verbose_name or task_func.__name__
-        day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        day_names = [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        ]
         logger.info(
             f"Scheduled weekly task '{task_name}' on {day_names[day_of_week]} at {hour:02d}:{minute:02d}"
         )
@@ -116,29 +137,18 @@ def schedule_weekly_task(
         raise
 
 
-# Common scheduling shortcuts
-def schedule_daily_cache_warmup():
-    """Schedule daily cache warmup at 2:00 AM."""
-    return schedule_daily("apps.core.tasks.warmup_cache", hour=2, minute=0, queue="search")
-
-
-def schedule_daily_search_rebuild():
-    """Schedule daily search index rebuild at 2:30 AM."""
-    return schedule_daily("apps.core.tasks.rebuild_search_index", hour=2, minute=30, queue="search")
-
-
-def schedule_hourly_search_optimization():
-    """Schedule hourly search optimization."""
-    return schedule_hourly("apps.core.tasks.optimize_search_indices", minute=0, queue="search")
-
-
 def schedule_test_suite(app_label=None):
     """Schedule test suite to run immediately."""
     return schedule_task(
-        "apps.core.tasks.run_app_tests", args=[app_label], delay_seconds=60, queue="test"
+        "core.background_tasks.run_app_tests",
+        args=[app_label],
+        delay_seconds=60,
+        queue="default",
     )
 
 
 def schedule_full_test_suite():
     """Schedule full test suite to run immediately."""
-    return schedule_task("apps.core.tasks.run_full_test_suite", delay_seconds=60, queue="test")
+    return schedule_task(
+        "core.background_tasks.run_full_test_suite", delay_seconds=60, queue="default"
+    )

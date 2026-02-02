@@ -1,6 +1,7 @@
 """
 Customer mediafile API views.
 """
+
 import logging
 
 from apps.mediafile.exceptions import (
@@ -90,7 +91,8 @@ class MediafileCustomerViewSet(viewsets.ModelViewSet):
             media_file = self.get_object()
             MediaService.regenerate_thumbnails(media_file)
             return Response(
-                {"message": "Thumbnails regenerated successfully"}, status=status.HTTP_200_OK
+                {"message": "Thumbnails regenerated successfully"},
+                status=status.HTTP_200_OK,
             )
         except Exception as e:
             logger.error(f"Error regenerating thumbnails: {e}")
@@ -106,19 +108,23 @@ class MediafileCustomerViewSet(viewsets.ModelViewSet):
             file_ids = request.data.get("file_ids", [])
             if not file_ids:
                 return Response(
-                    {"error": "No file IDs provided"}, status=status.HTTP_400_BAD_REQUEST
+                    {"error": "No file IDs provided"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Only allow deletion of user's own files
             deleted_count = MediaFile.objects.filter(
-                id__in=file_ids, store=getattr(request, "store", None), uploaded_by=request.user
+                id__in=file_ids,
+                store=getattr(request, "store", None),
+                uploaded_by=request.user,
             ).delete()[0]
 
             return Response({"message": f"Deleted {deleted_count} files successfully"})
         except Exception as e:
             logger.error(f"Error in bulk delete: {e}")
             return Response(
-                {"error": "Failed to delete files"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to delete files"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["get"])
@@ -201,7 +207,8 @@ class MediafolderCustomerViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error getting folder tree: {e}")
             return Response(
-                {"error": "Failed to get folder tree"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": "Failed to get folder tree"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     @action(detail=False, methods=["get"])

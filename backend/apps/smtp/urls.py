@@ -3,6 +3,7 @@ URL configuration for smtp app.
 
 Routes for public, customer, and dashboard smtp endpoints.
 """
+
 from django.urls import include, path
 
 app_name = "smtp"

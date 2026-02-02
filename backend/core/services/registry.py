@@ -1,6 +1,7 @@
 """
 Service registry for centralized service management.
 """
+
 from typing import Any, Dict, Type
 
 

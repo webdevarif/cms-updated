@@ -1,6 +1,7 @@
 """
 Gift cards app configuration.
 """
+
 from django.apps import AppConfig
 
 

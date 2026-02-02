@@ -1,6 +1,7 @@
 """
 Management command to migrate old stores.
 """
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 

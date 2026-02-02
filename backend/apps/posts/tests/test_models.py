@@ -1,6 +1,7 @@
 """
 Tests for post models.
 """
+
 import pytest
 from django.contrib.auth import get_user_model
 
@@ -15,11 +16,10 @@ class TestPostType:
         """Test creating a post type"""
         from apps.posts.models import PostType
         from apps.stores.models import Store
-        from core.services.user import UserService
 
         store = Store.objects.create(
             name="Test Store",
-            owner=UserService.create_user(email="test@example.com", password="pass"),
+            owner=User.objects.create_user(email="test@example.com", password="pass"),
         )
         post_type = PostType.objects.create(name="Blog Post", slug="blog", store=store)
 
@@ -35,14 +35,17 @@ class TestPost:
         """Test creating a post"""
         from apps.posts.models import Post, PostType
         from apps.stores.models import Store
-        from core.services.user import UserService
 
-        user = UserService.create_user(email="test@example.com", password="pass")
+        user = User.objects.create_user(email="test@example.com", password="pass")
         store = Store.objects.create(name="Test Store", owner=user)
         post_type = PostType.objects.create(name="Blog Post", slug="blog", store=store)
 
         post = Post.objects.create(
-            title="Test Post", content="Test content", post_type=post_type, store=store, author=user
+            title="Test Post",
+            content="Test content",
+            post_type=post_type,
+            store=store,
+            author=user,
         )
 
         assert str(post) == "Test Post"
@@ -57,9 +60,8 @@ class TestTaxonomy:
         """Test creating a taxonomy"""
         from apps.posts.models import Taxonomy
         from apps.stores.models import Store
-        from core.services.user import UserService
 
-        user = UserService.create_user(email="test@example.com", password="pass")
+        user = User.objects.create_user(email="test@example.com", password="pass")
         store = Store.objects.create(name="Test Store", owner=user)
         taxonomy = Taxonomy.objects.create(
             name="Categories", slug="categories", taxonomy_type="category", store=store

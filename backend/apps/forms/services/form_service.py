@@ -1,11 +1,16 @@
 """
 Form service for handling form operations.
+
+This service handles:
+- Submission creation and processing
+- Email notification sending
+- Analytics and statistics helpers
 """
+
 import logging
 
 from apps.forms.models import FormSubmission, FormSubmissionData, FormTemplate
 from django.conf import settings
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -13,12 +18,24 @@ logger = logging.getLogger(__name__)
 
 
 class FormService:
-    """Service class for form operations."""
+    """
+    Service class for form operations.
 
+    This service handles:
+    - Submission creation and processing
+    - Email notification sending
+    - Analytics and statistics helpers
+
+    All methods are static to provide a clean API without requiring instantiation.
+    """
+
+    # Submission handling methods
     @staticmethod
     def submit_form(form_template, submission_data, user=None, ip_address=None, user_agent=None):
         """
         Process a form submission.
+
+        Creates submission record, stores field data, and triggers processing.
         """
         try:
             # Create submission record
@@ -52,7 +69,11 @@ class FormService:
 
     @staticmethod
     def _process_submission(submission):
-        """Process a form submission (send notifications, etc.)."""
+        """
+        Process a form submission (send notifications, etc.).
+
+        Updates submission status and triggers email notifications.
+        """
         try:
             submission.status = "processing"
             submission.save()
@@ -73,50 +94,62 @@ class FormService:
             submission.processed_at = timezone.now()
             submission.save()
 
+    # Notification methods
     @staticmethod
     def _send_notification_email(submission):
-        """Send notification email for form submission."""
+        """Send notification email for form submission using email helper."""
         try:
-            subject = f"New Form Submission: {submission.form_template.title}"
+            from .email_helper import send_form_notification
 
-            # Get store email from settings or use default
-            store_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
-
-            # Create email content
+            # Create email context
             context = {
                 "submission": submission,
                 "form_template": submission.form_template,
                 "site_name": getattr(settings, "SITE_NAME", "Website"),
                 "submission_url": f"{settings.SITE_URL}/forms/submissions/{submission.submission_id}/",
+                "recipient_email": (
+                    submission.form_template.created_by.email
+                    if submission.form_template.created_by
+                    else getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@example.com")
+                ),
             }
 
-            html_content = render_to_string("forms/email_notification.html", context)
+            # Send email using helper
+            result = send_form_notification(submission.form_template, context)
 
-            # Send to form template creator or store owner
-            recipient_email = (
-                submission.form_template.created_by.email
-                if submission.form_template.created_by
-                else store_email
-            )
-
-            send_mail(
-                subject=subject,
-                message=html_content,
-                from_email=store_email,
-                recipient_list=[recipient_email],
-                html_message=html_content,
-            )
+            if not result["success"]:
+                logger.error(f"Failed to send notification email: {result['message']}")
 
         except Exception as e:
-            logger.error(f"Error sending notification email: {str(e)}")
+            logger.error(f"Error in _send_notification_email: {str(e)}")
+
+    # Statistics and analytics methods
+    @staticmethod
+    def get_form_analytics(form_template):
+        """
+        Get comprehensive analytics for a form template.
+
+        Args:
+            form_template: FormTemplate instance
+
+        Returns:
+            dict: Enhanced analytics including submission counts, user statistics, and trends
+        """
+        from .form_analytics_service import get_form_analytics as analytics_helper
+
+        return analytics_helper(form_template)
 
     @staticmethod
     def get_form_statistics(form_template):
-        """Get statistics for a form template."""
-        return {
-            "total_submissions": form_template.submissions.count(),
-            "pending_submissions": form_template.submissions.filter(status="pending").count(),
-            "completed_submissions": form_template.submissions.filter(status="completed").count(),
-            "failed_submissions": form_template.submissions.filter(status="failed").count(),
-            "recent_submissions": form_template.submissions.order_by("-submitted_at")[:10],
-        }
+        """
+        Get basic statistics for a form template.
+
+        Args:
+            form_template: FormTemplate instance
+
+        Returns:
+            dict: Basic counts and recent submissions
+        """
+        from .form_analytics_service import get_form_statistics as stats_helper
+
+        return stats_helper(form_template)

@@ -1,6 +1,7 @@
 """
 Dashboard API views for ecommerce v2.
 """
+
 from datetime import datetime, timedelta
 
 from apps.ecommerce.models.cart import Cart, CartItem
@@ -44,7 +45,11 @@ class ProductDashboardViewSet(viewsets.ModelViewSet):
 
     permission_classes = [IsAuthenticated, IsStoreAdmin]
     serializer_class = DashboardProductSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["category", "status", "store"]
     search_fields = ["title", "description", "sku"]
     ordering_fields = ["created_at", "updated_at", "price", "title"]
@@ -137,7 +142,9 @@ class CartDashboardViewSet(viewsets.ReadOnlyModelViewSet):
                 "total_carts": total_carts,
                 "active_carts": active_carts,
                 "abandoned_carts": abandoned_carts,
-                "abandonment_rate": (abandoned_carts / total_carts * 100) if total_carts > 0 else 0,
+                "abandonment_rate": (
+                    (abandoned_carts / total_carts * 100) if total_carts > 0 else 0
+                ),
                 "average_cart_value": round(avg_cart_value, 2),
                 "total_cart_value": round(total_cart_value, 2),
             }
@@ -149,7 +156,11 @@ class OrderDashboardViewSet(viewsets.ReadOnlyModelViewSet):
 
     permission_classes = [IsAuthenticated, IsStoreAdmin]
     serializer_class = OrderDashboardSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["store", "status", "payment_status"]
     search_fields = ["customer__username", "customer__email", "order_number"]
     ordering_fields = ["created_at", "updated_at", "total_amount"]
@@ -209,9 +220,9 @@ class OrderDashboardViewSet(viewsets.ReadOnlyModelViewSet):
                 "total_orders": total_orders,
                 "pending_orders": pending_orders,
                 "completed_orders": completed_orders,
-                "completion_rate": (completed_orders / total_orders * 100)
-                if total_orders > 0
-                else 0,
+                "completion_rate": (
+                    (completed_orders / total_orders * 100) if total_orders > 0 else 0
+                ),
                 "total_revenue": round(total_revenue, 2),
                 "average_order_value": round(avg_order_value, 2),
             }
@@ -266,9 +277,9 @@ class CustomerProfileDashboardViewSet(viewsets.ReadOnlyModelViewSet):
             {
                 "total_customers": total_customers,
                 "new_customers_30_days": new_customers,
-                "customer_growth_rate": (new_customers / total_customers * 100)
-                if total_customers > 0
-                else 0,
+                "customer_growth_rate": (
+                    (new_customers / total_customers * 100) if total_customers > 0 else 0
+                ),
             }
         )
 
@@ -319,7 +330,11 @@ class PaymentDashboardViewSet(viewsets.ReadOnlyModelViewSet):
 
     permission_classes = [IsAuthenticated, IsStoreAdmin]
     serializer_class = PaymentDashboardSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["store", "status", "payment_method"]
     search_fields = ["order__customer__username", "transaction_id"]
     ordering_fields = ["created_at", "amount"]
@@ -355,9 +370,9 @@ class PaymentDashboardViewSet(viewsets.ReadOnlyModelViewSet):
                 "total_payments": total_payments,
                 "successful_payments": successful_payments,
                 "failed_payments": failed_payments,
-                "success_rate": (successful_payments / total_payments * 100)
-                if total_payments > 0
-                else 0,
+                "success_rate": (
+                    (successful_payments / total_payments * 100) if total_payments > 0 else 0
+                ),
                 "total_revenue": round(total_revenue, 2),
             }
         )
@@ -404,12 +419,14 @@ class InventoryDashboardViewSet(viewsets.ModelViewSet):
                 "low_stock_products": low_stock_products,
                 "out_of_stock_products": out_of_stock_products,
                 "stock_health_rate": (
-                    (total_products - low_stock_products - out_of_stock_products)
-                    / total_products
-                    * 100
-                )
-                if total_products > 0
-                else 0,
+                    (
+                        (total_products - low_stock_products - out_of_stock_products)
+                        / total_products
+                        * 100
+                    )
+                    if total_products > 0
+                    else 0
+                ),
             }
         )
 

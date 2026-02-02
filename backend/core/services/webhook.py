@@ -3,6 +3,7 @@ Webhook management services for Digital Farmers CMS.
 
 Shared webhook management service.
 """
+
 import logging
 
 from django.core.exceptions import ValidationError

@@ -1,6 +1,7 @@
 """
 Dashboard notification views.
 """
+
 from apps.notifications.models import Notification, NotificationPreference, NotificationTemplate
 from apps.notifications.services import NotificationService
 from core.permissions import IsStoreOwner
@@ -22,7 +23,13 @@ class NotificationDashboardViewSet(viewsets.ModelViewSet):
     """
     Dashboard notification management endpoints.
 
-    Full admin CRUD on notifications.
+    Manages concrete notifications - actual delivered/queued notification items.
+    Use cases: inspection of notification history, manual mark-as-read operations,
+    and viewing delivery status for store notifications.
+
+    Future improvement: This viewset should focus on listing, inspecting, and marking
+    notifications as read. Template management and preferences should remain in their
+    respective dedicated viewsets.
     """
 
     permission_classes = [IsAuthenticated, IsStoreOwner]
@@ -75,7 +82,8 @@ class NotificationDashboardViewSet(viewsets.ModelViewSet):
         notification_ids = request.data.get("notification_ids", [])
         if not notification_ids:
             return Response(
-                {"error": "notification_ids required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "notification_ids required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         notifications = self.get_queryset().filter(id__in=notification_ids)
@@ -90,6 +98,13 @@ class NotificationDashboardViewSet(viewsets.ModelViewSet):
 class NotificationPreferenceDashboardViewSet(viewsets.ModelViewSet):
     """
     Dashboard notification preference management endpoints.
+
+    Manages per-user notification preferences including channel opt-in/out settings,
+    digest frequency, and notification type preferences. Use cases: configuring how
+    users receive notifications and managing delivery preferences per notification type.
+
+    Future improvement: This viewset should remain focused solely on preference management
+    and not mix with notification creation or template management.
     """
 
     permission_classes = [IsAuthenticated, IsStoreOwner]
@@ -105,6 +120,14 @@ class NotificationPreferenceDashboardViewSet(viewsets.ModelViewSet):
 class NotificationTemplateDashboardViewSet(viewsets.ModelViewSet):
     """
     Dashboard notification template management endpoints.
+
+    Manages reusable notification templates with channel-specific content and variable
+    substitution. Use cases: creating and managing email/in-app/push templates for
+    different notification events, customizing content per channel, and managing template
+    variables and rendering logic.
+
+    Future improvement: This viewset should focus solely on template CRUD operations
+    and not mix with notification delivery or preference management.
     """
 
     permission_classes = [IsAuthenticated, IsStoreOwner]

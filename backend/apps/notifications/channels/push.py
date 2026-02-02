@@ -1,6 +1,7 @@
 """
 Push channel for notifications.
 """
+
 import logging
 
 from .base import BaseChannel

@@ -1,6 +1,7 @@
 """
 Dashboard webhooks serializers.
 """
+
 from apps.webhooks.models import Webhook, WebhookDelivery
 from rest_framework import serializers
 

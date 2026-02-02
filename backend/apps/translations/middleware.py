@@ -1,6 +1,11 @@
 """
 Translation middleware.
+
+NOTE: This middleware is currently unused and not configured in settings.
+It provides request/response translation handling and can be enabled in the future
+if translation middleware functionality is needed.
 """
+
 import re
 
 from django.conf import settings
@@ -91,7 +96,8 @@ class TranslationMiddleware:
             from .utils.translation_parser import TranslationParser
 
             parser = TranslationParser(
-                store=getattr(request, "store", None), language_code=request.LANGUAGE_CODE
+                store=getattr(request, "store", None),
+                language_code=request.LANGUAGE_CODE,
             )
 
             translated_content = parser.parse_html(response.content.decode("utf-8"))

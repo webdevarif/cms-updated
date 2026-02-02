@@ -1,6 +1,7 @@
 """
 Admin configuration for entities app.
 """
+
 from django.contrib import admin
 
 from .models import EntityAction, EntityInteraction
@@ -19,7 +20,14 @@ class EntityActionAdmin(admin.ModelAdmin):
 class EntityInteractionAdmin(admin.ModelAdmin):
     """Admin interface for EntityInteraction model"""
 
-    list_display = ["user", "action", "content_type", "object_id", "is_active", "created_at"]
+    list_display = [
+        "user",
+        "action",
+        "content_type",
+        "object_id",
+        "is_active",
+        "created_at",
+    ]
     list_filter = ["action", "is_active"]
     search_fields = ["user__email"]
     readonly_fields = ["created_at", "updated_at"]

@@ -1,6 +1,7 @@
 """
 Role fixtures for testing.
 """
+
 import pytest
 from django.contrib.auth import get_user_model
 
@@ -16,7 +17,10 @@ def staff_user(store):
 
     # Create staff role
     role = Role.objects.create(
-        store=store, slug="staff", name="Staff", permissions=["content.read", "ecommerce.read"]
+        store=store,
+        slug="staff",
+        name="Staff",
+        permissions=["content.read", "ecommerce.read"],
     )
 
     # Assign role to user

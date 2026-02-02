@@ -1,6 +1,7 @@
 """
 Product models for ecommerce app.
 """
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -81,7 +82,11 @@ class Product(models.Model):
 
     # Category
     category = models.ForeignKey(
-        ProductCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name="products"
+        ProductCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
     )
 
     # Pricing
@@ -103,7 +108,11 @@ class Product(models.Model):
     tags = models.JSONField(default=list, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_products"
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_products",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

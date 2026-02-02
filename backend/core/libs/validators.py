@@ -1,6 +1,7 @@
 """
 Custom validators for Digital Farmers CMS.
 """
+
 import re
 
 from django.conf import settings
@@ -41,12 +42,14 @@ def validate_strong_password(value):
 
     if not any(c.isupper() for c in value):
         raise ValidationError(
-            _("Password must contain at least one uppercase letter."), code="password_no_upper"
+            _("Password must contain at least one uppercase letter."),
+            code="password_no_upper",
         )
 
     if not any(c.islower() for c in value):
         raise ValidationError(
-            _("Password must contain at least one lowercase letter."), code="password_no_lower"
+            _("Password must contain at least one lowercase letter."),
+            code="password_no_lower",
         )
 
     if not any(c.isdigit() for c in value):
@@ -56,7 +59,8 @@ def validate_strong_password(value):
 
     if not re.search(r'[!@#$%^&*(),.?":{}|<>]', value):
         raise ValidationError(
-            _("Password must contain at least one special character."), code="password_no_special"
+            _("Password must contain at least one special character."),
+            code="password_no_special",
         )
 
 

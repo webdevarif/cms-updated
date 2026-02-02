@@ -70,19 +70,22 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="metafield",
             index=models.Index(
-                fields=["content_type", "object_id"], name="metafields__content_307ae3_idx"
+                fields=["content_type", "object_id"],
+                name="metafields__content_307ae3_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="metafield",
             index=models.Index(
-                fields=["definition", "value_text"], name="metafields__definit_4efd4c_idx"
+                fields=["definition", "value_text"],
+                name="metafields__definit_4efd4c_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="metafield",
             index=models.Index(
-                fields=["definition", "value_number"], name="metafields__definit_970eeb_idx"
+                fields=["definition", "value_number"],
+                name="metafields__definit_970eeb_idx",
             ),
         ),
         migrations.AlterUniqueTogether(

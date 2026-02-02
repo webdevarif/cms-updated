@@ -1,6 +1,7 @@
 """
 Customer entities views - authenticated interface for entity interactions.
 """
+
 from apps.entities.models import EntityAction, EntityInteraction
 from django.contrib.contenttypes.models import ContentType
 from django_filters.rest_framework import DjangoFilterBackend
@@ -170,7 +171,8 @@ class CustomerEntityActionViewSet(viewsets.ReadOnlyModelViewSet):
             interaction.save()
 
             return Response(
-                {"message": "Interaction removed successfully"}, status=status.HTTP_200_OK
+                {"message": "Interaction removed successfully"},
+                status=status.HTTP_200_OK,
             )
 
         except EntityInteraction.DoesNotExist:

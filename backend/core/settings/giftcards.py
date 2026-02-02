@@ -1,6 +1,7 @@
 """
 Gift cards settings.
 """
+
 from django.conf import settings
 
 # Gift card code generation settings

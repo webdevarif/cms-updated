@@ -1,9 +1,11 @@
 """
 Celery configuration for the Digital Farmers CMS.
 """
+
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 from django.conf import settings
 
 # Set the default Django settings module for the 'celery' program.
@@ -38,6 +40,22 @@ app.conf.update(
 
 # Optional: Configure beat schedule
 app.conf.beat_schedule = getattr(settings, "CELERY_BEAT_SCHEDULE", {})
+
+# Add periodic tasks for background processing
+app.conf.beat_schedule.update(
+    {
+        "weekly-translation-sync": {
+            "task": "core.background_tasks.sync_translations",
+            "schedule": crontab(hour=4, minute=0, day_of_week=6),  # Sunday 4 AM
+            "options": {"queue": "default"},
+        },
+        "daily-full-test-suite": {
+            "task": "core.background_tasks.run_full_test_suite",
+            "schedule": crontab(hour=1, minute=0),  # Daily 1 AM
+            "options": {"queue": "default"},
+        },
+    }
+)
 
 
 @app.task(bind=True)

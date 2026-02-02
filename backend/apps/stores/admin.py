@@ -1,6 +1,7 @@
 """
 Admin configuration for stores app.
 """
+
 from django.contrib import admin
 
 from .models import Store, StoreSettings
@@ -10,7 +11,15 @@ from .models import Store, StoreSettings
 class StoreAdmin(admin.ModelAdmin):
     """Admin interface for Store model"""
 
-    list_display = ["name", "slug", "owner", "status", "store_type", "domain", "created_at"]
+    list_display = [
+        "name",
+        "slug",
+        "owner",
+        "status",
+        "store_type",
+        "domain",
+        "created_at",
+    ]
     list_filter = ["status", "store_type", "created_at"]
     search_fields = ["name", "slug", "owner__email", "domain"]
     readonly_fields = ["access_code", "verification_token", "created_at", "updated_at"]

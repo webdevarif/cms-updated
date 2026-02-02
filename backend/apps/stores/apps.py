@@ -1,6 +1,7 @@
 """
 Apps configuration for stores app.
 """
+
 from django.apps import AppConfig
 
 

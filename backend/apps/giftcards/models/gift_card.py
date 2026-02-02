@@ -1,6 +1,7 @@
 """
 GiftCard model for giftcards app.
 """
+
 import secrets
 import uuid
 

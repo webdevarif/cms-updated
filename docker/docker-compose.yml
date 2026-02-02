@@ -1,24 +1,46 @@
 services:
   backend:
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: docker/backend/Dockerfile
     container_name: cms-backend
     ports:
       - "8000:8000"
     environment:
       - DJANGO_SETTINGS_MODULE=core.settings.development
       - PYTHONUNBUFFERED=1
+      - RUN_MIGRATIONS=false
+      - DJANGO_SECRET_KEY=1BjoKHHzBRR3IUZsQ4YKbVFaw5A618I9xJHGKT0fUcSssL4M4MxQOv92YVPFqcmp
+      - DJANGO_DEBUG=False
     env_file:
-      - ../.env
-    depends_on:
-      - redis
+      - ./env/backend.env
     volumes:
-      - ../backend:/app
       - backend_media:/app/media
       - backend_static:/app/staticfiles
     working_dir: /app
-    command: python manage.py runserver 0.0.0.0:8000
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15-alpine
+    container_name: cms-db
+    environment:
+      - POSTGRES_DB=cms_db
+      - POSTGRES_USER=cms_user
+      - POSTGRES_PASSWORD=your-db-password-here
+      - POSTGRES_HOST=db
+    env_file:
+      - ./env/db.env.example
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   redis:
     image: redis:7-alpine
@@ -27,8 +49,38 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    build:
+      context: ../
+      dockerfile: docker/worker/Dockerfile
+    container_name: cms-worker
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings.development
+      - PYTHONUNBUFFERED=1
+      - RUN_MIGRATIONS=false
+      - DJANGO_SECRET_KEY=1BjoKHHzBRR3IUZsQ4YKbVFaw5A618I9xJHGKT0fUcSssL4M4MxQOv92YVPFqcmp
+      - DJANGO_DEBUG=False
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    env_file:
+      - ./env/backend.env
+    volumes:
+      - backend_media:/app/media
+      - backend_static:/app/staticfiles
+    working_dir: /app
+    depends_on:
+      - backend
+      - db
+      - redis
 
 volumes:
+  postgres_data:
   redis_data:
   backend_media:
   backend_static:

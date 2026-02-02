@@ -1,6 +1,7 @@
 """
 Public entities views - read-only interface for entity interactions.
 """
+
 from apps.entities.models import EntityAction, EntityInteraction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets

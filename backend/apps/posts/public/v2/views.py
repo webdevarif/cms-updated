@@ -22,18 +22,23 @@ class PublicPostViewSet(viewsets.ModelViewSet):
 
 
 class CommentPublicViewSet(viewsets.GenericViewSet):
-    """Public comment API - read-only list and create comments"""
+    """
+    Public read-only access to approved comments for a post.
+
+    All comment creation is handled via authenticated customer endpoints.
+    This viewset provides read access to approved, non-spam comments for public display.
+    """
 
     permission_classes = [AllowAny]
     serializer_class = CommentPublicSerializer
 
     def get_queryset(self):
-        """Get comments for a specific post"""
+        """Get approved, non-spam comments for a specific post"""
         post_id = self.kwargs.get("post_pk")
         if post_id:
             return CommentService.get_post_comments(
                 post=get_object_or_404(Post, id=post_id), approved_only=True
-            )
+            ).filter(is_spam=False, is_deleted=False)
         return Comment.objects.none()
 
     def list(self, request, post_pk=None):
@@ -105,21 +110,3 @@ class CommentPublicViewSet(viewsets.GenericViewSet):
                 "is_hidden": comment.is_hidden,
             }
         )
-
-    def create(self, request, post_pk=None):
-        """Create a new comment on a post"""
-        post = get_object_or_404(Post, id=post_pk)
-
-        # Check if post supports comments
-        if not post.post_type.supports_comments:
-            return Response({"error": "Comments are not enabled for this post type"}, status=400)
-
-        serializer = self.get_serializer(
-            data=request.data, context={"request": request, "post_id": post.id}
-        )
-        serializer.is_valid(raise_exception=True)
-        comment = serializer.save()
-
-        # Return the created comment
-        response_serializer = self.get_serializer(comment)
-        return Response(response_serializer.data, status=201)

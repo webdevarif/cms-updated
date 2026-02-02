@@ -1,6 +1,7 @@
 """
 Email template models for forms app.
 """
+
 from core.models import TenantModel
 from django.db import models
 from django.template import Context, Template

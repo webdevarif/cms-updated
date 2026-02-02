@@ -1,6 +1,7 @@
 """
 Public smtp API views.
 """
+
 import logging
 
 from apps.smtp.models import EmailLog, EmailTemplate, SmtpConfiguration

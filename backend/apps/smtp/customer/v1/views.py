@@ -1,6 +1,7 @@
 """
 Customer SMTP API views.
 """
+
 from apps.smtp.models import EmailLog, SMTPConfig
 from apps.smtp.services import SMTPService
 from core.permissions import IsStoreUser

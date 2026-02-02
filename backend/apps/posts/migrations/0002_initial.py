@@ -59,7 +59,9 @@ class Migration(migrations.Migration):
             model_name="post",
             name="store",
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, related_name="posts", to="stores.store"
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="posts",
+                to="stores.store",
             ),
         ),
         migrations.AddField(
@@ -84,7 +86,9 @@ class Migration(migrations.Migration):
             model_name="postrevision",
             name="user",
             field=models.ForeignKey(
-                null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
             ),
         ),
         migrations.AddField(
@@ -156,7 +160,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="comment",
             index=models.Index(
-                fields=["post", "is_approved", "created_at"], name="posts_comme_post_id_5b904c_idx"
+                fields=["post", "is_approved", "created_at"],
+                name="posts_comme_post_id_5b904c_idx",
             ),
         ),
         migrations.AddIndex(
@@ -184,7 +189,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="postrevision",
             index=models.Index(
-                fields=["post", "revision_number"], name="posts_post__post_id_0946dc_idx"
+                fields=["post", "revision_number"],
+                name="posts_post__post_id_0946dc_idx",
             ),
         ),
         migrations.AddIndex(

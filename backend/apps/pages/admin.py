@@ -1,48 +1,43 @@
 """
 Pages admin configuration.
 """
+
 from django.contrib import admin
 
-from .models import Post, PostType, Taxonomy, Term
+from .models import Menu, MenuItem
 
 
-@admin.register(Post)
-class PostAdmin(admin.ModelAdmin):
-    """Post admin configuration"""
+@admin.register(Menu)
+class MenuAdmin(admin.ModelAdmin):
+    """Menu admin configuration"""
 
-    list_display = ["title", "slug", "post_type", "store", "status", "created_at"]
-    list_filter = ["status", "post_type", "store", "created_at"]
-    search_fields = ["title", "content", "slug"]
-    prepopulated_fields = {"slug": ("title",)}
+    list_display = ["name", "slug", "store", "is_default", "created_at"]
+    list_filter = ["is_default", "store", "created_at"]
+    search_fields = ["name", "slug"]
+    prepopulated_fields = {"slug": ("name",)}
     date_hierarchy = "created_at"
-    ordering = ["-created_at"]
+    ordering = ["name"]
+
+    def get_queryset(self, request):
+        """Filter to store for non-superusers."""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(store=request.user.stores.first())
 
 
-@admin.register(PostType)
-class PostTypeAdmin(admin.ModelAdmin):
-    """Post type admin configuration"""
+@admin.register(MenuItem)
+class MenuItemAdmin(admin.ModelAdmin):
+    """Menu item admin configuration"""
 
-    list_display = ["name", "slug", "store", "is_public", "created_at"]
-    list_filter = ["is_public", "is_system", "created_at"]
-    search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    list_display = ["title", "menu", "parent", "position", "is_visible", "created_at"]
+    list_filter = ["is_visible", "menu", "created_at"]
+    search_fields = ["title", "url"]
+    ordering = ["menu", "position", "created_at"]
 
-
-@admin.register(Taxonomy)
-class TaxonomyAdmin(admin.ModelAdmin):
-    """Taxonomy admin configuration"""
-
-    list_display = ["name", "slug", "taxonomy_type", "store", "created_at"]
-    list_filter = ["taxonomy_type", "store", "created_at"]
-    search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
-
-
-@admin.register(Term)
-class TermAdmin(admin.ModelAdmin):
-    """Term admin configuration"""
-
-    list_display = ["name", "slug", "taxonomy", "store", "parent", "created_at"]
-    list_filter = ["taxonomy", "store", "created_at"]
-    search_fields = ["name", "slug"]
-    prepopulated_fields = {"slug": ("name",)}
+    def get_queryset(self, request):
+        """Filter to store for non-superusers."""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(menu__store=request.user.stores.first())

@@ -1,6 +1,7 @@
 """
 Dashboard stores API views.
 """
+
 from apps.stores.models import Store, StoreSettings
 from apps.stores.services import StoreService
 from core.permissions import IsStoreOwner

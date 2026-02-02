@@ -2,6 +2,7 @@
 Customer pages views - authenticated user manages own pages.
 Architectural + real implementation for customer pages interface.
 """
+
 from apps.pages.models.pages import Post, PostType
 from apps.stores.models import Store
 from core.permissions import IsStoreUser
@@ -57,13 +58,25 @@ class PageCustomerViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        """Set author and store when creating page."""
-        serializer.save(author=self.request.user, store=getattr(self.request, "store", None))
+        """Create page using PageService."""
+        from apps.pages.services.page_service import PageService
+
+        store = getattr(self.request, "store", None)
+        data = serializer.validated_data.copy()
+
+        # Remove fields that will be set by service
+        data.pop("store", None)
+        data.pop("author", None)
+
+        page = PageService.create_page(store=store, author=self.request.user, data=data)
+
+        # Set the instance on serializer for response
+        serializer.instance = page
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
         """
-        Publish a page.
+        Publish a page using PageService.
 
         Args:
             pk: Page ID
@@ -71,17 +84,20 @@ class PageCustomerViewSet(viewsets.ModelViewSet):
         Returns:
             Updated page data with published status
         """
-        page = self.get_object()
-        page.status = "published"
-        page.save()
+        from apps.pages.services.page_service import PageService
 
-        serializer = self.get_serializer(page)
-        return Response(serializer.data)
+        page = self.get_object()
+        try:
+            updated_page = PageService.publish_page(page, user=request.user)
+            serializer = self.get_serializer(updated_page)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=["post"])
     def unpublish(self, request, pk=None):
         """
-        Unpublish a page (set to draft).
+        Unpublish a page using PageService.
 
         Args:
             pk: Page ID
@@ -89,12 +105,15 @@ class PageCustomerViewSet(viewsets.ModelViewSet):
         Returns:
             Updated page data with draft status
         """
-        page = self.get_object()
-        page.status = "draft"
-        page.save()
+        from apps.pages.services.page_service import PageService
 
-        serializer = self.get_serializer(page)
-        return Response(serializer.data)
+        page = self.get_object()
+        try:
+            updated_page = PageService.unpublish_page(page, user=request.user)
+            serializer = self.get_serializer(updated_page)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=["get"])
     def revisions(self, request, pk=None):

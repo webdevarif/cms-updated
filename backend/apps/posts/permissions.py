@@ -1,6 +1,7 @@
 """
 Permissions for posts app.
 """
+
 from rest_framework import permissions
 
 

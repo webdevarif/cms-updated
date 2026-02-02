@@ -1,6 +1,7 @@
 """
 Apps configuration for SMTP app.
 """
+
 from django.apps import AppConfig
 
 

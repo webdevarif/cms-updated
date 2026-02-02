@@ -1,6 +1,7 @@
 """
 Customer form serializers.
 """
+
 from apps.forms.models.forms import FormTemplate
 from apps.forms.models.submissions import FormSubmission, FormSubmissionData
 from rest_framework import serializers
@@ -11,7 +12,11 @@ class CustomerFormTemplateSerializer(serializers.ModelSerializer):
 
     form_id = serializers.CharField(read_only=True)
     status = serializers.ChoiceField(
-        choices=[("draft", "Draft"), ("published", "Published"), ("archived", "Archived")],
+        choices=[
+            ("draft", "Draft"),
+            ("published", "Published"),
+            ("archived", "Archived"),
+        ],
         default="draft",
     )
 

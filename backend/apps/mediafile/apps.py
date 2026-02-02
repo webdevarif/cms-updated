@@ -1,6 +1,7 @@
 """
 Apps configuration for mediafile app.
 """
+
 from django.apps import AppConfig
 
 

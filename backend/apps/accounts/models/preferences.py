@@ -3,6 +3,7 @@ User preferences model for Digital Farmers CMS.
 
 Stores user-specific preferences and settings.
 """
+
 from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _

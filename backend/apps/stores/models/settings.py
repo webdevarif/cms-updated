@@ -1,6 +1,7 @@
 """
 Store settings model.
 """
+
 from django.db import models
 
 
@@ -66,9 +67,10 @@ class StoreSettings(models.Model):
 
     def set_logo_from_upload(self, uploaded_file, uploaded_by=None):
         """Set store logo using MediaService upload"""
-        from core.media_utils import upload_to_mediafile
+        from apps.mediafile.services.media_service import MediaService
 
-        media_file = upload_to_mediafile(
+        media_service = MediaService()
+        media_file = media_service.upload_from_request(
             store=self.store,
             file_obj=uploaded_file,
             uploaded_by=uploaded_by,
@@ -83,9 +85,10 @@ class StoreSettings(models.Model):
 
     def set_favicon_from_upload(self, uploaded_file, uploaded_by=None):
         """Set store favicon using MediaService upload"""
-        from core.media_utils import upload_to_mediafile
+        from apps.mediafile.services.media_service import MediaService
 
-        media_file = upload_to_mediafile(
+        media_service = MediaService()
+        media_file = media_service.upload_from_request(
             store=self.store,
             file_obj=uploaded_file,
             uploaded_by=uploaded_by,

@@ -1,6 +1,7 @@
 """
 Coupon models for ecommerce app.
 """
+
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -104,7 +105,11 @@ class Coupon(models.Model):
     )
     used_at = models.DateTimeField(null=True, blank=True)
     order = models.ForeignKey(
-        "Order", on_delete=models.SET_NULL, null=True, blank=True, related_name="coupons"
+        "Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="coupons",
     )
 
     # Status

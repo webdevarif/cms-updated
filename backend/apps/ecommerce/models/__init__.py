@@ -1,6 +1,7 @@
 """
 Ecommerce models.
 """
+
 from .cart import Cart, CartItem
 from .collections import ProductCollection
 from .coupons import Coupon, CouponCampaign  # Re-enabled
@@ -11,7 +12,6 @@ from .inventory import Inventory
 from .orders import Order, OrderItem
 from .payments import Payment, PaymentMethod
 from .products import Product, ProductCategory, ProductImage, ProductVariant
-from .products_search_vectors import ProductSearchVectorMixin
 from .review import Review
 
 __all__ = [
@@ -19,7 +19,6 @@ __all__ = [
     "ProductVariant",
     "ProductCategory",
     "ProductImage",
-    "ProductSearchVectorMixin",
     "ProductCollection",
     "Cart",
     "CartItem",

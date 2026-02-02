@@ -1,6 +1,7 @@
 """
 Public pages API tests - endpoint-focused only.
 """
+
 import json
 
 from django.contrib.auth import get_user_model
@@ -24,7 +25,11 @@ class PublicPagesAPITests(APITestCase):
 
         # Create a page post type
         self.page_type = PostType.objects.create(
-            name="Page", slug="page", store=self.store, is_public=True, is_hierarchical=True
+            name="Page",
+            slug="page",
+            store=self.store,
+            is_public=True,
+            is_hierarchical=True,
         )
 
         # Create a published page

@@ -1,6 +1,7 @@
 """
 Management command to bootstrap stores.
 """
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 

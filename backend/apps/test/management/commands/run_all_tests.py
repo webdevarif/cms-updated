@@ -1,6 +1,7 @@
 """
 Management command to run all tests.
 """
+
 from django.core.management.base import BaseCommand
 from django.test.utils import get_runner
 
@@ -20,7 +21,9 @@ class Command(BaseCommand):
         )
         parser.add_argument("--coverage", action="store_true", help="Generate coverage report")
         parser.add_argument(
-            "--parallel", action="store_true", help="Run tests in parallel (requires pytest-xdist)"
+            "--parallel",
+            action="store_true",
+            help="Run tests in parallel (requires pytest-xdist)",
         )
         parser.add_argument("--app", type=str, help="Test specific app (e.g., --app=stores)")
         parser.add_argument("--role", type=str, help="Test specific role (e.g., --role=admin)")

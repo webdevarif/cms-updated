@@ -1,6 +1,7 @@
 """
 Customer pages API tests - endpoint-focused only.
 """
+
 import json
 
 from django.contrib.auth import get_user_model
@@ -28,7 +29,11 @@ class CustomerPagesAPITests(APITestCase):
 
         # Create page post type
         self.page_type = PostType.objects.create(
-            name="Page", slug="page", store=self.store, is_public=True, is_hierarchical=True
+            name="Page",
+            slug="page",
+            store=self.store,
+            is_public=True,
+            is_hierarchical=True,
         )
 
         # Create pages
@@ -196,7 +201,11 @@ class CustomerPagesAPITests(APITestCase):
     def test_create_page_without_slug(self):
         """Test creating page without slug (should auto-generate)"""
         url = reverse("customer-pages-list")
-        data = {"title": "Page Without Slug", "content": "Page content", "status": "draft"}
+        data = {
+            "title": "Page Without Slug",
+            "content": "Page content",
+            "status": "draft",
+        }
 
         response = self.client.post(url, data, format="json")
 

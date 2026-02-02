@@ -1,6 +1,7 @@
 """
 Admin configuration for posts app.
 """
+
 from django.contrib import admin
 
 from .models import Post, PostType, Taxonomy, Term
@@ -20,7 +21,15 @@ class PostTypeAdmin(admin.ModelAdmin):
 class PostAdmin(admin.ModelAdmin):
     """Admin interface for Post model"""
 
-    list_display = ["title", "slug", "post_type", "status", "author", "store", "published_at"]
+    list_display = [
+        "title",
+        "slug",
+        "post_type",
+        "status",
+        "author",
+        "store",
+        "published_at",
+    ]
     list_filter = ["status", "post_type", "store", "published_at"]
     search_fields = ["title", "slug", "content"]
     readonly_fields = ["created_at", "updated_at"]

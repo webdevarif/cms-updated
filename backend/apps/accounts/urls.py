@@ -3,6 +3,7 @@ URL configuration for accounts app.
 
 Routes for public, customer, and dashboard accounts endpoints.
 """
+
 from django.urls import include, path
 
 app_name = "accounts"

@@ -1,6 +1,7 @@
 """
 API schema definitions for Gift Cards.
 """
+
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,
@@ -95,17 +96,39 @@ gift_card_list_schema = extend_schema_view(
             "application/json": {
                 "type": "object",
                 "properties": {
-                    "initial_balance": {"type": "string", "format": "decimal", "example": "100.00"},
+                    "initial_balance": {
+                        "type": "string",
+                        "format": "decimal",
+                        "example": "100.00",
+                    },
                     "currency": {"type": "string", "example": "USD"},
                     "gift_card_type": {
                         "type": "string",
-                        "enum": ["digital", "physical", "promotional", "refund", "loyalty"],
+                        "enum": [
+                            "digital",
+                            "physical",
+                            "promotional",
+                            "refund",
+                            "loyalty",
+                        ],
                     },
-                    "expires_at": {"type": "string", "format": "date-time", "nullable": True},
-                    "recipient_email": {"type": "string", "format": "email", "nullable": True},
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": True,
+                    },
+                    "recipient_email": {
+                        "type": "string",
+                        "format": "email",
+                        "nullable": True,
+                    },
                     "recipient_name": {"type": "string", "nullable": True},
                     "sender_name": {"type": "string", "nullable": True},
-                    "sender_email": {"type": "string", "format": "email", "nullable": True},
+                    "sender_email": {
+                        "type": "string",
+                        "format": "email",
+                        "nullable": True,
+                    },
                     "message": {"type": "string", "nullable": True},
                 },
                 "required": ["initial_balance", "currency", "gift_card_type"],
@@ -131,11 +154,23 @@ gift_card_detail_schema = extend_schema_view(
             "application/json": {
                 "type": "object",
                 "properties": {
-                    "expires_at": {"type": "string", "format": "date-time", "nullable": True},
-                    "recipient_email": {"type": "string", "format": "email", "nullable": True},
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": True,
+                    },
+                    "recipient_email": {
+                        "type": "string",
+                        "format": "email",
+                        "nullable": True,
+                    },
                     "recipient_name": {"type": "string", "nullable": True},
                     "sender_name": {"type": "string", "nullable": True},
-                    "sender_email": {"type": "string", "format": "email", "nullable": True},
+                    "sender_email": {
+                        "type": "string",
+                        "format": "email",
+                        "nullable": True,
+                    },
                     "message": {"type": "string", "nullable": True},
                     "metadata": {"type": "object", "nullable": True},
                 },
@@ -150,11 +185,23 @@ gift_card_detail_schema = extend_schema_view(
             "application/json": {
                 "type": "object",
                 "properties": {
-                    "expires_at": {"type": "string", "format": "date-time", "nullable": True},
-                    "recipient_email": {"type": "string", "format": "email", "nullable": True},
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": True,
+                    },
+                    "recipient_email": {
+                        "type": "string",
+                        "format": "email",
+                        "nullable": True,
+                    },
                     "recipient_name": {"type": "string", "nullable": True},
                     "sender_name": {"type": "string", "nullable": True},
-                    "sender_email": {"type": "string", "format": "email", "nullable": True},
+                    "sender_email": {
+                        "type": "string",
+                        "format": "email",
+                        "nullable": True,
+                    },
                     "message": {"type": "string", "nullable": True},
                     "metadata": {"type": "object", "nullable": True},
                 },
@@ -178,7 +225,11 @@ gift_card_redeem_schema = extend_schema_view(
                 "type": "object",
                 "properties": {
                     "code": {"type": "string", "example": "GC12345678"},
-                    "amount": {"type": "string", "format": "decimal", "example": "25.50"},
+                    "amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "example": "25.50",
+                    },
                     "order_id": {"type": "integer", "nullable": True},
                     "method": {
                         "type": "string",
@@ -235,7 +286,11 @@ gift_card_activate_schema = extend_schema_view(
             "application/json": {
                 "type": "object",
                 "properties": {
-                    "expires_at": {"type": "string", "format": "date-time", "nullable": True},
+                    "expires_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": True,
+                    },
                     "notes": {"type": "string", "nullable": True},
                 },
             }
@@ -279,7 +334,14 @@ gift_card_history_schema = extend_schema_view(
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 description="Filter by action type",
-                enum=["created", "redeemed", "refunded", "expired", "voided", "activated"],
+                enum=[
+                    "created",
+                    "redeemed",
+                    "refunded",
+                    "expired",
+                    "voided",
+                    "activated",
+                ],
             ),
             OpenApiParameter(
                 name="start_date",

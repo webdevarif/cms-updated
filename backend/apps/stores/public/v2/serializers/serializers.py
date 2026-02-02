@@ -1,6 +1,7 @@
 """
 Public stores serializers.
 """
+
 from apps.stores.models import Store
 from rest_framework import serializers
 

@@ -2,11 +2,11 @@
 WebSocket consumers for real-time features using Django Channels.
 Provides real-time notifications and search updates via WebSockets.
 """
+
 import json
 import logging
 
 from apps.notifications.models import Notification
-from apps.search.services import SearchService
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from django.contrib.auth import get_user_model
@@ -20,11 +20,32 @@ User = get_user_model()
 class NotificationsConsumer(AsyncJsonWebsocketConsumer):
     """
     WebSocket consumer for real-time notifications.
-    Pushes new notifications to authenticated users.
+
+    Provides real-time delivery of in-app notifications to authenticated users.
+    This consumer works with the InAppChannel to push notifications as they are
+    created, enabling instant notification delivery without requiring polling.
+
+    Relationship with notification system:
+    - NotificationService creates notifications and triggers async delivery
+    - InAppChannel marks notifications as delivered in database
+    - This consumer pushes notifications to connected users in real-time
+    - Users can still view notification history via REST API
+
+    Flow:
+    1. User connects via WebSocket (authenticated only)
+    2. User joins their personal notification group
+    3. New notifications are pushed to user's group
+    4. User receives real-time notification updates
+    5. Notification history remains available via REST API
     """
 
     async def connect(self):
-        """Handle WebSocket connection."""
+        """
+        Handle WebSocket connection for authenticated users.
+
+        Only authenticated users can connect to the notifications WebSocket.
+        Each user gets a unique group for their notifications.
+        """
         self.user = self.scope.get("user")
 
         if not self.user or not self.user.is_authenticated:
@@ -88,7 +109,10 @@ class NotificationsConsumer(AsyncJsonWebsocketConsumer):
         elif message_type == "mark_all_read":
             await self.mark_all_notifications_read()
             await self.send_json(
-                {"type": "all_notifications_marked_read", "timestamp": timezone.now().isoformat()}
+                {
+                    "type": "all_notifications_marked_read",
+                    "timestamp": timezone.now().isoformat(),
+                }
             )
 
         elif message_type == "subscribe_to_post":
@@ -502,7 +526,11 @@ class DashboardConsumer(AsyncJsonWebsocketConsumer):
     async def system_status_message(self, event):
         """Send system status updates to dashboard."""
         await self.send_json(
-            {"type": "system_status", "status": event["status"], "timestamp": event["timestamp"]}
+            {
+                "type": "system_status",
+                "status": event["status"],
+                "timestamp": event["timestamp"],
+            }
         )
 
     @database_sync_to_async

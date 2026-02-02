@@ -1,6 +1,7 @@
 """
 Models for notifications app.
 """
+
 from core.models import TenantModel
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -61,13 +62,22 @@ class Notification(TenantModel):
 
     # Relationships
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="notifications", null=True, blank=True
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        null=True,
+        blank=True,
     )
 
     # Targeting
     target_type = models.CharField(
         max_length=50,
-        choices=[("user", "User"), ("role", "Role"), ("store", "Store"), ("all", "All")],
+        choices=[
+            ("user", "User"),
+            ("role", "Role"),
+            ("store", "Store"),
+            ("all", "All"),
+        ],
         default="user",
     )
     target_id = models.CharField(max_length=100, blank=True)
@@ -218,17 +228,19 @@ class NotificationTemplate(TenantModel):
         return {
             "title": render_template(self.title_template),
             "message": render_template(self.message_template),
-            "email_subject": render_template(self.email_subject_template)
-            if self.email_subject_template
-            else None,
-            "email_body": render_template(self.email_body_template)
-            if self.email_body_template
-            else None,
-            "push_title": render_template(self.push_title_template)
-            if self.push_title_template
-            else None,
-            "push_body": render_template(self.push_body_template)
-            if self.push_body_template
-            else None,
+            "email_subject": (
+                render_template(self.email_subject_template)
+                if self.email_subject_template
+                else None
+            ),
+            "email_body": (
+                render_template(self.email_body_template) if self.email_body_template else None
+            ),
+            "push_title": (
+                render_template(self.push_title_template) if self.push_title_template else None
+            ),
+            "push_body": (
+                render_template(self.push_body_template) if self.push_body_template else None
+            ),
             "sms": render_template(self.sms_template) if self.sms_template else None,
         }

@@ -1,6 +1,7 @@
 """
 Report generation utilities.
 """
+
 from django.template.loader import render_to_string
 
 from .models import TestResult, TestRun

@@ -2,6 +2,7 @@
 Public gift cards views - read-only interface for gift card balance checks.
 Architectural + real implementation for public gift cards interface.
 """
+
 from apps.giftcards.models import GiftCard
 from apps.giftcards.services.giftcard_service import GiftCardService
 from django_filters.rest_framework import DjangoFilterBackend
@@ -57,7 +58,8 @@ class PublicGiftCardViewSet(viewsets.ReadOnlyModelViewSet):
         code = request.query_params.get("code")
         if not code:
             return Response(
-                {"error": "code parameter is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "code parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         balance_info = GiftCardService.get_gift_card_balance(code)
@@ -91,5 +93,6 @@ class PublicGiftCardViewSet(viewsets.ReadOnlyModelViewSet):
 
         except GiftCard.DoesNotExist:
             return Response(
-                {"error": "Gift card not found or inactive"}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Gift card not found or inactive"},
+                status=status.HTTP_404_NOT_FOUND,
             )

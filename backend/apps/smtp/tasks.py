@@ -1,11 +1,12 @@
 """
 Celery tasks for SMTP app.
 """
+
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
 
 from .models import EmailLog
-from .services import SmtpEmailService
 
 
 @shared_task(bind=True, max_retries=3)
@@ -20,17 +21,18 @@ def process_email_queue(self):
 
     for email in queued_emails:
         try:
-            # Send email
-            result = SmtpEmailService.send_email_async.delay(
-                {
-                    "to_email": email.to_email,
-                    "subject": email.subject,
-                    "html_content": email.html_content,
-                    "text_content": email.text_content,
-                    "smtp_config_id": str(email.smtp_config_id),
-                    "store_id": str(email.store_id),
-                    "template_id": str(email.template_id) if email.template_id else None,
-                }
+            # Send email using unified API
+            from .services.smtp_service import send_email
+
+            result = send_email(
+                store=email.store,
+                to_email=email.to_email,
+                subject=email.subject,
+                html_content=email.html_content,
+                text_content=email.text_content,
+                template_slug=email.template.name if email.template else None,
+                async_=False,  # Process synchronously within task
+                user=None,
             )
 
             # Mark as sent

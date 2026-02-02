@@ -1,6 +1,7 @@
 """
 Tests for gift cards API views.
 """
+
 import json
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
@@ -77,7 +78,8 @@ class GiftCardViewSetTestCase(APITestCase):
         }
 
         with patch(
-            "apps.giftcards.services.GiftCardService._generate_code", return_value="NEWCODE123456"
+            "apps.giftcards.services.GiftCardService._generate_code",
+            return_value="NEWCODE123456",
         ):
             response = self.client.post(self.list_url, data, format="json")
 
@@ -91,7 +93,12 @@ class GiftCardViewSetTestCase(APITestCase):
             store=self.store, total_amount=30.00, status="pending", created_by=self.user
         )
 
-        data = {"code": "TEST12345678", "amount": "30.00", "order_id": order.id, "method": "online"}
+        data = {
+            "code": "TEST12345678",
+            "amount": "30.00",
+            "order_id": order.id,
+            "method": "online",
+        }
 
         response = self.client.post(self.redeem_url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -140,7 +147,10 @@ class GiftCardViewSetTestCase(APITestCase):
         """Test retrieving gift card history."""
         # Add some history
         GiftCardHistory.objects.create(
-            gift_card=self.gift_card, action="created", amount=100.00, created_by=self.user
+            gift_card=self.gift_card,
+            action="created",
+            amount=100.00,
+            created_by=self.user,
         )
 
         response = self.client.get(self.history_url)

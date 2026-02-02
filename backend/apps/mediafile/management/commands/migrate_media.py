@@ -1,6 +1,7 @@
 """
 Management command to migrate media files.
 """
+
 import logging
 import os
 
@@ -20,7 +21,9 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--store-id", type=str, help="Store ID to migrate media for (default: all stores)"
+            "--store-id",
+            type=str,
+            help="Store ID to migrate media for (default: all stores)",
         )
         parser.add_argument(
             "--limit",

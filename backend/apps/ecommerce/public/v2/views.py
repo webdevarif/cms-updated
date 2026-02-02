@@ -1,13 +1,13 @@
 """
 Public ecommerce API.
 """
+
 from apps.ecommerce.models.cart import Cart, CartItem
 from apps.ecommerce.models.collections import ProductCollection
 from apps.ecommerce.models.customers import CustomerProfile
 from apps.ecommerce.models.products import Product, ProductCategory, ProductVariant
 
 # Review model import removed - model doesn't exist
-from apps.ecommerce.services.ecommerce_service import EcommerceService
 from drf_spectacular.utils import extend_schema
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
@@ -160,7 +160,8 @@ class ReviewPublicViewSet(viewsets.GenericViewSet):
         return Review.objects.none()
 
     @extend_schema(
-        summary="List product reviews", description="List approved reviews for a specific product"
+        summary="List product reviews",
+        description="List approved reviews for a specific product",
     )
     def list(self, request, product_pk=None):
         """List approved reviews for a product"""
@@ -250,7 +251,8 @@ class ReviewPublicViewSet(viewsets.GenericViewSet):
         # Check if product is active
         if product.status != "active":
             return Response(
-                {"error": "Cannot review inactive products"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "Cannot review inactive products"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         serializer = self.get_serializer(

@@ -1,6 +1,7 @@
 """
 Base serializers for mediafile app.
 """
+
 from apps.mediafile.models.media_file import MediaFile
 from apps.mediafile.models.media_folder import MediaFolder
 from rest_framework import serializers
@@ -101,7 +102,15 @@ class BaseMediaFolderSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "slug", "store", "created_by", "path", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "slug",
+            "store",
+            "created_by",
+            "path",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class BaseMediaFolderTreeSerializer(serializers.Serializer):

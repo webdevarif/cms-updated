@@ -1,6 +1,7 @@
 """
 Entity interaction models for entities app.
 """
+
 from core.models import TenantModel
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -21,7 +22,11 @@ class EntityInteraction(TenantModel):
         "entities.EntityAction", on_delete=models.CASCADE, related_name="interactions"
     )
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="entity_interactions", null=True, blank=True
+        User,
+        on_delete=models.CASCADE,
+        related_name="entity_interactions",
+        null=True,
+        blank=True,
     )
 
     # Generic foreign key to any model

@@ -1,6 +1,7 @@
 """
 Tests for dashboard posts API - bulk operations.
 """
+
 from apps.posts.models import Comment, Post, PostType
 from apps.stores.models import Store
 from django.contrib.auth import get_user_model
@@ -384,7 +385,10 @@ class DashboardPostsBulkOperationsTest(APITestCase):
         self.posts = []
         for i in range(5):
             post = Post.objects.create(
-                title=f"Test Post {i}", content=f"Content {i}", store=self.store, status="draft"
+                title=f"Test Post {i}",
+                content=f"Content {i}",
+                store=self.store,
+                status="draft",
             )
             self.posts.append(post)
 
@@ -537,7 +541,10 @@ class DashboardPostsBulkOperationsTest(APITestCase):
 
         # Create some test posts with different statuses
         Post.objects.create(
-            title="Published Post", content="Content", store=self.store, status="published"
+            title="Published Post",
+            content="Content",
+            store=self.store,
+            status="published",
         )
         Post.objects.create(title="Draft Post", content="Content", store=self.store, status="draft")
 

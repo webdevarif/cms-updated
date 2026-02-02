@@ -1,6 +1,7 @@
 """
 Test compliance with notifications.md rules
 """
+
 from unittest.mock import MagicMock, patch
 
 from apps.ecommerce.models import Inventory, Order, Product

@@ -1,7 +1,8 @@
 """
 Signals for posts app.
 """
-from apps.logs.tasks import log_event_async
+
+from apps.analytics.services.event_service import EventService
 from apps.notifications.services import NotificationService
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -40,30 +41,32 @@ def log_post_change(sender, instance, created, **kwargs):
         event_type = "POST_UPDATED"
         message = f"Post updated: {instance.title}"
 
-    log_event_async.delay(
-        {
-            "event_type": event_type,
-            "message": message,
-            "store": instance.store,
-            "user": instance.author,
+    EventService.log_event(
+        event_type=event_type,
+        event_name=message,
+        properties={
             "entity_type": "Post",
             "entity_id": instance.id,
-            "metadata": {"post_type": instance.post_type.slug, "status": instance.status},
-        }
+            "post_type": instance.post_type.slug,
+            "status": instance.status,
+        },
+        user=instance.author,
+        store=instance.store,
     )
 
 
 @receiver(post_delete, sender=Post)
 def log_post_deletion(sender, instance, **kwargs):
     """Log post deletion"""
-    log_event_async.delay(
-        {
-            "event_type": "POST_DELETED",
-            "message": f"Post deleted: {instance.title}",
+    EventService.log_event(
+        event_type="POST_DELETED",
+        event_name=f"Post deleted: {instance.title}",
+        properties={
             "entity_type": "Post",
             "entity_id": instance.id,
-            "metadata": {"post_title": instance.title},
-        }
+            "post_title": instance.title,
+        },
+        store=instance.store,
     )
 
 
@@ -77,15 +80,15 @@ def log_taxonomy_change(sender, instance, created, **kwargs):
         event_type = "TAXONOMY_UPDATED"
         message = f"Taxonomy updated: {instance.name}"
 
-    log_event_async.delay(
-        {
-            "event_type": event_type,
-            "message": message,
-            "store": instance.store,
+    EventService.log_event(
+        event_type=event_type,
+        event_name=message,
+        properties={
             "entity_type": "Taxonomy",
             "entity_id": instance.id,
-            "metadata": {"taxonomy_type": instance.taxonomy_type},
-        }
+            "taxonomy_type": instance.taxonomy_type,
+        },
+        store=instance.store,
     )
 
 
@@ -99,14 +102,15 @@ def log_term_change(sender, instance, created, **kwargs):
         event_type = "TERM_UPDATED"
         message = f"Term updated: {instance.name}"
 
-    log_event_async.delay(
-        {
-            "event_type": event_type,
-            "message": message,
+    EventService.log_event(
+        event_type=event_type,
+        event_name=message,
+        properties={
             "entity_type": "Term",
             "entity_id": instance.id,
-            "metadata": {"taxonomy": instance.taxonomy.name},
-        }
+            "taxonomy": instance.taxonomy.name,
+        },
+        store=instance.store,
     )
 
 
@@ -123,9 +127,9 @@ def notify_post_published(sender, instance, created, **kwargs):
                 "message": f'Your post "{instance.title}" has been published',
                 "post_id": instance.id,
                 "post_type": instance.post_type.slug,
-                "published_at": instance.published_at.isoformat()
-                if instance.published_at
-                else None,
+                "published_at": (
+                    instance.published_at.isoformat() if instance.published_at else None
+                ),
             },
             store=instance.store,
         )

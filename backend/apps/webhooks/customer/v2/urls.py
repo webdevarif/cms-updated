@@ -1,6 +1,7 @@
 """
 URL configuration for webhooks customer API v2.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
@@ -10,7 +11,9 @@ from .views import WebhookCustomerViewSet, WebhookDeliveryCustomerViewSet
 router = DefaultRouter()
 router.register(r"webhooks", WebhookCustomerViewSet, basename="customer-webhooks")
 router.register(
-    r"deliveries", WebhookDeliveryCustomerViewSet, basename="customer-webhook-deliveries"
+    r"deliveries",
+    WebhookDeliveryCustomerViewSet,
+    basename="customer-webhook-deliveries",
 )
 
 urlpatterns = [

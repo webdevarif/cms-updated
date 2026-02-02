@@ -1,6 +1,7 @@
 """
 Services for test module.
 """
+
 import logging
 
 from django.db import transaction
@@ -135,7 +136,7 @@ class TestRunnerService:
             "completed_runs": completed,
             "total_tests": total_tests,
             "passed_tests": passed_tests,
-            "success_rate": (passed_tests / total_tests * 100) if total_tests > 0 else 0,
+            "success_rate": ((passed_tests / total_tests * 100) if total_tests > 0 else 0),
         }
 
     @staticmethod

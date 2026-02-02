@@ -1,6 +1,7 @@
 """
 Tests for dashboard ecommerce API - analytics.
 """
+
 from apps.accounts.models import User
 from apps.ecommerce.models import Product, ProductCategory, Review
 from core.models import Store

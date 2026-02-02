@@ -3,6 +3,7 @@ Base settings for Digital Farmers CMS.
 
 These settings are common to all environments.
 """
+
 import logging
 import os
 from datetime import timedelta
@@ -100,14 +101,11 @@ INSTALLED_APPS = [
     # Feature apps
     "apps.accounts",  # Migrated to internal layered structure
     "apps.stores",  # Migrated to internal layered structure
-    "apps.logs",  # Migrated to internal layered structure
     "apps.smtp",
     "apps.mediafile",
     "apps.notifications",
     "apps.entities",
-    "apps.queue",
     "apps.forms",  # Migrated to internal layered structure
-    "apps.search",  # Re-enabled after migration
     "apps.translations",
     "apps.ecommerce",  # Re-enabled
     "apps.giftcards",  # Re-enabled
@@ -116,8 +114,9 @@ INSTALLED_APPS = [
     "apps.webhooks",  # Re-enabled
     "apps.test",  # Re-enabled - investigate actual admin template error
     "apps.posts",
+    "apps.pages",  # Added for page management and navigation
+    "apps.analytics",  # Added for analytics and reporting - replaces search and logs
     "django_celery_beat",  # Added for Celery Beat scheduling
-    "background_task",  # Added for django-background-tasks
 ]
 
 MIDDLEWARE = [
@@ -132,7 +131,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.security.SecurityMiddleware",
-    "apps.logs.middleware.LoggingMiddleware",
+    # "apps.logs.middleware.LoggingMiddleware",  # Removed - logs app deleted
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -161,7 +160,7 @@ WSGI_APPLICATION = "core.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": str(BASE_DIR / "db.sqlite3"),
     }
 }
 
@@ -291,7 +290,6 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 # =============================================================================
 # CELERY - ENABLED FOR BACKGROUND TASKS
 # =============================================================================
-from celery.schedules import crontab
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
@@ -308,30 +306,12 @@ CELERY_TIMEZONE = "UTC"
 CELERY_ENABLE_UTC = True
 
 # Beat Settings
-CELERY_BEAT_SCHEDULE = {
-    "example-periodic-task": {
-        "task": "apps.search.tasks.rebuild_search_index",
-        "schedule": crontab(minute=0, hour=3),  # Daily at 3 AM UTC
-    },
-}
-
-# =============================================================================
-# DJANGO BACKGROUND TASKS CONFIGURATION
-# =============================================================================
-BACKGROUND_TASKS = {
-    "QUEUES": {
-        "default": 3,  # Number of concurrent tasks
-        "test": 2,  # Separate queue for test tasks
-        "search": 1,  # Separate queue for search tasks
-        "reports": 1,  # Separate queue for report tasks
-    },
-    "MAX_RUN_TIME": 3600,  # Maximum run time in seconds (1 hour)
-    "MAX_ATTEMPTS": 3,  # Maximum retry attempts
-    "RUN_EVERY_TASK_TYPE": False,  # Don't run every task type automatically
-    "BACKGROUND_TASKS_ASYNC_METHODS": ["POST"],  # HTTP methods allowed for async tasks
-    "BACKGROUND_TASKS_ASYNC_URL": "/background-tasks/",  # URL for async task execution
-    "BACKGROUND_TASKS_URLS": [],  # Additional URLs to allow
-}
+# CELERY_BEAT_SCHEDULE = {
+#     'example-periodic-task': {
+#         'task': 'apps.search.tasks.rebuild_search_index',
+#         'schedule': crontab(minute=0, hour=3),  # Daily at 3 AM UTC
+#     },
+# }
 
 # =============================================================================
 # CACHING - TEMPORARILY DISABLED
@@ -444,7 +424,10 @@ ELASTICSEARCH_SETTINGS = {
 
 # Add authentication if provided
 if ELASTICSEARCH_USERNAME and ELASTICSEARCH_PASSWORD:
-    ELASTICSEARCH_SETTINGS["http_auth"] = (ELASTICSEARCH_USERNAME, ELASTICSEARCH_PASSWORD)
+    ELASTICSEARCH_SETTINGS["http_auth"] = (
+        ELASTICSEARCH_USERNAME,
+        ELASTICSEARCH_PASSWORD,
+    )
 elif ELASTICSEARCH_API_KEY:
     ELASTICSEARCH_SETTINGS["api_key"] = ELASTICSEARCH_API_KEY
 # =============================================================================
@@ -486,8 +469,14 @@ SPECTACULAR_SETTINGS = {
     "SORT_OPERATION_PARAMETERS": False,
     # Tags and grouping
     "TAGS": [
-        {"name": "Authentication", "description": "User authentication and authorization"},
-        {"name": "Content Management", "description": "Posts, pages, and content operations"},
+        {
+            "name": "Authentication",
+            "description": "User authentication and authorization",
+        },
+        {
+            "name": "Content Management",
+            "description": "Posts, pages, and content operations",
+        },
         {"name": "E-commerce", "description": "Products, orders, and store management"},
         {"name": "Search", "description": "Full-text search and indexing"},
         {"name": "Themes", "description": "Theme management and customization"},
@@ -501,7 +490,10 @@ SPECTACULAR_SETTINGS = {
     },
     # Extensions
     "EXTENSIONS_ROOT": {
-        "x-logo": {"url": "https://digitalfarmers.com/logo.png", "altText": "Digital Farmers CMS"}
+        "x-logo": {
+            "url": "https://digitalfarmers.com/logo.png",
+            "altText": "Digital Farmers CMS",
+        }
     },
     # Custom settings for our multi-tenant architecture
     "SERVERS": [

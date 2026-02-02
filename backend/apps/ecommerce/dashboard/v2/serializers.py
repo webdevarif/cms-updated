@@ -1,6 +1,7 @@
 """
 Dashboard ecommerce serializers.
 """
+
 from apps.ecommerce.models.cart import Cart, CartItem
 from apps.ecommerce.models.collections import ProductCollection
 from apps.ecommerce.models.coupons import Coupon, CouponCampaign
@@ -58,7 +59,6 @@ class DashboardProductSerializer(serializers.ModelSerializer):
             "category_slug",
             "status",
             "sku",
-            "image",
             "inventory_count",
             "order_count",
             "revenue",
@@ -99,10 +99,7 @@ class ProductVariantDashboardSerializer(serializers.ModelSerializer):
             "price",
             "product",
             "product_title",
-            "is_active",
             "inventory_count",
-            "created_at",
-            "updated_at",
         ]
 
     def get_inventory_count(self, obj):
@@ -177,11 +174,10 @@ class DashboardCollectionSerializer(serializers.ModelSerializer):
         model = ProductCollection
         fields = [
             "id",
-            "name",
+            "title",
             "slug",
             "description",
             "image",
-            "is_active",
             "product_count",
             "created_at",
             "updated_at",
@@ -207,19 +203,18 @@ class DashboardInventorySerializer(serializers.ModelSerializer):
             "product_title",
             "product_sku",
             "quantity",
-            "reorder_level",
+            "low_stock_threshold",
             "is_low_stock",
             "stock_status",
-            "last_updated",
         ]
 
     def get_is_low_stock(self, obj):
-        return obj.quantity <= obj.reorder_level
+        return obj.quantity <= obj.low_stock_threshold
 
     def get_stock_status(self, obj):
         if obj.quantity == 0:
             return "out_of_stock"
-        elif obj.quantity <= obj.reorder_level:
+        elif obj.quantity <= obj.low_stock_threshold:
             return "low_stock"
         else:
             return "in_stock"
@@ -242,7 +237,6 @@ class OrderDashboardSerializer(serializers.ModelSerializer):
             "customer_name",
             "store",
             "status",
-            "payment_status",
             "total_amount",
             "item_count",
             "created_at",
@@ -285,8 +279,8 @@ class CouponCampaignDashboardSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "description",
-            "start_date",
-            "end_date",
+            "starts_at",
+            "ends_at",
             "is_active",
             "coupon_count",
             "used_count",
@@ -315,11 +309,8 @@ class CouponDashboardSerializer(serializers.ModelSerializer):
             "campaign_name",
             "customer",
             "customer_email",
-            "discount_type",
-            "discount_value",
             "status",
             "used_at",
-            "expires_at",
             "created_at",
         ]
 
@@ -334,8 +325,7 @@ class PaymentMethodDashboardSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
-            "type",
-            "provider",
+            "method_type",
             "is_active",
             "usage_count",
             "created_at",
@@ -364,9 +354,8 @@ class PaymentDashboardSerializer(serializers.ModelSerializer):
             "amount",
             "currency",
             "status",
-            "transaction_id",
+            "gateway_transaction_id",
             "created_at",
-            "completed_at",
         ]
 
 
@@ -386,9 +375,6 @@ class CustomerProfileDashboardSerializer(serializers.ModelSerializer):
             "user_email",
             "user_name",
             "phone",
-            "address",
-            "city",
-            "country",
             "order_count",
             "total_spent",
             "created_at",

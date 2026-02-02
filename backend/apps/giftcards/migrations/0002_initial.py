@@ -92,7 +92,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="giftcardhistory",
             index=models.Index(
-                fields=["gift_card", "created_at"], name="giftcards_h_gift_ca_acceca_idx"
+                fields=["gift_card", "created_at"],
+                name="giftcards_h_gift_ca_acceca_idx",
             ),
         ),
         migrations.AddIndex(

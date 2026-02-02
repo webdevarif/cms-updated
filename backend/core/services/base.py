@@ -1,6 +1,7 @@
 """
 Base service utilities for Digital Farmers CMS.
 """
+
 import logging
 
 from django.core.exceptions import ValidationError
@@ -168,18 +169,18 @@ class LogQueryHelper:
         Returns:
             dict: Analytics data
         """
-        from apps.logs.models import LogEntry
+        from apps.analytics.models.events import EventLog
         from django.utils import timezone
 
         since = timezone.now() - timezone.timedelta(days=days)
 
         # Basic metrics
-        total_visits = LogEntry.objects.filter(
+        total_visits = EventLog.objects.filter(
             store=store, event_type="PAGE_VIEW", created_at__gte=since
         ).count()
 
         unique_visitors = (
-            LogEntry.objects.filter(store=store, event_type="PAGE_VIEW", created_at__gte=since)
+            EventLog.objects.filter(store=store, event_type="PAGE_VIEW", created_at__gte=since)
             .values("session_id")
             .distinct()
             .count()
@@ -190,43 +191,6 @@ class LogQueryHelper:
             "unique_visitors": unique_visitors,
             "period_days": days,
         }
-
-
-class MediaCRUDService(BaseTenantCRUDService):
-    """
-    CRUD service for MediaFile operations
-    """
-
-    model_class = None  # Will be set dynamically
-
-    @classmethod
-    def create_media_file(cls, **kwargs):
-        """Create MediaFile with proper validation"""
-        from apps.mediafile.models.media_file import MediaFile
-
-        cls.model_class = MediaFile
-        return cls.create(**kwargs)
-
-    @classmethod
-    def get_media_file(cls, **kwargs):
-        """Get MediaFile by criteria"""
-        from apps.mediafile.models.media_file import MediaFile
-
-        cls.model_class = MediaFile
-        return cls.get(**kwargs)
-
-    @classmethod
-    def filter_media_files(cls, **kwargs):
-        """Filter MediaFile by criteria"""
-        from apps.mediafile.models.media_file import MediaFile
-
-        cls.model_class = MediaFile
-        return cls.filter(**kwargs)
-
-    @classmethod
-    def delete_media_file(cls, instance):
-        """Delete MediaFile with cleanup"""
-        return cls.delete(instance)
 
 
 class ValidationHelper:

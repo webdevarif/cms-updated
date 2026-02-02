@@ -2,6 +2,7 @@
 Public pages serializers - read-only interface for published pages.
 Architectural + real implementation for public pages interface.
 """
+
 from apps.pages.models.pages import Post, PostType, Taxonomy, Term
 from rest_framework import serializers
 

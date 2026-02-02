@@ -1,6 +1,7 @@
 """
 Dashboard gift cards serializers - admin interface for gift card management.
 """
+
 from datetime import datetime
 from decimal import Decimal
 
@@ -136,7 +137,13 @@ class DashboardGiftCardHistorySerializer(serializers.ModelSerializer):
             "created_by_name",
             "created_at",
         ]
-        read_only_fields = ["id", "created_at", "created_by", "created_by_email", "created_by_name"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "created_by",
+            "created_by_email",
+            "created_by_name",
+        ]
 
 
 class DashboardGiftCardAnalyticsSerializer(serializers.Serializer):
@@ -219,7 +226,8 @@ class BulkActionSerializer(serializers.Serializer):
         ]
     )
     ids = serializers.ListField(
-        child=serializers.IntegerField(), help_text="List of gift card IDs to perform action on"
+        child=serializers.IntegerField(),
+        help_text="List of gift card IDs to perform action on",
     )
     data = serializers.DictField(
         required=False,

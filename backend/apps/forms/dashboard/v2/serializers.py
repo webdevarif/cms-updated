@@ -1,6 +1,7 @@
 """
 Dashboard form serializers with admin-level access.
 """
+
 from apps.forms.models.forms import FormTemplate
 from apps.forms.models.submissions import FormSubmission, FormSubmissionData
 from rest_framework import serializers
@@ -34,7 +35,13 @@ class DashboardFormTemplateSerializer(serializers.ModelSerializer):
             "updated_at",
             "submission_count",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "form_id", "submission_count"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "form_id",
+            "submission_count",
+        ]
 
     def get_submission_count(self, obj):
         """Get total submission count"""

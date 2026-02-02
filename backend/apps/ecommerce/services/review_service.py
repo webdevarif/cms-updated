@@ -1,6 +1,7 @@
 """
 Review service for managing product reviews and ratings.
 """
+
 from apps.ecommerce.models import Order, OrderItem, Product, Review
 from apps.notifications.services import NotificationService
 from django.core.exceptions import ValidationError
@@ -251,7 +252,8 @@ class ReviewService:
             "pending_reviews": queryset.filter(is_approved=False).count(),
             "verified_reviews": queryset.filter(verified_purchase=True).count(),
             "average_rating": round(
-                queryset.filter(is_approved=True).aggregate(avg=Avg("rating"))["avg"] or 0, 1
+                queryset.filter(is_approved=True).aggregate(avg=Avg("rating"))["avg"] or 0,
+                1,
             ),
             "helpful_votes_avg": queryset.filter(is_approved=True).aggregate(
                 avg_helpfulness=Avg("helpful_votes") / (Avg("total_votes") + 0.001) * 100
@@ -291,7 +293,9 @@ class ReviewService:
 
         # Check if user has any completed orders for this product
         return OrderItem.objects.filter(
-            order__user=user, product=product, order__status__in=["completed", "shipped"]
+            order__user=user,
+            product=product,
+            order__status__in=["completed", "shipped"],
         ).exists()
 
     @staticmethod
@@ -349,7 +353,11 @@ class ReviewService:
                 notification_type="review.rejected",  # Use string constant
                 title="Your review was not approved",
                 message=f'Your review on "{review.product.title}" was not approved. Reason: {reason}',
-                data={"product_id": review.product.id, "review_id": review.id, "reason": reason},
+                data={
+                    "product_id": review.product.id,
+                    "review_id": review.id,
+                    "reason": reason,
+                },
                 store=review.product.store,
             )
         except Exception as e:
@@ -358,7 +366,7 @@ class ReviewService:
     @staticmethod
     def _check_spam(review):
         """Run spam detection on review"""
-        from services.spam_detection_service import SpamDetectionService
+        from core.services.spam_detection import SpamDetectionService
 
         # Combine title and content for spam checking
         full_content = f"{review.title} {review.content}".strip()

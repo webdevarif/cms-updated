@@ -1,7 +1,8 @@
 """
 Posts services - PostService for post operations with logging.
 """
-from apps.logs.tasks import log_event_async
+
+from apps.analytics.services.event_service import EventService
 from django.utils import timezone
 
 
@@ -17,20 +18,21 @@ class PostService:
         post = Post.objects.create(store=store, post_type=post_type, author=user, **data)
 
         # Log the creation
-        log_event_async.delay(
-            {
-                "event_type": "POST_CREATED",
-                "message": f'Created {post_type.name} "{post.title}"',
-                "store": store,
-                "user": user,
+        EventService.log_event(
+            event_type="POST_CREATED",
+            event_name=f'Created {post_type.name} "{post.title}"',
+            properties={
+                "user": user.id if user else None,
+                "store": store.id,
                 "entity_type": "Post",
                 "entity_id": post.id,
-                "metadata": {
-                    "post_id": str(post.id),
-                    "post_type": post_type.slug,
-                    "status": post.status,
-                },
-            }
+                "post_type": post_type.name,
+                "title": post.title,
+                "slug": post.slug,
+                "status": post.status,
+            },
+            user=user,
+            store=store,
         )
         return post
 
@@ -56,20 +58,22 @@ class PostService:
         post.save()
 
         # Log the update
-        log_event_async.delay(
-            {
-                "event_type": "POST_UPDATED",
-                "message": f'Updated {post.post_type.name} "{post.title}"',
-                "store": post.store,
-                "user": user,
+        EventService.log_event(
+            event_type="POST_UPDATED",
+            event_name=f'Updated {post.post_type.name} "{post.title}"',
+            properties={
+                "user": user.id if user else None,
+                "store": post.store.id,
                 "entity_type": "Post",
                 "entity_id": post.id,
-                "metadata": {
-                    "post_id": str(post.id),
-                    "revision_id": str(revision.id),
-                    "status": post.status,
-                },
-            }
+                "post_type": post.post_type.name,
+                "title": post.title,
+                "slug": post.slug,
+                "status": post.status,
+                "fields_updated": list(data.keys()),
+            },
+            user=user,
+            store=post.store,
         )
         return post
 
@@ -80,16 +84,19 @@ class PostService:
         post.published_at = timezone.now()
         post.save()
 
-        log_event_async.delay(
-            {
-                "event_type": "POST_PUBLISHED",
-                "message": f"Published post: {post.title}",
-                "store": post.store,
-                "user": user,
+        EventService.log_event(
+            event_type="POST_PUBLISHED",
+            event_name=f"Published post: {post.title}",
+            properties={
+                "user": user.id if user else None,
+                "store": post.store.id,
                 "entity_type": "Post",
                 "entity_id": post.id,
-                "metadata": {"post_id": str(post.id), "post_type": post.post_type.slug},
-            }
+                "post_id": str(post.id),
+                "post_type": post.post_type.slug,
+            },
+            user=user,
+            store=post.store,
         )
         return post
 
@@ -100,12 +107,16 @@ class PostService:
         post_id = post.id
         post.delete()
 
-        log_event_async.delay(
-            {
-                "event_type": "POST_DELETED",
-                "message": f"Deleted post: {title}",
+        EventService.log_event(
+            event_type="POST_DELETED",
+            event_name=f"Deleted post: {title}",
+            properties={
+                "user": user.id if user else None,
+                "store": post.store.id,
                 "entity_type": "Post",
                 "entity_id": post_id,
-                "metadata": {"post_title": title},
-            }
+                "post_title": title,
+            },
+            user=user,
+            store=post.store,
         )

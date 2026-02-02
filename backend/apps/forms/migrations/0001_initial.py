@@ -15,7 +15,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("submission_id", models.CharField(max_length=50, unique=True)),
@@ -50,7 +53,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("field_name", models.CharField(max_length=255)),
@@ -69,7 +75,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("title", models.CharField(max_length=255)),
@@ -78,10 +87,15 @@ class Migration(migrations.Migration):
                 (
                     "form_id",
                     models.CharField(
-                        help_text="Unique identifier for the form", max_length=50, unique=True
+                        help_text="Unique identifier for the form",
+                        max_length=50,
+                        unique=True,
                     ),
                 ),
-                ("fields", models.JSONField(default=dict, help_text="Form field definitions")),
+                (
+                    "fields",
+                    models.JSONField(default=dict, help_text="Form field definitions"),
+                ),
                 (
                     "settings",
                     models.JSONField(default=dict, help_text="Form settings and configuration"),

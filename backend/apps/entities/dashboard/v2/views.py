@@ -1,6 +1,7 @@
 """
 Dashboard entities views - admin interface for entity management.
 """
+
 from apps.entities.models import EntityAction, EntityInteraction
 from core.permissions import IsStoreOwner
 from django.contrib.contenttypes.models import ContentType
@@ -69,7 +70,8 @@ class DashboardEntityActionViewSet(viewsets.ModelViewSet):
         entity_action.save()
 
         return Response(
-            DashboardEntityActionSerializer(entity_action).data, status=status.HTTP_200_OK
+            DashboardEntityActionSerializer(entity_action).data,
+            status=status.HTTP_200_OK,
         )
 
     @action(detail=True, methods=["post"])
@@ -85,7 +87,8 @@ class DashboardEntityActionViewSet(viewsets.ModelViewSet):
         entity_action.save()
 
         return Response(
-            DashboardEntityActionSerializer(entity_action).data, status=status.HTTP_200_OK
+            DashboardEntityActionSerializer(entity_action).data,
+            status=status.HTTP_200_OK,
         )
 
     @action(detail=True, methods=["get"])
@@ -125,30 +128,10 @@ class DashboardEntityActionViewSet(viewsets.ModelViewSet):
         """
         entity_action = self.get_object()
 
-        interactions = EntityInteraction.objects.filter(action=entity_action)
+        # Use analytics service for statistics
+        from ..services.entity_analytics_service import get_action_stats
 
-        stats = {
-            "total_interactions": interactions.count(),
-            "active_interactions": interactions.filter(is_active=True).count(),
-            "unique_users": interactions.values("user").distinct().count(),
-            "average_rating": interactions.filter(rating__isnull=False).aggregate(
-                avg_rating=Avg("rating")
-            )["avg_rating"]
-            or 0,
-            "interactions_by_content_type": list(
-                interactions.values("content_type__model")
-                .annotate(count=Count("id"))
-                .order_by("-count")
-            ),
-            "recent_interactions": list(
-                interactions.filter(is_active=True)
-                .order_by("-created_at")[:10]
-                .values(
-                    "user__username", "content_type__model", "object_id", "rating", "created_at"
-                )
-            ),
-        }
-
+        stats = get_action_stats(entity_action)
         return Response(stats)
 
     @action(detail=True, methods=["post"])
@@ -183,7 +166,10 @@ class DashboardEntityActionViewSet(viewsets.ModelViewSet):
         deactivated_count = interactions.update(is_active=False)
 
         return Response(
-            {"message": f"Deactivated {deactivated_count} interactions", "count": deactivated_count}
+            {
+                "message": f"Deactivated {deactivated_count} interactions",
+                "count": deactivated_count,
+            }
         )
 
 
@@ -279,14 +265,18 @@ class DashboardEntityInteractionViewSet(viewsets.ModelViewSet):
 
         if not interaction_ids:
             return Response(
-                {"error": "interaction_ids are required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "interaction_ids are required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         queryset = self.get_queryset().filter(id__in=interaction_ids)
         activated_count = queryset.update(is_active=True)
 
         return Response(
-            {"message": f"Activated {activated_count} interactions", "count": activated_count}
+            {
+                "message": f"Activated {activated_count} interactions",
+                "count": activated_count,
+            }
         )
 
     @action(detail=False, methods=["post"])
@@ -304,14 +294,18 @@ class DashboardEntityInteractionViewSet(viewsets.ModelViewSet):
 
         if not interaction_ids:
             return Response(
-                {"error": "interaction_ids are required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "interaction_ids are required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         queryset = self.get_queryset().filter(id__in=interaction_ids)
         deactivated_count = queryset.update(is_active=False)
 
         return Response(
-            {"message": f"Deactivated {deactivated_count} interactions", "count": deactivated_count}
+            {
+                "message": f"Deactivated {deactivated_count} interactions",
+                "count": deactivated_count,
+            }
         )
 
     @action(detail=False, methods=["post"])
@@ -329,7 +323,8 @@ class DashboardEntityInteractionViewSet(viewsets.ModelViewSet):
 
         if not interaction_ids:
             return Response(
-                {"error": "interaction_ids are required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "interaction_ids are required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         queryset = self.get_queryset().filter(id__in=interaction_ids)

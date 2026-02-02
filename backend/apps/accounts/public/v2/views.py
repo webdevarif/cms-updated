@@ -1,6 +1,7 @@
 """
 Public accounts API.
 """
+
 from apps.accounts.models.user import User
 from apps.accounts.services.account_service import PublicAuthService
 from core.permissions import AllowAnyPublicRead

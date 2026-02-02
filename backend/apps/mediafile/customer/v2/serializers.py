@@ -1,6 +1,7 @@
 """
 Customer mediafile serializers.
 """
+
 from apps.mediafile.serializers import (
     BaseMediaFileSerializer,
     BaseMediaFileUploadSerializer,
@@ -50,7 +51,16 @@ class MediafolderCustomerSerializer(BaseMediaFolderSerializer):
     file_count = serializers.SerializerMethodField()
 
     class Meta(BaseMediaFolderSerializer.Meta):
-        fields = ["id", "name", "slug", "parent", "path", "file_count", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "parent",
+            "path",
+            "file_count",
+            "created_at",
+            "updated_at",
+        ]
         # Exclude sensitive fields like store, created_by
 
     def get_file_count(self, obj):

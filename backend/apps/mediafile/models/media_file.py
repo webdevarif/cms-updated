@@ -1,6 +1,7 @@
 """
 MediaFile model for media management.
 """
+
 import os
 
 from core.models import TenantModel
@@ -27,12 +28,29 @@ class MediaFile(TenantModel):
         ("other", "Other"),
     ]
 
+    # Visibility levels
+    VISIBILITY_PUBLIC = "public"
+    VISIBILITY_AUTHENTICATED = "authenticated"
+    VISIBILITY_PRIVATE = "private"
+
+    VISIBILITY_CHOICES = (
+        (VISIBILITY_PUBLIC, "Public"),
+        (VISIBILITY_AUTHENTICATED, "Authenticated"),
+        (VISIBILITY_PRIVATE, "Private"),
+    )
+
     # Core fields
     original_filename = models.CharField(max_length=255)
     file_extension = models.CharField(max_length=10)
     file_size = models.PositiveIntegerField()
     mime_type = models.CharField(max_length=100)
     resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES)
+    visibility = models.CharField(
+        max_length=32,
+        choices=VISIBILITY_CHOICES,
+        default=VISIBILITY_AUTHENTICATED,
+        help_text="Who can access this media file",
+    )
 
     # R2 storage path (format: store_{id}/media/{folder_path}/filename.xxx)
     storage_path = models.CharField(max_length=512)
@@ -68,6 +86,7 @@ class MediaFile(TenantModel):
         indexes = [
             models.Index(fields=["store", "resource_type"]),
             models.Index(fields=["store", "folder"]),
+            models.Index(fields=["store", "visibility"]),
             models.Index(fields=["created_at"]),
             models.Index(fields=["file_size"]),
         ]

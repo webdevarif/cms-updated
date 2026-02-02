@@ -24,7 +24,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("session_key", models.CharField(blank=True, max_length=40, null=True)),
@@ -40,8 +43,14 @@ class Migration(migrations.Migration):
                         max_length=20,
                     ),
                 ),
-                ("subtotal", models.DecimalField(decimal_places=2, default=0, max_digits=10)),
-                ("total", models.DecimalField(decimal_places=2, default=0, max_digits=10)),
+                (
+                    "subtotal",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=10),
+                ),
+                (
+                    "total",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=10),
+                ),
                 ("currency", models.CharField(default="USD", max_length=3)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
@@ -75,7 +84,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("name", models.CharField(max_length=255)),
@@ -91,10 +103,22 @@ class Migration(migrations.Migration):
                         max_length=20,
                     ),
                 ),
-                ("discount_value", models.DecimalField(decimal_places=2, max_digits=10)),
-                ("minimum_amount", models.DecimalField(decimal_places=2, default=0, max_digits=10)),
-                ("usage_limit_per_customer", models.PositiveIntegerField(blank=True, null=True)),
-                ("total_usage_limit", models.PositiveIntegerField(blank=True, null=True)),
+                (
+                    "discount_value",
+                    models.DecimalField(decimal_places=2, max_digits=10),
+                ),
+                (
+                    "minimum_amount",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=10),
+                ),
+                (
+                    "usage_limit_per_customer",
+                    models.PositiveIntegerField(blank=True, null=True),
+                ),
+                (
+                    "total_usage_limit",
+                    models.PositiveIntegerField(blank=True, null=True),
+                ),
                 ("used_count", models.PositiveIntegerField(default=0)),
                 ("starts_at", models.DateTimeField()),
                 ("ends_at", models.DateTimeField()),
@@ -121,7 +145,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("first_name", models.CharField(blank=True, max_length=100)),
@@ -145,7 +172,10 @@ class Migration(migrations.Migration):
                 ("email_marketing_consent", models.BooleanField(default=False)),
                 ("sms_marketing_consent", models.BooleanField(default=False)),
                 ("total_orders", models.PositiveIntegerField(default=0)),
-                ("total_spent", models.DecimalField(decimal_places=2, default=0, max_digits=10)),
+                (
+                    "total_spent",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=10),
+                ),
                 ("last_order_date", models.DateTimeField(blank=True, null=True)),
                 ("tags", models.JSONField(blank=True, default=list)),
                 ("metadata", models.JSONField(blank=True, default=dict)),
@@ -178,7 +208,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("order_number", models.CharField(max_length=50, unique=True)),
@@ -199,7 +232,10 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("subtotal", models.DecimalField(decimal_places=2, max_digits=10)),
-                ("tax_amount", models.DecimalField(decimal_places=2, default=0, max_digits=10)),
+                (
+                    "tax_amount",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=10),
+                ),
                 (
                     "shipping_amount",
                     models.DecimalField(decimal_places=2, default=0, max_digits=10),
@@ -250,7 +286,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("code", models.CharField(max_length=50, unique=True)),
@@ -310,7 +349,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("name", models.CharField(max_length=255)),
@@ -365,12 +407,18 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
                     ),
                 ),
                 ("amount", models.DecimalField(decimal_places=2, max_digits=10)),
                 ("currency", models.CharField(default="USD", max_length=3)),
-                ("gateway_transaction_id", models.CharField(blank=True, max_length=255)),
+                (
+                    "gateway_transaction_id",
+                    models.CharField(blank=True, max_length=255),
+                ),
                 ("gateway_response", models.JSONField(default=dict)),
                 (
                     "status",
@@ -430,7 +478,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("title", models.CharField(max_length=255)),
@@ -468,7 +519,10 @@ class Migration(migrations.Migration):
                 ("metadata", models.JSONField(blank=True, default=dict)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                ("search_vector", django.contrib.postgres.search.SearchVectorField(default="")),
+                (
+                    "search_vector",
+                    django.contrib.postgres.search.SearchVectorField(default=""),
+                ),
                 (
                     "created_by",
                     models.ForeignKey(
@@ -499,7 +553,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("quantity", models.PositiveIntegerField(default=0)),
@@ -528,14 +585,18 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("position", models.PositiveIntegerField(default=0)),
                 (
                     "product",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="ecommerce.product"
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="ecommerce.product",
                     ),
                 ),
             ],
@@ -550,7 +611,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=255)),
@@ -605,13 +669,19 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("title", models.CharField(max_length=255)),
                 ("slug", models.SlugField(max_length=255, unique=True)),
                 ("description", models.TextField(blank=True)),
-                ("image", models.ImageField(blank=True, null=True, upload_to="collections/")),
+                (
+                    "image",
+                    models.ImageField(blank=True, null=True, upload_to="collections/"),
+                ),
                 ("is_featured", models.BooleanField(default=False)),
                 ("position", models.PositiveIntegerField(default=0)),
                 ("seo_title", models.CharField(blank=True, max_length=255)),
@@ -654,7 +724,8 @@ class Migration(migrations.Migration):
             model_name="collectionproduct",
             name="collection",
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, to="ecommerce.productcollection"
+                on_delete=django.db.models.deletion.CASCADE,
+                to="ecommerce.productcollection",
             ),
         ),
         migrations.CreateModel(
@@ -663,7 +734,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("image", models.ImageField(upload_to="products/")),
@@ -690,7 +764,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("title", models.CharField(max_length=255)),
@@ -731,7 +808,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("product_name", models.CharField(max_length=255)),
@@ -780,7 +860,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("quantity", models.PositiveIntegerField(default=1)),
@@ -825,7 +908,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 (
@@ -978,7 +1064,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="payment",
             index=models.Index(
-                fields=["payment_method", "status"], name="ecommerce_p_payment_9ca2a7_idx"
+                fields=["payment_method", "status"],
+                name="ecommerce_p_payment_9ca2a7_idx",
             ),
         ),
         migrations.AddIndex(
@@ -1077,7 +1164,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="review",
             index=models.Index(
-                fields=["is_approved", "is_featured"], name="ecommerce_r_is_appr_f4c248_idx"
+                fields=["is_approved", "is_featured"],
+                name="ecommerce_r_is_appr_f4c248_idx",
             ),
         ),
         migrations.AddIndex(

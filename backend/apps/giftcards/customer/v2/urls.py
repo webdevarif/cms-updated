@@ -1,6 +1,7 @@
 """
 Customer gift cards URLs - authenticated interface for gift card management.
 """
+
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 

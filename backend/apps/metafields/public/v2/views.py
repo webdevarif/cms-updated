@@ -3,6 +3,7 @@ Architectural + real implementation for public metafields interface.
 
 Read-only access to metafields for content consumption.
 """
+
 from apps.metafields.models import Metafield, MetafieldDefinition
 from django.contrib.contenttypes.models import ContentType
 from django_filters.rest_framework import DjangoFilterBackend
@@ -27,7 +28,11 @@ class MetafieldPublicViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]  # Public access
     throttle_classes = [AnonRateThrottle]
     serializer_class = MetafieldPublicSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     filterset_fields = ["definition__namespace", "definition__type"]
 
     def get_queryset(self):
@@ -77,7 +82,8 @@ class MetafieldPublicViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
     @extend_schema(
-        summary="Get metafields by content", description="Get metafields for specific content"
+        summary="Get metafields by content",
+        description="Get metafields for specific content",
     )
     @action(detail=False, methods=["get"])
     def by_content(self, request):
@@ -102,7 +108,8 @@ class MetafieldPublicViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
-        summary="Get metafield definitions", description="Get available metafield definitions"
+        summary="Get metafield definitions",
+        description="Get available metafield definitions",
     )
     @action(detail=False, methods=["get"])
     def definitions(self, request):
@@ -140,7 +147,8 @@ class MetafieldPublicViewSet(viewsets.ReadOnlyModelViewSet):
 
         if not namespace:
             return Response(
-                {"error": "namespace parameter is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "namespace parameter is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         definitions = MetafieldDefinition.objects.filter(

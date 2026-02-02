@@ -1,6 +1,7 @@
 """
 Customer entities serializers - authenticated interface for entity interactions.
 """
+
 from apps.entities.models import EntityAction, EntityInteraction
 from rest_framework import serializers
 

@@ -1,6 +1,7 @@
 """
 Customer ecommerce serializers.
 """
+
 from apps.ecommerce.models.cart import Cart, CartItem
 from apps.ecommerce.models.collections import ProductCollection
 from apps.ecommerce.models.coupons import Coupon, CouponCampaign
@@ -84,7 +85,14 @@ class CartItemCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
-        fields = ["id", "product", "product_name", "quantity", "unit_price", "total_price"]
+        fields = [
+            "id",
+            "product",
+            "product_name",
+            "quantity",
+            "unit_price",
+            "total_price",
+        ]
 
 
 class CollectionCustomerSerializer(serializers.ModelSerializer):
@@ -92,7 +100,15 @@ class CollectionCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductCollection
-        fields = ["id", "title", "slug", "description", "is_featured", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "title",
+            "slug",
+            "description",
+            "is_featured",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class CustomerProfileCustomerSerializer(serializers.ModelSerializer):
@@ -100,7 +116,15 @@ class CustomerProfileCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomerProfile
-        fields = ["id", "user", "first_name", "last_name", "phone", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "user",
+            "first_name",
+            "last_name",
+            "phone",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class OrderCustomerSerializer(serializers.ModelSerializer):

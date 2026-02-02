@@ -1,6 +1,7 @@
 """
 Custom exceptions for Digital Farmers CMS.
 """
+
 from django.core.exceptions import ValidationError
 
 

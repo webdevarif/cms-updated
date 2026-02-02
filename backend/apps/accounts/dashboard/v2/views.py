@@ -3,6 +3,7 @@ Dashboard account views for Digital Farmers CMS.
 
 Endpoints for admin user and role management.
 """
+
 from apps.accounts.models.store_user import StoreUser
 from apps.accounts.models.user import User
 from apps.accounts.services.account_service import DashboardAccountService

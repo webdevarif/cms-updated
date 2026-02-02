@@ -1,6 +1,7 @@
 """
 Dashboard mediafile API tests - endpoint-focused only.
 """
+
 import factory
 import pytest
 from django.contrib.auth import get_user_model
@@ -76,7 +77,9 @@ class MediaFileViewSetTests:
         image_file.seek(0)
 
         response = authenticated_client.post(
-            "/v2/api/media/", {"file": image_file, "name": "test.jpg"}, format="multipart"
+            "/v2/api/media/",
+            {"file": image_file, "name": "test.jpg"},
+            format="multipart",
         )
 
         assert response.status_code in [201, 200]

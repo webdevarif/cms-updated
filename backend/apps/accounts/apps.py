@@ -1,6 +1,7 @@
 """
 Apps configuration for Digital Farmers CMS accounts app.
 """
+
 from django.apps import AppConfig
 
 

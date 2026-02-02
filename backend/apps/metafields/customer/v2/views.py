@@ -3,6 +3,7 @@ Architectural + real implementation for customer metafields interface.
 
 Authenticated users manage their own metafields for content.
 """
+
 from apps.metafields.models import Metafield, MetafieldDefinition
 from apps.metafields.services import MetafieldService
 from core.permissions import IsStoreUser
@@ -29,7 +30,11 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsStoreUser]
     throttle_classes = [UserRateThrottle]
     serializer_class = MetafieldCustomerSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
     search_fields = ["value_text", "value_number", "value_boolean"]
     ordering_fields = ["created_at", "updated_at"]
 
@@ -76,7 +81,8 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
         metafields_data = request.data.get("metafields", [])
         if not metafields_data:
             return Response(
-                {"error": "metafields array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "metafields array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         created_metafields = []
@@ -113,7 +119,8 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
         metafields_data = request.data.get("metafields", [])
         if not metafields_data:
             return Response(
-                {"error": "metafields array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "metafields array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         updated_metafields = []
@@ -150,7 +157,8 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
         metafield_ids = request.data.get("metafield_ids", [])
         if not metafield_ids:
             return Response(
-                {"error": "metafield_ids array is required"}, status=status.HTTP_400_BAD_REQUEST
+                {"error": "metafield_ids array is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         deleted_count = 0
@@ -171,7 +179,8 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
         return Response({"message": f"Deleted {deleted_count} metafields successfully"})
 
     @extend_schema(
-        summary="Get metafield by content", description="Get metafields for specific content"
+        summary="Get metafield by content",
+        description="Get metafields for specific content",
     )
     @action(detail=False, methods=["get"])
     def by_content(self, request):
@@ -188,7 +197,8 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
         # Validate user owns the content
         if not MetafieldService.user_owns_content(self.request.user, content_type_id, object_id):
             return Response(
-                {"error": "Content not found or access denied"}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Content not found or access denied"},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         metafields = Metafield.objects.filter(
@@ -201,7 +211,8 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @extend_schema(
-        summary="Get metafield definitions", description="Get available metafield definitions"
+        summary="Get metafield definitions",
+        description="Get available metafield definitions",
     )
     @action(detail=False, methods=["get"])
     def definitions(self, request):
@@ -227,7 +238,8 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
         )
 
     @extend_schema(
-        summary="Validate metafield", description="Validate metafield value against definition"
+        summary="Validate metafield",
+        description="Validate metafield value against definition",
     )
     @action(detail=False, methods=["post"])
     def validate(self, request):
@@ -247,7 +259,8 @@ class MetafieldCustomerViewSet(viewsets.ModelViewSet):
             )
         except MetafieldDefinition.DoesNotExist:
             return Response(
-                {"error": "Definition not found or access denied"}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Definition not found or access denied"},
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         validation_result = MetafieldService.validate_value(definition=definition, value=value)

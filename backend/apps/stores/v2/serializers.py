@@ -2,6 +2,7 @@
 Stores V2 API serializers.
 Consolidated serializers from public, customer, and dashboard layers.
 """
+
 from apps.stores.models import Store, StoreSettings
 from rest_framework import serializers
 
@@ -51,7 +52,13 @@ class StoreCustomerSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "verification_token", "access_code", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "verification_token",
+            "access_code",
+            "created_at",
+            "updated_at",
+        ]
 
     def create(self, validated_data):
         """Create store and initialize settings"""
@@ -86,7 +93,13 @@ class StoreDashboardSerializer(serializers.ModelSerializer):
             "updated_at",
             "last_accessed",
         ]
-        read_only_fields = ["id", "verification_token", "access_code", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "verification_token",
+            "access_code",
+            "created_at",
+            "updated_at",
+        ]
 
     def create(self, validated_data):
         """Create store and initialize settings"""

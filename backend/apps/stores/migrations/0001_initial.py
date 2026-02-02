@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ("mediafile", "__first__"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
@@ -20,13 +19,19 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=255)),
                 ("slug", models.SlugField(max_length=255, unique=True)),
                 ("description", models.TextField(blank=True)),
-                ("access_code", models.CharField(editable=False, max_length=6, unique=True)),
+                (
+                    "access_code",
+                    models.CharField(editable=False, max_length=6, unique=True),
+                ),
                 (
                     "verification_token",
                     models.CharField(blank=True, max_length=255, null=True, unique=True),
@@ -59,8 +64,14 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ("domain", models.URLField(blank=True, null=True, unique=True)),
-                ("logo", models.ImageField(blank=True, null=True, upload_to="stores/logos/")),
-                ("favicon", models.ImageField(blank=True, null=True, upload_to="stores/favicons/")),
+                (
+                    "logo",
+                    models.ImageField(blank=True, null=True, upload_to="stores/logos/"),
+                ),
+                (
+                    "favicon",
+                    models.ImageField(blank=True, null=True, upload_to="stores/favicons/"),
+                ),
                 ("settings", models.JSONField(blank=True, default=dict)),
                 ("meta_title", models.CharField(blank=True, max_length=255)),
                 ("meta_description", models.TextField(blank=True)),
@@ -88,7 +99,8 @@ class Migration(migrations.Migration):
                 (
                     "bootstrap_error",
                     models.TextField(
-                        blank=True, help_text="Any errors that occurred during bootstrap"
+                        blank=True,
+                        help_text="Any errors that occurred during bootstrap",
                     ),
                 ),
                 (
@@ -111,7 +123,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("site_name", models.CharField(default="My Store", max_length=255)),
@@ -126,7 +141,10 @@ class Migration(migrations.Migration):
                 ("currency", models.CharField(default="USD", max_length=3)),
                 ("timezone", models.CharField(default="UTC", max_length=50)),
                 ("language", models.CharField(default="en", max_length=10)),
-                ("tax_rate", models.DecimalField(decimal_places=4, default=0, max_digits=5)),
+                (
+                    "tax_rate",
+                    models.DecimalField(decimal_places=4, default=0, max_digits=5),
+                ),
                 ("shipping_enabled", models.BooleanField(default=True)),
                 (
                     "free_shipping_threshold",
@@ -135,28 +153,6 @@ class Migration(migrations.Migration):
                 ("custom_settings", models.JSONField(blank=True, default=dict)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
-                (
-                    "favicon",
-                    models.ForeignKey(
-                        blank=True,
-                        help_text="Store favicon image",
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="store_favicons",
-                        to="mediafile.mediafile",
-                    ),
-                ),
-                (
-                    "logo",
-                    models.ForeignKey(
-                        blank=True,
-                        help_text="Store logo image",
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="store_logos",
-                        to="mediafile.mediafile",
-                    ),
-                ),
                 (
                     "store",
                     models.OneToOneField(

@@ -1,6 +1,7 @@
 """
 Public mediafile serializers.
 """
+
 from apps.mediafile.serializers import BaseMediaFileSerializer, BaseMediaFolderSerializer
 from rest_framework import serializers
 

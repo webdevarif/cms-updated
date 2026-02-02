@@ -3,6 +3,7 @@ Permission classes for Digital Farmers CMS.
 
 Store-scoped permissions for role-based access control.
 """
+
 from rest_framework.permissions import BasePermission
 
 
@@ -37,13 +38,13 @@ class IsStoreAdmin(BasePermission):
 
         # Check if user has admin role in this store
         try:
-            from apps.stores.models import StoreMember
+            from apps.accounts.models.store_user import StoreUser
 
-            membership = StoreMember.objects.get(
+            membership = StoreUser.objects.get(
                 user=request.user, store=request.store, role__in=["admin", "owner"]
             )
             return True
-        except StoreMember.DoesNotExist:
+        except StoreUser.DoesNotExist:
             return False
 
     def has_object_permission(self, request, view, obj):
@@ -67,11 +68,11 @@ class IsStoreUser(BasePermission):
 
         # Check if user has any role in this store
         try:
-            from apps.stores.models import StoreMember
+            from apps.accounts.models.store_user import StoreUser
 
-            StoreMember.objects.get(user=request.user, store=request.store)
+            StoreUser.objects.get(user=request.user, store=request.store)
             return True
-        except StoreMember.DoesNotExist:
+        except StoreUser.DoesNotExist:
             return False
 
 
@@ -89,13 +90,13 @@ class IsFormOwner(BasePermission):
         # Check if user is store admin
         if hasattr(obj, "store"):
             try:
-                from apps.stores.models import StoreMember
+                from apps.accounts.models.store_user import StoreUser
 
-                membership = StoreMember.objects.get(
+                membership = StoreUser.objects.get(
                     user=request.user, store=obj.store, role__in=["admin", "owner"]
                 )
                 return True
-            except StoreMember.DoesNotExist:
+            except StoreUser.DoesNotExist:
                 pass
 
         return False
@@ -113,13 +114,13 @@ class CanViewFormSubmissions(BasePermission):
 
         # Check if user has admin role in this store
         try:
-            from apps.stores.models import StoreMember
+            from apps.accounts.models.store_user import StoreUser
 
-            membership = StoreMember.objects.get(
+            membership = StoreUser.objects.get(
                 user=request.user, store=request.store, role__in=["admin", "owner"]
             )
             return True
-        except StoreMember.DoesNotExist:
+        except StoreUser.DoesNotExist:
             return False
 
     def has_object_permission(self, request, view, obj):
@@ -185,13 +186,13 @@ class HasRole(BasePermission):
 
         # Check if user has any of the allowed roles in this store
         try:
-            from apps.stores.models import StoreMember
+            from apps.accounts.models.store_user import StoreUser
 
-            membership = StoreMember.objects.get(
+            membership = StoreUser.objects.get(
                 user=request.user, store=request.store, role__in=self.allowed_roles
             )
             return True
-        except StoreMember.DoesNotExist:
+        except StoreUser.DoesNotExist:
             return False
 
     def has_object_permission(self, request, view, obj):
@@ -201,13 +202,13 @@ class HasRole(BasePermission):
         # Check if user has required role for this object's store
         if hasattr(obj, "store"):
             try:
-                from apps.stores.models import StoreMember
+                from apps.accounts.models.store_user import StoreUser
 
-                StoreMember.objects.get(
+                StoreUser.objects.get(
                     user=request.user, store=obj.store, role__in=self.allowed_roles
                 )
                 return True
-            except StoreMember.DoesNotExist:
+            except StoreUser.DoesNotExist:
                 return False
 
         return False

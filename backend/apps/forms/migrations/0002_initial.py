@@ -76,7 +76,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="formsubmissiondata",
             index=models.Index(
-                fields=["submission", "field_order"], name="forms_form__submiss_0e914b_idx"
+                fields=["submission", "field_order"],
+                name="forms_form__submiss_0e914b_idx",
             ),
         ),
         migrations.AddIndex(
@@ -104,13 +105,15 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="formsubmission",
             index=models.Index(
-                fields=["store", "form_template", "status"], name="forms_form__store_i_c52493_idx"
+                fields=["store", "form_template", "status"],
+                name="forms_form__store_i_c52493_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="formsubmission",
             index=models.Index(
-                fields=["form_template", "submission_id"], name="forms_form__form_te_239c0e_idx"
+                fields=["form_template", "submission_id"],
+                name="forms_form__form_te_239c0e_idx",
             ),
         ),
         migrations.AddIndex(

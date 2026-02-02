@@ -1,20 +1,21 @@
 """
 Consolidated background tasks for all modules.
 """
+
 import logging
 import os
 import subprocess
 import threading
 import time
 
-from background_task import background
+from core.celery import app
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
 
-@background
-def run_full_test_suite():
+@app.task(bind=True)
+def run_full_test_suite(self):
     """Run full test suite using pytest."""
     try:
         logger.info("Starting full test suite execution via background task")
@@ -111,8 +112,8 @@ def run_full_test_suite():
         raise
 
 
-@background
-def run_app_tests(app_label):
+@app.task(bind=True)
+def run_app_tests(self, app_label):
     """Run tests for a specific app."""
     try:
         logger.info(f"Starting test execution for app: {app_label}")
@@ -206,77 +207,8 @@ def run_app_tests(app_label):
         raise
 
 
-@background
-def rebuild_search_index(store_id=None):
-    """Rebuild search index for a store or all stores."""
-    try:
-        logger.info(f"Starting search index rebuild for store {store_id}")
-
-        from apps.search.models.infrastructure import SearchIndex
-        from apps.search.services.infrastructure import SearchService
-        from apps.stores.models import Store
-
-        if store_id:
-            store = Store.objects.get(id=store_id)
-            SearchService.rebuild_index(store)
-
-            search_index, created = SearchIndex.objects.get_or_create(
-                store=store, defaults={"last_rebuild": timezone.now()}
-            )
-            if not created:
-                search_index.last_rebuild = timezone.now()
-                search_index.save()
-        else:
-            stores = Store.objects.filter(status="active")
-            for store in stores:
-                SearchService.rebuild_index(store)
-
-                search_index, created = SearchIndex.objects.get_or_create(
-                    store=store, defaults={"last_rebuild": timezone.now()}
-                )
-                if not created:
-                    search_index.last_rebuild = timezone.now()
-                    search_index.save()
-
-        logger.info("Search index rebuild completed successfully")
-        return "Search index rebuild completed"
-
-    except Exception as e:
-        logger.error(f"Search index rebuild failed: {e}")
-        raise
-
-
-@background
-def optimize_search_indices():
-    """Optimize search indices across all stores."""
-    try:
-        logger.info("Starting search indices optimization")
-
-        from apps.search.services.infrastructure import SearchService
-        from apps.stores.models import Store
-
-        active_stores = Store.objects.filter(status="active")
-        optimized_count = 0
-
-        for store in active_stores:
-            try:
-                SearchService.optimize_index(store)
-                optimized_count += 1
-                logger.info(f"Optimized search index for store {store.id}")
-            except Exception as e:
-                logger.error(f"Failed to optimize index for store {store.id}: {str(e)}")
-                continue
-
-        logger.info(f"Completed search indices optimization for {optimized_count} stores")
-        return f"Successfully optimized search indices for {optimized_count} stores"
-
-    except Exception as e:
-        logger.error(f"Search indices optimization failed: {e}")
-        raise
-
-
-@background
-def warmup_cache():
+@app.task(bind=True)
+def warmup_cache(self):
     """Warm up search cache for better performance."""
     try:
         logger.info("Starting search cache warmup")
@@ -360,50 +292,15 @@ class BackgroundTestRunner:
         return thread
 
 
-@background
-def warmup_cache():
-    """Warm up cache with frequently accessed data."""
-    try:
-        logger.info("Starting cache warmup")
-
-        from core.services.cache_service import CacheService
-
-        # Warm up common cache keys
-        cache_service = CacheService()
-
-        # Get all active stores and warm up their caches
-        from apps.stores.models import Store
-
-        stores = Store.objects.filter(is_active=True)
-
-        warmed_count = 0
-        for store in stores:
-            try:
-                # Warm up store-specific cache
-                cache_service.warm_store_cache(store)
-                warmed_count += 1
-                logger.info(f"Warmed cache for store: {store.name}")
-            except Exception as e:
-                logger.warning(f"Failed to warm cache for store {store.id}: {e}")
-
-        logger.info(f"Cache warmup completed: {warmed_count} stores processed")
-
-        return {"warmed_stores": warmed_count, "success": True}
-
-    except Exception as e:
-        logger.error(f"Cache warmup failed: {e}")
-        return {"warmed_stores": 0, "success": False, "error": str(e)}
-
-
-@background
-def sync_translations():
+@app.task(bind=True)
+def sync_translations(self):
     """Sync and check translations weekly."""
     try:
         logger.info("Starting weekly translation sync")
 
-        from apps.translations.services.translation_service import TranslationService
-
-        translation_service = TranslationService()
+        # TODO: TranslationService no longer exists - implement translation sync if needed
+        # from apps.translations.services.translation_service import TranslationService
+        # translation_service = TranslationService()
 
         # Sync translations for all active stores
         from apps.stores.models import Store
@@ -413,7 +310,9 @@ def sync_translations():
         sync_results = []
         for store in stores:
             try:
-                result = translation_service.sync_store_translations(store)
+                # TODO: Implement translation sync logic if TranslationService is recreated
+                # result = translation_service.sync_store_translations(store)
+                result = {"success": False, "translations_count": 0}  # Placeholder
                 sync_results.append(
                     {
                         "store_id": store.id,

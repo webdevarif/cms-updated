@@ -1,6 +1,7 @@
 """
 Tests for webhook services.
 """
+
 import json
 from unittest.mock import MagicMock, patch
 
@@ -28,7 +29,12 @@ class WebhookServiceTest(TestCase):
 
     def test_trigger_webhook_success(self):
         """Test successful webhook triggering"""
-        event_data = {"id": "123", "order_number": "ORD-001", "status": "created", "total": 99.99}
+        event_data = {
+            "id": "123",
+            "order_number": "ORD-001",
+            "status": "created",
+            "total": 99.99,
+        }
 
         delivery = WebhookService.trigger_webhook(
             webhook=self.webhook,

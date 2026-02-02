@@ -18,7 +18,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=100)),
@@ -61,7 +64,8 @@ class Migration(migrations.Migration):
                 (
                     "validations",
                     models.JSONField(
-                        default=dict, help_text="Validation rules (min_length, max_length, etc.)"
+                        default=dict,
+                        help_text="Validation rules (min_length, max_length, etc.)",
                     ),
                 ),
                 (
@@ -71,7 +75,8 @@ class Migration(migrations.Migration):
                 (
                     "ui",
                     models.JSONField(
-                        default=dict, help_text="UI configuration (placeholder, help text, etc.)"
+                        default=dict,
+                        help_text="UI configuration (placeholder, help text, etc.)",
                     ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
@@ -89,7 +94,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("object_id", models.PositiveIntegerField()),
@@ -103,7 +111,8 @@ class Migration(migrations.Migration):
                 (
                     "content_type",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="contenttypes.contenttype"
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="contenttypes.contenttype",
                     ),
                 ),
             ],

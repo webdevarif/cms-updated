@@ -1,6 +1,7 @@
 """
 Admin configuration for Digital Farmers CMS accounts app.
 """
+
 from django.contrib import admin
 
 from .models import Role, User, UserActivity, UserPreferences
@@ -25,8 +26,14 @@ class UserAdmin(admin.ModelAdmin):
     readonly_fields = ["created_at", "updated_at"]
 
     fieldsets = (
-        ("Personal Information", {"fields": ("email", "username", "first_name", "last_name")}),
-        ("Status", {"fields": ("is_active", "is_verified", "is_staff", "is_superuser")}),
+        (
+            "Personal Information",
+            {"fields": ("email", "username", "first_name", "last_name")},
+        ),
+        (
+            "Status",
+            {"fields": ("is_active", "is_verified", "is_staff", "is_superuser")},
+        ),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 

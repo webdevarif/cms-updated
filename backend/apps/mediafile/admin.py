@@ -1,6 +1,7 @@
 """
 Admin configuration for media app.
 """
+
 from django.contrib import admin
 
 from .models.media_file import MediaFile

@@ -3,6 +3,7 @@ Customer Forms API v2
 
 Provides form management for store customers with appropriate permissions.
 """
+
 from apps.forms.models import FormSubmission, FormTemplate
 from apps.forms.services import FormService
 from core.permissions import IsStoreUser
@@ -22,7 +23,11 @@ class CustomerFormFilter(filters.FilterSet):
     """Filters for customer form templates"""
 
     status = filters.ChoiceFilter(
-        choices=[("draft", "Draft"), ("published", "Published"), ("archived", "Archived")]
+        choices=[
+            ("draft", "Draft"),
+            ("published", "Published"),
+            ("archived", "Archived"),
+        ]
     )
     is_active = filters.BooleanFilter()
     search = filters.CharFilter(field_name="title", lookup_expr="icontains")

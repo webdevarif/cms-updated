@@ -1,6 +1,7 @@
 """
 Models package for accounts app.
 """
+
 from .activity import UserActivity
 from .preferences import UserPreferences
 from .role import Role

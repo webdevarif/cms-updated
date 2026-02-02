@@ -3,6 +3,7 @@ Production settings for Digital Farmers CMS.
 
 These settings are specific to the production environment.
 """
+
 import os
 
 from .base import *  # noqa

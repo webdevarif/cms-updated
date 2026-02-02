@@ -1,117 +1,60 @@
 """
 Media utilities for Digital Farmers CMS.
-"""
-import logging
 
-from apps.mediafile.models.mediafile import MediaFile, MediaFolder
-from apps.mediafile.services.mediafile_service import MediaService
-from django.core.files.uploadedfile import UploadedFile
+This module provides deprecated helper functions that have been moved to MediaService.
+Please use apps.mediafile.services.media_service.MediaService directly instead.
+
+DEPRECATED: This module will be removed in a future version.
+"""
+
+import logging
 
 logger = logging.getLogger(__name__)
 
 
-def upload_to_mediafile(
-    store,
-    file_obj: UploadedFile,
-    uploaded_by=None,
-    folder_name: str = None,
-    alt_text: str = "",
-    description: str = "",
-    metadata: dict = None,
-) -> MediaFile:
+def upload_to_mediafile(*args, **kwargs):
     """
-    Centralized helper to upload files via MediaService.
+    DEPRECATED: Use MediaService.upload_from_request() instead.
 
-    Args:
-        store: Store instance
-        file_obj: UploadedFile instance
-        uploaded_by: User instance (optional)
-        folder_name: Folder name to organize files (optional)
-        alt_text: Alt text for images (optional)
-        description: File description (optional)
-        metadata: Additional metadata (optional)
-
-    Returns:
-        MediaFile: Created media file instance
+    This function has been moved to MediaService for better organization.
     """
-    try:
-        service = MediaService()
+    logger.warning(
+        "upload_to_mediafile is deprecated. "
+        "Use apps.mediafile.services.media_service.MediaService.upload_from_request() instead."
+    )
+    from apps.mediafile.services.media_service import MediaService
 
-        # Get or create folder
-        folder = None
-        if folder_name:
-            folder, created = MediaFolder.objects.get_or_create(
-                store=store,
-                name=folder_name,
-                defaults={"created_by": uploaded_by, "slug": folder_name.lower().replace(" ", "-")},
-            )
-
-        # Determine resource type
-        resource_type = service._determine_resource_type(file_obj.content_type)
-
-        # Upload via MediaService
-        media_file = service.upload_file(
-            store=store,
-            file_obj=file_obj,
-            uploaded_by=uploaded_by,
-            folder=folder,
-            resource_type=resource_type,
-            alt_text=alt_text,
-            description=description,
-            metadata=metadata or {},
-        )
-
-        logger.info(f"Uploaded media file: {media_file.original_filename} for store {store.id}")
-        return media_file
-
-    except Exception as e:
-        logger.error(f"Failed to upload media file: {e}")
-        raise
+    service = MediaService()
+    return service.upload_from_request(*args, **kwargs)
 
 
-def get_mediafile_url(media_file: MediaFile, transformation: str = None) -> str:
+def get_mediafile_url(*args, **kwargs):
     """
-    Get public URL for a MediaFile with optional transformations.
+    DEPRECATED: Use MediaService.get_media_url() instead.
 
-    Args:
-        media_file: MediaFile instance
-        transformation: ImageKit transformation string (optional)
-
-    Returns:
-        str: Public URL
+    This function has been moved to MediaService for better organization.
     """
-    if not media_file:
-        return None
+    logger.warning(
+        "get_mediafile_url is deprecated. "
+        "Use apps.mediafile.services.media_service.MediaService.get_media_url() instead."
+    )
+    from apps.mediafile.services.media_service import MediaService
 
-    try:
-        service = MediaService()
-        return service.get_media_url(media_file, transformation)
-    except Exception as e:
-        logger.error(f"Failed to get media URL: {e}")
-        return None
+    service = MediaService()
+    return service.get_media_url(*args, **kwargs)
 
 
-def get_mediafile_thumbnail(
-    media_file: MediaFile, width: int = 200, height: int = 200, crop: str = "fill"
-) -> str:
+def get_mediafile_thumbnail(*args, **kwargs):
     """
-    Get thumbnail URL for a MediaFile.
+    DEPRECATED: Use MediaService.get_thumbnail_url() instead.
 
-    Args:
-        media_file: MediaFile instance
-        width: Thumbnail width
-        height: Thumbnail height
-        crop: Crop mode
-
-    Returns:
-        str: Thumbnail URL or None
+    This function has been moved to MediaService for better organization.
     """
-    if not media_file or not media_file.is_image:
-        return None
+    logger.warning(
+        "get_mediafile_thumbnail is deprecated. "
+        "Use apps.mediafile.services.media_service.MediaService.get_thumbnail_url() instead."
+    )
+    from apps.mediafile.services.media_service import MediaService
 
-    try:
-        service = MediaService()
-        return service.get_thumbnail_url(media_file, width, height, crop)
-    except Exception as e:
-        logger.error(f"Failed to get thumbnail URL: {e}")
-        return None
+    service = MediaService()
+    return service.get_thumbnail_url(*args, **kwargs)

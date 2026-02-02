@@ -20,7 +20,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=255)),
@@ -29,10 +32,15 @@ class Migration(migrations.Migration):
                 (
                     "method",
                     models.CharField(
-                        choices=[("POST", "POST"), ("PUT", "PUT")], default="POST", max_length=10
+                        choices=[("POST", "POST"), ("PUT", "PUT")],
+                        default="POST",
+                        max_length=10,
                     ),
                 ),
-                ("secret", models.CharField(default=secrets.token_urlsafe, max_length=255)),
+                (
+                    "secret",
+                    models.CharField(default=secrets.token_urlsafe, max_length=255),
+                ),
                 ("verify_ssl", models.BooleanField(default=True)),
                 ("event_types", models.JSONField(default=list)),
                 ("is_active", models.BooleanField(default=True)),
@@ -56,7 +64,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("event_type", models.CharField(max_length=100)),
@@ -111,7 +122,10 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.BigAutoField(
-                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
                     ),
                 ),
                 ("event_type", models.CharField(db_index=True, max_length=100)),
@@ -161,7 +175,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="webhookdelivery",
             index=models.Index(
-                fields=["store", "webhook", "status"], name="webhooks_de_store_i_e8e66d_idx"
+                fields=["store", "webhook", "status"],
+                name="webhooks_de_store_i_e8e66d_idx",
             ),
         ),
         migrations.AddIndex(

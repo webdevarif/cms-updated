@@ -29,7 +29,12 @@ class CustomerPostViewSet(viewsets.ModelViewSet):
 
 
 class CommentCustomerViewSet(viewsets.ModelViewSet):
-    """Customer comment API - manage own comments and replies"""
+    """
+    Customer comment management for authenticated users.
+
+    Main entrypoint for logged-in users to create/manage their own comments and replies.
+    All operations use CommentService and enforce request.user ownership.
+    """
 
     permission_classes = [IsAuthenticated, IsStoreUser]
     serializer_class = CommentCustomerSerializer
@@ -52,7 +57,8 @@ class CommentCustomerViewSet(viewsets.ModelViewSet):
         # Check ownership
         if instance.user != request.user:
             return Response(
-                {"error": "You can only edit your own comments"}, status=status.HTTP_403_FORBIDDEN
+                {"error": "You can only edit your own comments"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -68,7 +74,8 @@ class CommentCustomerViewSet(viewsets.ModelViewSet):
         # Check ownership
         if instance.user != request.user:
             return Response(
-                {"error": "You can only delete your own comments"}, status=status.HTTP_403_FORBIDDEN
+                {"error": "You can only delete your own comments"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         try:
@@ -85,7 +92,8 @@ class CommentCustomerViewSet(viewsets.ModelViewSet):
         # Check if user can reply
         if not parent_comment.can_reply(request.user):
             return Response(
-                {"error": "You cannot reply to this comment"}, status=status.HTTP_403_FORBIDDEN
+                {"error": "You cannot reply to this comment"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         serializer = ReplyCreateSerializer(

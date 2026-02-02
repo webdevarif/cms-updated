@@ -32,7 +32,8 @@ class BulkActionSerializer(serializers.Serializer):
         ]
     )
     ids = serializers.ListField(
-        child=serializers.IntegerField(), help_text="List of post IDs to perform action on"
+        child=serializers.IntegerField(),
+        help_text="List of post IDs to perform action on",
     )
     data = serializers.DictField(
         required=False,
@@ -159,11 +160,8 @@ class ReplyAsAdminSerializer(serializers.ModelSerializer):
             user_ip=user_ip,
             user_agent=user_agent,
             referrer=referrer,
+            auto_approve=True,  # Admin replies are auto-approved
         )
-
-        # Auto-approve admin replies
-        reply.approve()
-        reply.save()
 
         return reply
 

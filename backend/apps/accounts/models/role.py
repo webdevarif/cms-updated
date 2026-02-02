@@ -3,6 +3,7 @@ Role model for Digital Farmers CMS.
 
 Defines store-specific user roles and permissions.
 """
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -19,7 +20,10 @@ class Role(models.Model):
     ]
 
     store = models.ForeignKey(
-        "stores.Store", on_delete=models.CASCADE, related_name="roles", verbose_name=_("store")
+        "stores.Store",
+        on_delete=models.CASCADE,
+        related_name="roles",
+        verbose_name=_("store"),
     )
     name = models.CharField(_("name"), max_length=20, choices=ROLE_CHOICES)
     permissions = models.JSONField(_("permissions"), default=dict)

@@ -1,6 +1,7 @@
 """
 Admin configuration for SMTP app.
 """
+
 from django.contrib import admin
 
 from .models import EmailLog, EmailTemplate, SmtpConfiguration
@@ -21,7 +22,10 @@ class SmtpConfigurationAdmin(admin.ModelAdmin):
             {"fields": ("host", "port", "username", "password", "use_tls", "use_ssl")},
         ),
         ("Limits", {"fields": ("daily_limit", "hourly_limit")}),
-        ("Metadata", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+        (
+            "Metadata",
+            {"fields": ("created_at", "updated_at"), "classes": ("collapse",)},
+        ),
     )
 
 

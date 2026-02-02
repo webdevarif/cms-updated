@@ -1,6 +1,7 @@
 """
 Public gift cards API tests - endpoint-focused only.
 """
+
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model

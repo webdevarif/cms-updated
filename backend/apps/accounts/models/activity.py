@@ -3,6 +3,7 @@ User activity model for Digital Farmers CMS.
 
 Tracks user actions and activities for audit logging.
 """
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 

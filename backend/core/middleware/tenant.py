@@ -4,6 +4,7 @@ Tenant middleware for Digital Farmers CMS.
 This middleware identifies the tenant from the request URL and sets it in the
 thread local storage for the duration of the request.
 """
+
 import re
 from threading import local
 

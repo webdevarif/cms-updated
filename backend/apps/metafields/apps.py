@@ -1,4 +1,5 @@
 """Metafields application configuration."""
+
 from django.apps import AppConfig
 
 

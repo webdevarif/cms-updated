@@ -71,6 +71,25 @@ CSRF_COOKIE_SAMESITE = "Lax"
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # =============================================================================
+# ENCRYPTION SETTINGS
+# =============================================================================
+# Encryption key for django-fernet-fields
+# Generate with: from cryptography.fernet import Fernet; Fernet.generate_key()
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+if not ENCRYPTION_KEY:
+    if DEBUG:
+        # Generate a key for development (don't use in production!)
+        from cryptography.fernet import Fernet
+
+        ENCRYPTION_KEY = Fernet.generate_key().decode()
+        print(f"WARNING: Generated development encryption key: {ENCRYPTION_KEY}")
+    else:
+        raise ValueError("ENCRYPTION_KEY environment variable is required in production")
+
+# Password reset settings
+PASSWORD_RESET_TIMEOUT = int(os.getenv("PASSWORD_RESET_TIMEOUT", "3600"))  # 1 hour
+
+# =============================================================================
 # AUTHENTICATION CONFIGURATION
 # =============================================================================
 # AUTH_USER_MODEL = 'accounts.User'  # Temporarily commented out for migration

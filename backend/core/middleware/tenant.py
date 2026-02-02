@@ -52,7 +52,7 @@ class TenantMiddleware:
             store_slug = match.group("store_slug")
             try:
                 # Import here to avoid circular imports
-                from stores.models import Store
+                from apps.stores.models import Store
 
                 # Get the store/tenant
                 store = Store.objects.get(slug=store_slug, is_active=True)

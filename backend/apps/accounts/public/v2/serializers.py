@@ -2,7 +2,7 @@
 Public accounts serializers.
 """
 
-from apps.accounts.models.user import User
+from django.contrib.auth.models import User
 from rest_framework import serializers
 
 
@@ -35,10 +35,9 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "is_active",
-            "created_at",
-            "updated_at",
+            "date_joined",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "date_joined"]
 
 
 class RegistrationSerializer(serializers.ModelSerializer):

@@ -53,7 +53,7 @@ class PublicAuthService:
     @staticmethod
     def create_user(email, password, first_name="", last_name="", **extra_fields):
         """Create new user account"""
-        from apps.accounts.models.user import User
+        from django.contrib.auth.models import User
 
         username = (
             email.split("@")[0] if not extra_fields.get("username") else extra_fields["username"]
@@ -70,6 +70,85 @@ class PublicAuthService:
 
         logger.info(f"Created new user: {email}")
         return user
+
+    @staticmethod
+    def send_password_reset_email(email):
+        """Send password reset email to user"""
+        from django.conf import settings
+        from django.contrib.auth.models import User
+
+        try:
+            # Find user by email
+            user = User.objects.get(email=email)
+
+            # Generate reset token
+            from apps.accounts.models.password_reset_token import PasswordResetToken
+
+            reset_token = PasswordResetToken.generate_token(user)
+
+            # Get store context (for multi-tenant support)
+            # For now, we'll use a default store context since the public API doesn't have store context
+            # In a real multi-tenant scenario, you'd need to determine the store from the request
+            store = None
+            if hasattr(user, "store_users") and user.store_users.exists():
+                store = user.store_users.first().store
+
+            # If no store found, create a minimal store context for email
+            if store is None:
+                from collections import namedtuple
+
+                Store = namedtuple("Store", ["name"])
+                store = Store(name=settings.FRONTEND_URL or "Digital Farmers CMS")
+
+            # Send email using the existing email service
+            from core.services.email import EmailService
+
+            EmailService.send_password_reset_email(
+                user=user, store=store, reset_token=reset_token.token, async_send=True
+            )
+
+            logger.info(f"Password reset email sent to: {email}")
+            return True
+
+        except User.DoesNotExist:
+            # Don't reveal whether email exists - always return success
+            logger.info(f"Password reset requested for non-existent email: {email}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {email}: {e}")
+            # Still return True to avoid email enumeration
+            return True
+
+    @staticmethod
+    def reset_password(token, new_password):
+        """Reset password with token validation"""
+        from apps.accounts.models.password_reset_token import PasswordResetToken
+
+        try:
+            # Get valid token
+            reset_token = PasswordResetToken.get_valid_token(token)
+            if reset_token is None:
+                logger.warning(f"Invalid or expired password reset token used: {token}")
+                return {"success": False, "error": "Invalid or expired token"}
+
+            # Validate new password
+            if len(new_password) < 8:
+                return {"success": False, "error": "Password must be at least 8 characters long"}
+
+            # Update user password
+            user = reset_token.user
+            user.set_password(new_password)
+            user.save(update_fields=["password"])
+
+            # Mark token as used
+            reset_token.mark_as_used()
+
+            logger.info(f"Password reset successful for user: {user.email}")
+            return {"success": True, "message": "Password reset successful"}
+
+        except Exception as e:
+            logger.error(f"Error during password reset with token {token}: {e}")
+            return {"success": False, "error": "An error occurred during password reset"}
 
 
 class CustomerAccountService:

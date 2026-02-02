@@ -1,0 +1,39 @@
+{
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite",
+    "save": "Sauvegarder",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter"
+  },
+  "auth": {
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "signUp": "S'inscrire",
+    "email": "Email",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "welcomeBack": "Bienvenue",
+    "welcome": "Bienvenue",
+    "login": "Connexion",
+    "logout": "Déconnexion"
+  },
+  "dashboard": {
+    "title": "Tableau de Bord du Magasin",
+    "description": "Page d'accueil spécifique à la langue.",
+    "overview": "Aperçu",
+    "analytics": "Analyses",
+    "settings": "Paramètres",
+    "profile": "Profil",
+    "users": "Utilisateurs",
+    "products": "Produits",
+    "orders": "Commandes"
+  }
+}

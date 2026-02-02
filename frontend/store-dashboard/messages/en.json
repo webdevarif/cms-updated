@@ -1,0 +1,39 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "signUp": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "resetPassword": "Reset Password",
+    "confirmPassword": "Confirm Password",
+    "welcomeBack": "Welcome back",
+    "welcome": "Welcome",
+    "login": "Login",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "Store Dashboard",
+    "description": "Locale-specific hello world page.",
+    "overview": "Overview",
+    "analytics": "Analytics",
+    "settings": "Settings",
+    "profile": "Profile",
+    "users": "Users",
+    "products": "Products",
+    "orders": "Orders"
+  }
+}

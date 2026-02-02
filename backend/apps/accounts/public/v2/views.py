@@ -2,9 +2,9 @@
 Public accounts API.
 """
 
-from apps.accounts.models.user import User
 from apps.accounts.services.account_service import PublicAuthService
 from core.permissions import AllowAnyPublicRead
+from django.contrib.auth.models import User
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny
@@ -12,6 +12,7 @@ from rest_framework.response import Response
 
 from .serializers import (
     LoginSerializer,
+    PasswordResetConfirmSerializer,
     PasswordResetSerializer,
     RegistrationSerializer,
     UserSerializer,
@@ -23,13 +24,13 @@ class PublicLoginView(generics.GenericAPIView):
     Public login endpoint.
     """
 
-    permission_classes = [AllowAnyPublicRead]
+    permission_classes = [AllowAny]
     serializer_class = LoginSerializer
 
     @extend_schema(summary="User login", description="Authenticate user and return JWT token")
     def post(self, request):
         """Authenticate user and return JWT token"""
-        serializer = UserSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         user = User.objects.get(email=serializer.validated_data["email"])
@@ -103,17 +104,20 @@ class ResetPasswordView(generics.GenericAPIView):
     """
 
     permission_classes = [AllowAny]
-    serializer_class = PasswordResetSerializer
+    serializer_class = PasswordResetConfirmSerializer
 
     @extend_schema(summary="Reset password", description="Reset password with token")
     def post(self, request):
         """Reset password with token"""
-        serializer = PasswordResetSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        PublicAuthService.reset_password(
+        result = PublicAuthService.reset_password(
             token=serializer.validated_data["token"],
             new_password=serializer.validated_data["new_password"],
         )
 
-        return Response({"message": "Password reset successful"})
+        if result["success"]:
+            return Response({"message": result["message"]})
+        else:
+            return Response({"detail": result["error"]}, status=status.HTTP_400_BAD_REQUEST)

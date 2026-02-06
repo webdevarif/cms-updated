@@ -1,12 +1,19 @@
-'use client';
-
+import { Metadata } from 'next';
+import { createLocalizedMetadata } from '@/lib/metadata';
 import { useTranslations } from 'next-intl';
-import { Link, usePathname } from '@/lib/navigation';
-import { locales } from '@/i18n/request';
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  
+  return createLocalizedMetadata(locale, {
+    title: 'Home',
+    description: 'Welcome to Digital Farmers CMS - Your modern agricultural management solution',
+    keywords: ['home', 'dashboard', 'agriculture', 'farming', 'cms'],
+  });
+}
 
 export default function Page() {
   const t = useTranslations('home');
-  const pathname = usePathname();
 
   return (
     <main className="min-h-screen flex items-center justify-center p-8">
@@ -29,49 +36,10 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <div className="mt-12 space-y-4">
-          <h2 className="text-lg font-semibold">Navigation</h2>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              Home
-            </Link>
-            <Link href="/dashboard" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              Dashboard
-            </Link>
-            <Link href="/auth/login" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-              Login
-            </Link>
-            <Link href="/auth/register" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-              Register
-            </Link>
-            <Link href="/contact-us" className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
-              Contact Us
-            </Link>
-          </div>
-        </div>
-
-        {/* Locale Switcher */}
-        <div className="mt-8 space-y-4">
-          <h2 className="text-lg font-semibold">Language / Locale</h2>
-          <div className="flex justify-center gap-2">
-            {locales.map((locale) => (
-              <Link
-                key={locale}
-                href={pathname}
-                locale={locale}
-                className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
-              >
-                {locale.toUpperCase()}
-              </Link>
-            ))}
-          </div>
-        </div>
-
         <div className="mt-8 text-sm text-gray-500">
           Locale-specific content loaded successfully!
         </div>
-      </div>
+    </div>
     </main>
   );
 }

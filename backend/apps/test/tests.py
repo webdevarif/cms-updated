@@ -3,6 +3,7 @@ Basic Django tests for the test app.
 """
 
 from apps.test.models import TestResult, TestRun
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 

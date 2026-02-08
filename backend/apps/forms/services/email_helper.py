@@ -5,6 +5,7 @@ Provides email sending functionality for form notifications.
 """
 
 from apps.smtp.services.smtp_service import send_email
+
 from django.template.loader import render_to_string
 
 

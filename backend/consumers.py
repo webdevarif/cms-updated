@@ -9,6 +9,7 @@ import logging
 from apps.notifications.models import Notification
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone

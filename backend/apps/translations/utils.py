@@ -6,6 +6,7 @@ import hashlib
 
 import bleach
 from bs4 import BeautifulSoup, NavigableString
+
 from django.conf import settings
 from django.core.cache import caches
 

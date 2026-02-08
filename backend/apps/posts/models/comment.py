@@ -3,6 +3,7 @@ Comments models - Comment with nested reply support.
 """
 
 from core.models import TenantModel
+
 from django.contrib.auth import get_user_model
 from django.db import models
 

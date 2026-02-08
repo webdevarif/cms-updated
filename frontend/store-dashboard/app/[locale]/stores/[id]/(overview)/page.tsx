@@ -1,7 +1,6 @@
 'use client';
 
-import React from 'react';
-import { useParams } from 'next/navigation';
+import React, { use } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,11 +9,11 @@ import { Skeleton, SkeletonText } from '@/components/ui/skeleton';
 import { useStore } from '@/hooks/stores';
 import StoreLayout from '@/components/layouts/store-layout';
 
-export default function StoreOverviewPage() {
+export default function StoreOverviewPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const t = useTranslations('store');
-  const params = useParams();
-  const storeId = params.id as string;
-  
+  const resolvedParams = use(params);
+  const storeId = resolvedParams.id;
+
   const { data: store, isLoading, error } = useStore(storeId);
 
   if (isLoading) {
@@ -24,7 +23,7 @@ export default function StoreOverviewPage() {
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-5 w-3/4" />
         </div>
-        
+
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
@@ -37,7 +36,7 @@ export default function StoreOverviewPage() {
             </Card>
           ))}
         </div>
-        
+
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <Skeleton className="h-6 w-48" />
@@ -91,7 +90,7 @@ export default function StoreOverviewPage() {
   }
 
   return (
-    <StoreLayout params={{ id: storeId }}>
+    <StoreLayout params={params}>
       <div className="space-y-6">
         <PageHeader
           title={store.name}

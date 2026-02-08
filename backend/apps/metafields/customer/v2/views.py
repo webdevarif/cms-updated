@@ -7,7 +7,6 @@ Authenticated users manage their own metafields for content.
 from apps.metafields.models import Metafield, MetafieldDefinition
 from apps.metafields.services import MetafieldService
 from core.permissions import IsStoreUser
-from django.contrib.contenttypes.models import ContentType
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import filters, status, viewsets
@@ -15,6 +14,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
+
+from django.contrib.contenttypes.models import ContentType
 
 from .serializers import MetafieldCustomerSerializer
 

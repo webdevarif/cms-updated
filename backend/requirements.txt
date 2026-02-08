@@ -6,6 +6,11 @@ django-ratelimit>=4.0.0
 cryptography>=3.4.0
 django-redis>=5.0.0
 
+# OAuth dependencies
+django-allauth>=0.57.0
+django-allauth[socialaccount]>=0.57.0
+social-auth-app-django>=5.4.0
+
 # Monitoring and error tracking
 sentry-sdk>=1.40.0
 

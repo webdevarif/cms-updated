@@ -10,27 +10,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link';
 import { Post } from '@/types/posts.types';
 
-export default function PagesPage() {
+
+import StoreLayout from '@/components/layouts/store-layout';
+export default function PagesPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const { data: pages, error, isLoading } = usePages();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [contentTypeFilter, setContentTypeFilter] = useState('');
-  const [isFeaturedFilter, setIsFeaturedFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [contentTypeFilter, setContentTypeFilter] = useState('all');
+  const [isFeaturedFilter, setIsFeaturedFilter] = useState('all');
   const [ordering, setOrdering] = useState('-created_at');
 
   // Memoized filtered pages
   const filteredPages = useMemo(() => {
     return pages?.filter((page: Post) => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         page.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         page.slug?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         page.excerpt?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = !statusFilter || page.status === statusFilter;
-      const matchesContentType = !contentTypeFilter || page.content_type === contentTypeFilter;
-      const matchesFeatured = !isFeaturedFilter || 
+
+      const matchesStatus = statusFilter === 'all' || page.status === statusFilter;
+      const matchesContentType = contentTypeFilter === 'all' || page.content_type === contentTypeFilter;
+      const matchesFeatured = isFeaturedFilter === 'all' ||
         (isFeaturedFilter === 'true' ? page.is_featured : !page.is_featured);
-      
+
       return matchesSearch && matchesStatus && matchesContentType && matchesFeatured;
     });
   }, [pages, searchTerm, statusFilter, contentTypeFilter, isFeaturedFilter]);
@@ -39,7 +41,8 @@ export default function PagesPage() {
   if (error) return <div>Error loading pages: {(error as Error).message}</div>;
 
   return (
-    <div className="p-4">
+    <StoreLayout params={params}>
+      <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Pages</h1>
         <Button asChild>
@@ -60,7 +63,7 @@ export default function PagesPage() {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="published">Published</SelectItem>
             <SelectItem value="archived">Archived</SelectItem>
@@ -72,7 +75,7 @@ export default function PagesPage() {
             <SelectValue placeholder="Content Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Types</SelectItem>
+            <SelectItem value="all">All Types</SelectItem>
             <SelectItem value="html">HTML</SelectItem>
             <SelectItem value="markdown">Markdown</SelectItem>
             <SelectItem value="json">JSON</SelectItem>
@@ -84,7 +87,7 @@ export default function PagesPage() {
             <SelectValue placeholder="Featured" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All</SelectItem>
+            <SelectItem value="all">All</SelectItem>
             <SelectItem value="true">Featured</SelectItem>
             <SelectItem value="false">Not Featured</SelectItem>
           </SelectContent>
@@ -141,8 +144,8 @@ export default function PagesPage() {
               <TableCell>
                 <Badge variant="outline">{page.content_type}</Badge>
               </TableCell>
-              <TableCell>{page.created_by.username}</TableCell>
-              <TableCell>{page.updated_by.username}</TableCell>
+              <TableCell>{page.created_by?.username}</TableCell>
+              <TableCell>{page.updated_by?.username}</TableCell>
               <TableCell>
                 {page.published_at ? new Date(page.published_at).toLocaleDateString() : '-'}
               </TableCell>
@@ -158,6 +161,7 @@ export default function PagesPage() {
           )) || <TableRow><TableCell colSpan={9}>No pages found</TableCell></TableRow>}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </StoreLayout>
   );
 }

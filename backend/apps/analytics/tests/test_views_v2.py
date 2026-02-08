@@ -4,11 +4,12 @@ import pytest
 from apps.analytics.models.events import EventLog, SearchLog
 from apps.analytics.services.event_service import EventService
 from apps.stores.models import Store
+from rest_framework import status
+from rest_framework.test import APIClient
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient
 
 User = get_user_model()
 

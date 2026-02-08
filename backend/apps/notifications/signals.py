@@ -3,6 +3,7 @@ Signals for notifications app.
 """
 
 from apps.analytics.services.event_service import EventService
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 

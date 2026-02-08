@@ -75,17 +75,39 @@ DEBUG_TOOLBAR_CONFIG = {
 # CORS settings for development
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Logging
-if "LOGGING" in locals():
-    LOGGING["loggers"] = {
+# Logging - reduce debug output
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",  # Only show warnings and errors
+    },
+    "loggers": {
         "django": {
             "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": True,
+            "level": "WARNING",  # Only warnings and errors
+            "propagate": False,
         },
         "core": {
             "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": True,
+            "level": "WARNING",  # Only warnings and errors
+            "propagate": False,
         },
-    }
+        "django.utils.autoreload": {
+            "handlers": ["console"],
+            "level": "WARNING",  # Suppress autoreload debug messages
+            "propagate": False,
+        },
+        "django.core.management": {
+            "handlers": ["console"],
+            "level": "WARNING",  # Suppress management command debug
+            "propagate": False,
+        },
+    },
+}

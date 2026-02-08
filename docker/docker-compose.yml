@@ -81,7 +81,7 @@ services:
 
   store-dashboard:
     build:
-      context: ./frontend/store-dashboard
+      context: ../frontend/store-dashboard
       dockerfile: Dockerfile
     container_name: cms-store-dashboard
     ports:
@@ -98,7 +98,7 @@ services:
 
   store-frontend:
     build:
-      context: ./frontend/store-frontend
+      context: ../frontend/store-frontend
       dockerfile: Dockerfile
     container_name: cms-store-frontend
     ports:

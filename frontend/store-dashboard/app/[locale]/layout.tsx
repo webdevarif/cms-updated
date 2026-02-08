@@ -3,6 +3,7 @@ import {hasLocale} from 'next-intl';
 import {notFound} from 'next/navigation';
 import {routing} from '@/i18n/routing';
 import {NextIntlClientProvider} from 'next-intl';
+import { StoreProvider } from '@/lib/store-context';
 
 type Props = {
   children: React.ReactNode;
@@ -20,7 +21,9 @@ export default async function LocaleLayout({children, params}: Props) {
 
   return (
     <NextIntlClientProvider>
-      {children}
+      <StoreProvider>
+        {children}
+      </StoreProvider>
     </NextIntlClientProvider>
   );
 }

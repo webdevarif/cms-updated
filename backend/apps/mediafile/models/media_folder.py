@@ -3,6 +3,7 @@ MediaFolder model for organizing media files.
 """
 
 from core.models import TenantModel
+
 from django.contrib.auth import get_user_model
 from django.db import models
 

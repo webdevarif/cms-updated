@@ -3,6 +3,7 @@ Posts models - PostType, Post, Taxonomy, Term, PostRevision.
 """
 
 from core.models import TenantModel
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils.text import slugify

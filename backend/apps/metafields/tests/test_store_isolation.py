@@ -1,6 +1,7 @@
 import pytest
 from apps.metafields.models import Metafield, MetafieldDefinition
 from apps.stores.models import Store
+
 from django.contrib.auth import get_user_model
 
 User = get_user_model()

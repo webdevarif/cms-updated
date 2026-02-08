@@ -3,6 +3,7 @@ List Celery tasks management command.
 """
 
 from celery import current_app
+
 from django.core.management.base import BaseCommand
 
 

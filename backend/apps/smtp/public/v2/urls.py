@@ -1,0 +1,31 @@
+"""
+URL configuration for smtp public API v2.
+"""
+
+from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
+
+from .views import (
+    EmailLogDashboardViewSet,
+    EmailTemplateDashboardViewSet,
+    SmtpDashboardViewSet,
+    SmtpPublicViewSet,
+)
+
+# Public router for smtp
+public_router = DefaultRouter()
+public_router.register(r"smtp", SmtpPublicViewSet, basename="public-smtp")
+
+# Dashboard router for smtp
+dashboard_router = DefaultRouter()
+dashboard_router.register(r"configs", SmtpDashboardViewSet, basename="dashboard-smtp-configs")
+dashboard_router.register(
+    r"templates", EmailTemplateDashboardViewSet, basename="dashboard-smtp-templates"
+)
+dashboard_router.register(r"logs", EmailLogDashboardViewSet, basename="dashboard-smtp-logs")
+
+urlpatterns = [
+    path("", include(public_router.urls)),
+    path("dashboard/", include(dashboard_router.urls)),
+]

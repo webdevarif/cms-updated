@@ -4,6 +4,7 @@ import pytest
 from apps.analytics.models.events import EventLog, SearchLog
 from apps.analytics.services.event_service import EventService
 from apps.stores.models import Store
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone

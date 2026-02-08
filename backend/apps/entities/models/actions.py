@@ -3,6 +3,7 @@ Entity action models for entities app.
 """
 
 from core.models import TenantModel
+
 from django.db import models
 
 

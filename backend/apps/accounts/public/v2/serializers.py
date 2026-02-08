@@ -2,24 +2,41 @@
 Public accounts serializers.
 """
 
-from django.contrib.auth.models import User
+from apps.accounts.models import User
 from rest_framework import serializers
+
+from django.contrib.auth import authenticate
 
 
 class LoginSerializer(serializers.Serializer):
-    """User login serializer"""
+    """User login serializer - supports both email and username"""
 
-    email = serializers.EmailField()
+    login = serializers.CharField()  # Can be email or username
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
         """Validate user credentials"""
+        login_field = data["login"]
+        password = data["password"]
+
+        # Try to find user by email or username
+        user = None
         try:
-            user = User.objects.get(email=data["email"])
-            if not user.check_password(data["password"]):
-                raise serializers.ValidationError("Invalid credentials")
+            if "@" in login_field:
+                # Looks like an email
+                user = User.objects.get(email=login_field)
+            else:
+                # Treat as username
+                user = User.objects.get(username=login_field)
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid credentials")
+
+        # Check password
+        if not user.check_password(password):
+            raise serializers.ValidationError("Invalid credentials")
+
+        # Store user in validated data for use in view
+        data["user"] = user
         return data
 
 
@@ -35,35 +52,43 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "is_active",
-            "date_joined",
+            "is_verified",
+            "created_at",
+            "updated_at",
         ]
-        read_only_fields = ["id", "date_joined"]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class RegistrationSerializer(serializers.ModelSerializer):
     """User registration serializer"""
 
     password = serializers.CharField(write_only=True, min_length=8)
-    password_confirm = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
-        fields = ["email", "password", "password_confirm", "first_name", "last_name"]
+        fields = ["username", "email", "password", "first_name", "last_name"]
 
     def validate(self, data):
         """Validate registration data"""
-        if data["password"] != data["password_confirm"]:
-            raise serializers.ValidationError("Passwords don't match")
-
         if User.objects.filter(email=data["email"]).exists():
             raise serializers.ValidationError("Email already registered")
+
+        if User.objects.filter(username=data["username"]).exists():
+            raise serializers.ValidationError("Username already taken")
 
         return data
 
     def create(self, validated_data):
         """Create new user"""
-        validated_data.pop("password_confirm")
-        user = User.objects.create_user(**validated_data)
+        from apps.accounts.models import User
+
+        user = User.objects.create_user(
+            email=validated_data["email"],
+            username=validated_data["username"],
+            password=validated_data["password"],
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+        )
         return user
 
 

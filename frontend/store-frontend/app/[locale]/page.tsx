@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  
+
   return createLocalizedMetadata(locale, {
     title: 'Home',
     description: 'Welcome to Digital Farmers CMS - Your modern agricultural management solution',

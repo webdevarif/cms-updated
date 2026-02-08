@@ -162,6 +162,7 @@ class PageService:
         """
         from apps.analytics.services.event_service import EventService
         from apps.posts.models import PostType
+
         from django.core.cache import cache
 
         from ..models.pages import PAGE_TYPE_SLUG
@@ -226,6 +227,7 @@ class PageService:
             Updated Post instance
         """
         from apps.analytics.services.event_service import EventService
+
         from django.core.cache import cache
 
         # Store old values for logging
@@ -286,6 +288,7 @@ class PageService:
             Updated Post instance
         """
         from apps.analytics.services.event_service import EventService
+
         from django.core.cache import cache
 
         old_status = page.status
@@ -386,6 +389,7 @@ class PageService:
         """
         from apps.analytics.services.event_service import EventService
         from apps.posts.models import Post
+
         from django.core.cache import cache
         from django.db import transaction
 

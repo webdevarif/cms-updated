@@ -9,3 +9,5 @@ export const routing = defineRouting({
 
   localePrefix: 'as-needed'
 });
+
+export const SUPPORTED_LOCALES = routing.locales;

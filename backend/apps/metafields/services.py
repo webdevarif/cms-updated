@@ -3,6 +3,7 @@ Metafields service module for metafield operations.
 """
 
 from apps.metafields.models import Metafield, MetafieldDefinition
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -132,31 +133,6 @@ class MetafieldService:
 
         return metafields
 
-
-def serialize_metafields_for_instance(instance):
-    """
-    Return a dictionary of metafields for the given instance in a
-    normalized shape:
-
-    {
-        "namespace.key": {
-            "type": "...",
-            "value": ...,
-        },
-        ...
-    }
-
-    Uses MetafieldService.get_all_metafields() internally to ensure
-    consistent serialization across all APIs.
-
-    Args:
-        instance: The model instance to serialize metafields for
-
-    Returns:
-        Dict with standardized metafields shape
-    """
-    return MetafieldService.get_all_metafields(instance)
-
     @staticmethod
     def get_metafield_definition(store, namespace, key):
         """Get a metafield definition by namespace and key"""
@@ -238,3 +214,28 @@ def serialize_metafields_for_instance(instance):
         """Invalidate metafield definition cache for a store."""
         # Placeholder: implement actual cache invalidation logic
         pass
+
+
+def serialize_metafields_for_instance(instance):
+    """
+    Return a dictionary of metafields for the given instance in a
+    normalized shape:
+
+    {
+        "namespace.key": {
+            "type": "...",
+            "value": ...,
+        },
+        ...
+    }
+
+    Uses MetafieldService.get_all_metafields() internally to ensure
+    consistent serialization across all APIs.
+
+    Args:
+        instance: The model instance to serialize metafields for
+
+    Returns:
+        Dict with standardized metafields shape
+    """
+    return MetafieldService.get_all_metafields(instance)

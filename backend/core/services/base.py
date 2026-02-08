@@ -130,6 +130,7 @@ class GiftCardQueryHelper:
             dict: Analytics data
         """
         from apps.public.giftcards.models import GiftCard
+
         from django.db.models import Q, Sum
         from django.utils import timezone
 
@@ -170,6 +171,7 @@ class LogQueryHelper:
             dict: Analytics data
         """
         from apps.analytics.models.events import EventLog
+
         from django.utils import timezone
 
         since = timezone.now() - timezone.timedelta(days=days)

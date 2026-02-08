@@ -8,12 +8,14 @@ import logging
 
 from apps.webhooks.models import Webhook, WebhookDelivery
 from apps.webhooks.services import WebhookService
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
+from drf_spectacular.utils import extend_schema
 from rest_framework import status, views
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
+
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 
 from .serializers import (
     WebhookDeliveryPublicSerializer,
@@ -132,6 +134,12 @@ class WebhookStatusView(views.APIView):
 
     permission_classes = [AllowAny]
 
+    @extend_schema(
+        operation_id="webhook_status_retrieve",
+        summary="Get webhook status by ID",
+        description="Retrieve status information for a specific webhook",
+        responses={200: WebhookStatusSerializer},
+    )
     def get(self, request, webhook_id=None, *args, **kwargs):
         """Get webhook status"""
         if webhook_id:
@@ -155,3 +163,24 @@ class WebhookStatusView(views.APIView):
                 "id", "name", "url", "method", "last_triggered_at"
             )
             return Response({"active_webhooks": list(webhooks), "total_count": webhooks.count()})
+
+
+class WebhookStatusListView(views.APIView):
+    """
+    Public webhook status list endpoint for health checks.
+    """
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        operation_id="webhook_status_list",
+        summary="List all active webhooks",
+        description="Get a list of all active webhooks with basic information",
+        responses={200: WebhookStatusSerializer(many=True)},
+    )
+    def get(self, request, *args, **kwargs):
+        """List all active webhooks"""
+        webhooks = Webhook.objects.filter(is_active=True).values(
+            "id", "name", "url", "method", "last_triggered_at"
+        )
+        return Response({"active_webhooks": list(webhooks), "total_count": webhooks.count()})

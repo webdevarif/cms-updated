@@ -4,12 +4,13 @@ Tests for dashboard posts API - bulk operations.
 
 from apps.posts.models import Comment, Post, PostType
 from apps.stores.models import Store
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 User = get_user_model()
 

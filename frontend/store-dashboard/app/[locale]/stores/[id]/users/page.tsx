@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, use } from 'react';
 import { StoreMembership } from '@/types/stores.types';
-import { 
+import {
   useStoreMemberships
 } from '@/hooks/stores';
 import { storeActionHandlers } from '@/handles/stores.handles';
@@ -15,9 +14,9 @@ import { Heading, Paragraph, Text } from '@/components/ui/typography';
 import { UserPlus, Trash2, Mail, User, Crown } from 'lucide-react';
 import StoreLayout from '@/components/layouts/store-layout';
 
-const StoreUsersPage = () => {
-  const params = useParams();
-  const storeId = params.id as string;
+const StoreUsersPage = ({ params }: { params: Promise<{ id: string; locale: string }> }) => {
+  const resolvedParams = use(params);
+  const storeId = resolvedParams.id;
 
   const { data: memberships, mutate: mutateMemberships } = useStoreMemberships(storeId);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -33,12 +32,12 @@ const StoreUsersPage = () => {
     setLoadingStates({ ...loadingStates, creatingMember: true });
     try {
       const membershipData: Omit<StoreMembership, 'id' | 'store' | 'joined_at'> = {
-        user: { 
-          id: '', 
-          username: '', 
-          email: createForm.email, 
-          first_name: '', 
-          last_name: '' 
+        user: {
+          id: '',
+          username: '',
+          email: createForm.email,
+          first_name: '',
+          last_name: ''
         },
         role: createForm.role
       };
@@ -90,7 +89,7 @@ const StoreUsersPage = () => {
   };
 
   return (
-    <StoreLayout params={{ id: storeId }}>
+    <StoreLayout params={params}>
       <div className="p-6 max-w-6xl mx-auto">
         <div className="mb-6">
           <Heading variant="h2" className="mb-2">Store Members</Heading>

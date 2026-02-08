@@ -6,10 +6,11 @@ import json
 from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
-from django.urls import reverse
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from django.urls import reverse
+from django.utils import timezone
 
 from ...accounts.tests.factories import UserFactory
 from ...ecommerce.models import Order

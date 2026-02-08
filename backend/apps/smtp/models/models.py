@@ -2,7 +2,7 @@
 SMTP models for email configuration.
 """
 
-from core.fields import EncryptedCharField
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -30,7 +30,7 @@ class SmtpConfiguration(models.Model):
     host = models.CharField(max_length=255)
     port = models.PositiveIntegerField(default=587)
     username = models.EmailField()
-    password = EncryptedCharField(max_length=255)
+    password = models.CharField(max_length=255)
     use_tls = models.BooleanField(default=True)
     use_ssl = models.BooleanField(default=False)
 
@@ -137,7 +137,9 @@ class EmailLog(models.Model):
     template = models.ForeignKey(EmailTemplate, on_delete=models.SET_NULL, null=True)
 
     # User reference
-    user = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
 
     # Retry tracking
     retry_count = models.PositiveIntegerField(default=0)

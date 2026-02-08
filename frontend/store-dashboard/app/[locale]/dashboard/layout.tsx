@@ -1,4 +1,3 @@
-import { requireAuth } from '@/lib/auth-guard';
 import { NextIntlClientProvider } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { hasLocale } from 'next-intl';
@@ -20,9 +19,6 @@ export default async function DashboardLayout({ children, params }: DashboardLay
 
   // Enable static rendering
   setRequestLocale(locale);
-
-  // Require authentication (redirect to login if not authenticated)
-  await requireAuth();
 
   return (
     <NextIntlClientProvider>

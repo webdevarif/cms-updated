@@ -13,6 +13,7 @@ All balance and status changes should go through this service to ensure proper a
 from decimal import Decimal
 
 from apps.giftcards.models import GiftCard, GiftCardHistory
+
 from django.db import transaction
 from django.utils import timezone
 

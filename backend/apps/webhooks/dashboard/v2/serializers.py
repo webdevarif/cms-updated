@@ -2,8 +2,12 @@
 Dashboard webhooks serializers.
 """
 
+from typing import Optional
+
 from apps.webhooks.models import Webhook, WebhookDelivery
 from rest_framework import serializers
+
+from django.utils import timezone
 
 
 class WebhookDashboardSerializer(serializers.ModelSerializer):
@@ -40,16 +44,16 @@ class WebhookDashboardSerializer(serializers.ModelSerializer):
             "success_rate",
         ]
 
-    def get_delivery_count(self, obj):
+    def get_delivery_count(self, obj: Webhook) -> int:
         """Get total delivery count"""
         return obj.deliveries.count()
 
-    def get_last_triggered_at(self, obj):
+    def get_last_triggered_at(self, obj: Webhook) -> Optional[timezone.datetime]:
         """Get last triggered timestamp"""
         last_delivery = obj.deliveries.order_by("-created_at").first()
         return last_delivery.created_at if last_delivery else None
 
-    def get_success_rate(self, obj):
+    def get_success_rate(self, obj: Webhook) -> float:
         """Calculate success rate"""
         total = obj.deliveries.count()
         if total == 0:

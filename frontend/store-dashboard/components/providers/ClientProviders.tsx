@@ -1,7 +1,6 @@
 'use client';
 
 import { NextIntlClientProvider } from 'next-intl';
-import { SessionProvider } from 'next-auth/react';
 import { SWRProvider } from '@/providers/SWRProvider';
 
 interface ProvidersProps {
@@ -14,11 +13,9 @@ interface ProvidersProps {
 export function Providers({ children, messages, locale, timeZone }: ProvidersProps) {
   return (
     <NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone}>
-      <SessionProvider>
-        <SWRProvider>
-          {children}
-        </SWRProvider>
-      </SessionProvider>
+      <SWRProvider>
+        {children}
+      </SWRProvider>
     </NextIntlClientProvider>
   );
 }

@@ -31,20 +31,27 @@ class GlobalUserManager(BaseUserManager):
         user.set_password(password)
         user.save(using=self._db)
 
-        # Log user creation
-        from apps.analytics.services.event_service import EventService
+        # Log user creation (only if analytics service is available)
+        try:
+            from apps.analytics.services.event_service import EventService
 
-        EventService.log_event(
-            event_type="USER_CREATED",
-            event_name=f"User created: {email}",
-            properties={
-                "user_id": user.id,
-                "email": email,
-                "username": username,
-                "is_superuser": extra_fields.get("is_superuser", False),
-            },
-            user=user,
-        )
+            EventService.log_event(
+                event_type="USER_CREATED",
+                event_name=f"User created: {email}",
+                properties={
+                    "user_id": user.id,
+                    "email": email,
+                    "username": username,
+                    "is_superuser": extra_fields.get("is_superuser", False),
+                },
+                user=user,
+            )
+        except Exception as e:
+            # Log the error but don't fail user creation
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to log user creation event: {e}")
 
         return user
 

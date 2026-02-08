@@ -5,10 +5,11 @@ Endpoint-focused tests for forms API.
 from apps.forms.models.forms import FormTemplate
 from apps.forms.models.submissions import FormSubmission
 from apps.stores.models import Store
+from rest_framework.test import APIClient
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 User = get_user_model()
 

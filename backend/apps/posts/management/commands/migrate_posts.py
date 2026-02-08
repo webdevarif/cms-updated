@@ -3,6 +3,7 @@ Management command to migrate legacy posts.
 """
 
 from apps.stores.models import Store
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 

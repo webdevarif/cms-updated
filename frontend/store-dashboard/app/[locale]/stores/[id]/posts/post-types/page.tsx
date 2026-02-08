@@ -7,22 +7,23 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
+import StoreLayout from '@/components/layouts/store-layout';
 
-export default function PostTypesPage() {
+export default function PostTypesPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const { data: postTypes, error, isLoading, mutate } = usePostTypes();
   const { deletePostType, isLoading: isDeleting } = useDeletePostType();
   const [searchTerm, setSearchTerm] = useState('');
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [showBuiltinOnly, setShowBuiltinOnly] = useState(false);
 
-  const filteredPostTypes = postTypes?.filter(postType => {
+  const filteredPostTypes = Array.isArray(postTypes) ? postTypes.filter(postType => {
     const matchesSearch = postType.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          postType.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          postType.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesActive = !showActiveOnly || postType.is_active;
     const matchesBuiltin = !showBuiltinOnly || postType.is_builtin;
     return matchesSearch && matchesActive && matchesBuiltin;
-  });
+  }) : [];
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this post type?')) {
@@ -39,7 +40,8 @@ export default function PostTypesPage() {
   if (error) return <div>Error loading post types: {(error as Error).message}</div>;
 
   return (
-    <div className="p-4">
+    <StoreLayout params={params}>
+      <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Post Types</h1>
         <Button asChild>
@@ -118,6 +120,7 @@ export default function PostTypesPage() {
           )) || <TableRow><TableCell colSpan={8}>No post types found</TableCell></TableRow>}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </StoreLayout>
   );
 }

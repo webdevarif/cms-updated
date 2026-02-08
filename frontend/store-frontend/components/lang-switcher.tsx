@@ -37,8 +37,8 @@ const LangSwitcher = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {locales.map((loc) => (
-          <DropdownMenuItem 
-            key={loc} 
+          <DropdownMenuItem
+            key={loc}
             onClick={() => handleLanguageChange(loc)}
             className={locale === loc ? "bg-accent" : ""}
           >

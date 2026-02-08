@@ -2,8 +2,9 @@
 URL configuration for webhooks customer API v2.
 """
 
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
 
 from .views import WebhookCustomerViewSet, WebhookDeliveryCustomerViewSet
 

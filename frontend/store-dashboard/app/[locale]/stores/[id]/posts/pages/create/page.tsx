@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreatePage, useCategories } from '@/hooks/posts';
 import { pageCreateSchema } from '@/schemas/posts.schemas';
@@ -12,16 +12,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { MultiSelect } from '@/components/ui/multi-select';
 
-export default function CreatePagePage() {
+
+import StoreLayout from '@/components/layouts/store-layout';
+export default function CreatePagePage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const router = useRouter();
-  
+
   // TODO: Get actual store ID from context or auth
   // For now, using a hardcoded store ID to test API functionality
   const storeId = '1'; // Temporary hardcoded store ID
-  
+
   const { data: categories } = useCategories();
   const { createPage, isLoading } = useCreatePage();
-  
+
   // Form state
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -47,14 +49,15 @@ export default function CreatePagePage() {
         store: storeId,
       });
       await createPage(result);
-      router.push('/posts/pages');
+      router.push(`/stores/${storeId}/posts/pages`);
     } catch (error) {
       console.error('Error creating page:', error);
     }
   };
 
   return (
-    <div className="p-4">
+    <StoreLayout params={params}>
+      <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Create New Page</h1>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-4xl">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -158,5 +161,6 @@ export default function CreatePagePage() {
         </div>
       </form>
     </div>
+      </StoreLayout>
   );
 }

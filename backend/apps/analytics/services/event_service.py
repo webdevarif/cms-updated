@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from core.services.base import BaseTenantCRUDService
+
 from django.db import transaction
 from django.db.models import Avg, Count
 from django.utils import timezone

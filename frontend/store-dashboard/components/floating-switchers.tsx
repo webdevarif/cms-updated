@@ -9,9 +9,9 @@ interface FloatingSwitchersProps {
   className?: string
 }
 
-const FloatingSwitchers = ({ 
-  position = 'bottom-right', 
-  className = '' 
+const FloatingSwitchers = ({
+  position = 'bottom-right',
+  className = ''
 }: FloatingSwitchersProps) => {
   const positionClasses = {
     'bottom-right': 'bottom-8 right-8',

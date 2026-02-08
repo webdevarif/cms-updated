@@ -11,19 +11,17 @@ class IsStoreOwner(BasePermission):
     """Allow access only to store owners"""
 
     def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and hasattr(request, "store")
-            and request.store
-        )
+        return request.user and request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
+        # For store objects, check if user is the owner
+        if hasattr(obj, "owner"):
+            return obj.owner == request.user
         # For user objects, check if they're the owner
         if hasattr(obj, "user"):
             return obj.user == request.user
         # For other objects, check store ownership
-        return hasattr(obj, "store") and obj.store == request.store
+        return hasattr(obj, "store") and obj.store.owner == request.user
 
 
 class IsStoreAdmin(BasePermission):

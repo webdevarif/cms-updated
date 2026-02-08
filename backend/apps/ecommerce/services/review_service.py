@@ -4,6 +4,7 @@ Review service for managing product reviews and ratings.
 
 from apps.ecommerce.models import Order, OrderItem, Product, Review
 from apps.notifications.services import NotificationService
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Avg, Count
@@ -366,7 +367,7 @@ class ReviewService:
     @staticmethod
     def _check_spam(review):
         """Run spam detection on review"""
-        from core.services.spam_detection import SpamDetectionService
+        from core.services.spam import SpamDetectionService
 
         # Combine title and content for spam checking
         full_content = f"{review.title} {review.content}".strip()
@@ -416,6 +417,7 @@ class ReviewService:
         try:
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer
+
             from django.utils import timezone
 
             channel_layer = get_channel_layer()
@@ -449,6 +451,7 @@ class ReviewService:
         try:
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer
+
             from django.utils import timezone
 
             channel_layer = get_channel_layer()
@@ -481,6 +484,7 @@ class ReviewService:
         try:
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer
+
             from django.utils import timezone
 
             channel_layer = get_channel_layer()

@@ -4,7 +4,28 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
+      }
+    ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/api/:path*',
+      },
+      {
+        source: '/v2/api/:path*',
+        destination: 'http://localhost:8000/v2/api/:path*',
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

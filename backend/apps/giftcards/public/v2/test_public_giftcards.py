@@ -4,10 +4,11 @@ Public gift cards API tests - endpoint-focused only.
 
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
+
+from django.contrib.auth import get_user_model
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -152,6 +153,7 @@ class PublicGiftCardsAPITests(APITestCase):
         import datetime
 
         from apps.giftcards.models.giftcards import GiftCard
+
         from django.utils import timezone
 
         expired_card = GiftCard.objects.create(

@@ -3,8 +3,9 @@ Serializers for customer metafields module.
 """
 
 from apps.metafields.models import Metafield, MetafieldDefinition
-from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
+
+from django.contrib.contenttypes.models import ContentType
 
 
 class MetafieldCustomerSerializer(serializers.ModelSerializer):

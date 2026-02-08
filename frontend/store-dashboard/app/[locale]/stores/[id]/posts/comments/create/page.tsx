@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreateComment } from '@/hooks/posts';
 import { commentCreateSchema } from '@/schemas/posts.schemas';
@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 
-export default function CreateCommentPage() {
+
+import StoreLayout from '@/components/layouts/store-layout';
+export default function CreateCommentPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const router = useRouter();
   const { createComment, isLoading } = useCreateComment();
 
@@ -43,14 +45,15 @@ export default function CreateCommentPage() {
         is_public: isPublic,
       });
       await createComment(result);
-      router.push('/posts/comments');
+      router.push(`/stores/${storeId}/posts/comments`);
     } catch (error) {
       console.error('Error creating comment:', error);
     }
   };
 
   return (
-    <div className="p-4">
+    <StoreLayout params={params}>
+      <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Create New Comment</h1>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
@@ -137,5 +140,6 @@ export default function CreateCommentPage() {
         </div>
       </form>
     </div>
+      </StoreLayout>
   );
 }

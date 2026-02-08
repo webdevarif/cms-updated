@@ -3,6 +3,8 @@ GiftCardHistory model for giftcards app.
 """
 
 from core.models import TenantModel
+
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -27,7 +29,9 @@ class GiftCardHistory(TenantModel):
         "giftcards.GiftCard", on_delete=models.CASCADE, related_name="history"
     )
     order = models.ForeignKey("ecommerce.Order", on_delete=models.SET_NULL, null=True, blank=True)
-    created_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
+    )
 
     # Transaction details
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)

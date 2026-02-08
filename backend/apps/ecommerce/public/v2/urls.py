@@ -2,9 +2,10 @@
 URL configuration for ecommerce public API v2.
 """
 
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
+
+from django.urls import include, path
 
 from .views import (
     CartPublicViewSet,

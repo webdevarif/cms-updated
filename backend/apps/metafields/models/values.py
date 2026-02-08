@@ -3,6 +3,7 @@ Metafield model for metafields app.
 """
 
 from core.models import TenantModel
+
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models

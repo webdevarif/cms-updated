@@ -8,6 +8,7 @@ import os
 from urllib.parse import urljoin
 
 from apps.mediafile.models import MediaFile, MediaFolder
+
 from django.conf import settings
 from django.utils.text import slugify
 

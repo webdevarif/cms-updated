@@ -5,6 +5,7 @@ Comment service for managing comments and replies.
 from apps.analytics.services.event_service import EventService
 from apps.notifications.services import NotificationService
 from apps.posts.models import Comment
+
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
@@ -402,7 +403,7 @@ class CommentService:
     @staticmethod
     def _check_spam(comment):
         """Run spam detection on comment"""
-        from core.services.spam_detection import SpamDetectionService
+        from core.services.spam import SpamDetectionService
 
         spam_result = SpamDetectionService.check_content(
             content=comment.content,
@@ -451,6 +452,7 @@ class CommentService:
 
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer
+
             from django.utils import timezone
 
             channel_layer = get_channel_layer()
@@ -482,6 +484,7 @@ class CommentService:
         try:
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer
+
             from django.utils import timezone
 
             channel_layer = get_channel_layer()
@@ -512,6 +515,7 @@ class CommentService:
         try:
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer
+
             from django.utils import timezone
 
             channel_layer = get_channel_layer()

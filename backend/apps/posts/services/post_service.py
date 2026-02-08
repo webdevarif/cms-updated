@@ -3,6 +3,7 @@ Posts services - PostService for post operations with logging.
 """
 
 from apps.analytics.services.event_service import EventService
+
 from django.utils import timezone
 
 

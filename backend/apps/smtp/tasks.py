@@ -3,6 +3,7 @@ Celery tasks for SMTP app.
 """
 
 from celery import shared_task
+
 from django.conf import settings
 from django.utils import timezone
 

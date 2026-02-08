@@ -4,11 +4,12 @@ Endpoint-focused tests for metafields API.
 
 from apps.metafields.models.metafield import Metafield, MetafieldDefinition
 from apps.stores.models import Store
+from rest_framework.test import APIClient
+
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APIClient
 
 User = get_user_model()
 

@@ -92,8 +92,43 @@ PASSWORD_RESET_TIMEOUT = int(os.getenv("PASSWORD_RESET_TIMEOUT", "3600"))  # 1 h
 # =============================================================================
 # AUTHENTICATION CONFIGURATION
 # =============================================================================
-# AUTH_USER_MODEL = 'accounts.User'  # Temporarily commented out for migration
-AUTH_USER_MODEL = "auth.User"  # Use default for now
+AUTH_USER_MODEL = "accounts.User"  # Use custom User model
+
+# OAuth Configuration
+SOCIAL_AUTH_GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+SOCIAL_AUTH_GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+SOCIAL_AUTH_FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "")
+SOCIAL_AUTH_FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "")
+SOCIAL_AUTH_GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "")
+SOCIAL_AUTH_GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET", "")
+
+# Frontend URL for OAuth redirects
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# Django Allauth Configuration
+# Updated to new format - removed deprecated settings
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_RATE_LIMITS = {"login_failed": "5/min"}
+
+# Social Account Configuration
+SOCIAL_ACCOUNT_EMAIL_REQUIRED = True
+SOCIAL_ACCOUNT_EMAIL_VERIFICATION = False
+SOCIAL_ACCOUNT_QUERY_EMAIL = True
+
+# OAuth Providers Configuration
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    "profile",
+    "email",
+]
+SOCIAL_AUTH_FACEBOOK_SCOPE = [
+    "email",
+    "public_profile",
+]
+SOCIAL_AUTH_GITHUB_SCOPE = [
+    "user:email",
+    "read:user",
+]
 
 # =============================================================================
 # APPLICATION DEFINITION
@@ -115,6 +150,13 @@ INSTALLED_APPS = [
     "drf_spectacular_sidecar",  # Swagger UI static files
     "django_ratelimit",  # Rate limiting for production
     "elasticsearch_dsl",  # Elasticsearch/OpenSearch integration
+    # OAuth apps
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.facebook",
+    "allauth.socialaccount.providers.github",
     # Core apps
     "core",
     # Feature apps
@@ -147,10 +189,10 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "core.middleware.tenant.TenantMiddleware",  # Before authentication
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",  # Allauth middleware
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.security.SecurityMiddleware",
-    # "apps.logs.middleware.LoggingMiddleware",  # Removed - logs app deleted
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -176,12 +218,24 @@ WSGI_APPLICATION = "core.wsgi.application"
 # =============================================================================
 # DATABASE
 # =============================================================================
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": str(BASE_DIR / "db.sqlite3"),
+#     }
+# }
+
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": str(BASE_DIR / "db.sqlite3"),
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "df-cms",
+        "USER": "postgres",
+        "PASSWORD": "1234",
+        "HOST": "localhost",
+        "PORT": "5432",
     }
 }
+
 
 # =============================================================================
 # PASSWORD VALIDATION

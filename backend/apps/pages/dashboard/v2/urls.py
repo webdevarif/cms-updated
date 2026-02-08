@@ -3,8 +3,9 @@ Dashboard pages URLs - admin interface for page management.
 Architectural + real implementation for dashboard pages interface.
 """
 
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
 
 from .views import PageDashboardViewSet, PostTypeViewSet, TaxonomyViewSet, TermViewSet
 from .views_navigation import MenuDashboardViewSet, MenuItemDashboardViewSet

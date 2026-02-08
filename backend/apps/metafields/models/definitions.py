@@ -3,6 +3,7 @@ MetafieldDefinition model for metafields app.
 """
 
 from core.models import TenantModel
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify

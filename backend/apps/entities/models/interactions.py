@@ -3,6 +3,7 @@ Entity interaction models for entities app.
 """
 
 from core.models import TenantModel
+
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType

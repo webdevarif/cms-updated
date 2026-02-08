@@ -6,6 +6,7 @@ from apps.analytics.services.search_service import SimpleSearchService
 from apps.ecommerce.models.products import Product
 from apps.posts.models import Post
 from apps.stores.models import Store
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 

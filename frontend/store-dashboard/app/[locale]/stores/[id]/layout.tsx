@@ -9,7 +9,7 @@ type StoreLayoutProps = {
 export default async function StoreLayout({ children, params }: StoreLayoutProps) {
   const resolvedParams = await params;
   const storeId = Array.isArray(resolvedParams.id) ? resolvedParams.id[0] : resolvedParams.id;
-  
+
   return (
     <StoreClientLayout storeId={storeId || ''}>
       {children}
@@ -19,7 +19,7 @@ export default async function StoreLayout({ children, params }: StoreLayoutProps
 
 export async function generateMetadata() {
   const t = await getTranslations('store');
-  
+
   return {
     title: t('storeManagement'),
     description: t('manageYourStore'),

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useCreatePost, usePostTypes, useCategories } from '@/hooks/posts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,13 +16,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { postCreateSchema, PostCreateFormData } from '@/schemas/posts.schemas';
 import { PageHeader } from '@/components/ui/typography';
 
-export default function CreatePostPage() {
+
+import StoreLayout from '@/components/layouts/store-layout';
+export default function CreatePostPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const router = useRouter();
-  
-  // TODO: Get actual store ID from context or auth
-  // For now, using a hardcoded store ID to test API functionality
-  const storeId = '1'; // Temporary hardcoded store ID
-  
+  const params = useParams();
+  const storeId = params.id as string;
+
   const { data: postTypes, isLoading: postTypesLoading } = usePostTypes(storeId);
   const { data: categories, isLoading: categoriesLoading } = useCategories();
   const { createPost, isLoading } = useCreatePost();
@@ -46,7 +46,7 @@ export default function CreatePostPage() {
   const onSubmit = async (data: PostCreateFormData) => {
     try {
       await createPost(data);
-      router.push('/posts');
+      router.push(`/stores/${storeId}/posts`);
     } catch (error) {
       console.error('Error creating post:', error);
     }
@@ -54,6 +54,7 @@ export default function CreatePostPage() {
 
   if (postTypesLoading || categoriesLoading) {
     return (
+    <StoreLayout params={params}>
       <div className="p-4">
         <PageHeader title="Create New Post" />
         <div className="space-y-4">
@@ -66,12 +67,13 @@ export default function CreatePostPage() {
   }
 
   return (
-    <div className="p-4">
-      <PageHeader 
-        title="Create New Post" 
+    <StoreLayout params={params}>
+      <div className="p-4">
+      <PageHeader
+        title="Create New Post"
         description="Create a new post with categories and tags"
       />
-      
+
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-w-4xl">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -80,8 +82,8 @@ export default function CreatePostPage() {
               name="post_type"
               control={form.control}
               render={({ field }) => (
-                <Select 
-                  value={field.value} 
+                <Select
+                  value={field.value}
                   onValueChange={field.onChange}
                 >
                   <SelectTrigger>
@@ -107,8 +109,8 @@ export default function CreatePostPage() {
               name="status"
               control={form.control}
               render={({ field }) => (
-                <Select 
-                  value={field.value} 
+                <Select
+                  value={field.value}
                   onValueChange={field.onChange}
                 >
                   <SelectTrigger>
@@ -201,8 +203,8 @@ export default function CreatePostPage() {
               name="content_type"
               control={form.control}
               render={({ field }) => (
-                <Select 
-                  value={field.value} 
+                <Select
+                  value={field.value}
                   onValueChange={field.onChange}
                 >
                   <SelectTrigger>

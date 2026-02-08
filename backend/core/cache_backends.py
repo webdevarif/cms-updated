@@ -68,3 +68,25 @@ class DevelopmentCache(DummyCache):
     def has_key(self, key):
         """Check if key exists and hasn't expired."""
         return self.get(key) is not None
+
+    def add(self, key, value, timeout=None):
+        """Add a value only if key doesn't exist."""
+        if self.has_key(key):
+            return False
+        return self.set(key, value, timeout)
+
+    def get_many(self, keys, default=None):
+        """Get multiple values from cache."""
+        return {key: self.get(key, default) for key in keys}
+
+    def set_many(self, data, timeout=None):
+        """Set multiple values in cache."""
+        for key, value in data.items():
+            self.set(key, value, timeout)
+        return True
+
+    def delete_many(self, keys):
+        """Delete multiple keys from cache."""
+        for key in keys:
+            self.delete(key)
+        return True

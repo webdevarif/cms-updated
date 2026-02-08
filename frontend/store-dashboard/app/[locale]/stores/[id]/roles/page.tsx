@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { StoreRole } from '@/types/stores.types';
-import { 
+import {
   useStoreRoles
 } from '@/hooks/stores';
 import { storeActionHandlers } from '@/handles/stores.handles';

@@ -14,7 +14,9 @@ import { Comment } from '@/types/posts.types';
 import { PageHeader } from '@/components/ui/typography';
 import { SkeletonCard } from '@/components/ui/skeleton';
 
-export default function CommentsPage() {
+
+import StoreLayout from '@/components/layouts/store-layout';
+export default function CommentsPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const { data: comments, error, isLoading, mutate } = useComments();
   const { updateComment, isLoading: isUpdating } = useUpdateComment();
   const { deleteComment, isLoading: isDeleting } = useDeleteComment();
@@ -35,7 +37,7 @@ export default function CommentsPage() {
 
   const handleEdit = async () => {
     if (!editingComment) return;
-    
+
     try {
       await updateComment(editingComment.id, {
         content: editContent,
@@ -87,6 +89,7 @@ export default function CommentsPage() {
 
   if (isLoading) {
     return (
+    <StoreLayout params={params}>
       <div className="p-4">
         <PageHeader title="Comments" />
         <div className="space-y-4">
@@ -101,9 +104,10 @@ export default function CommentsPage() {
   if (error) return <div>Error loading comments: {(error as Error).message}</div>;
 
   return (
-    <div className="p-4">
-      <PageHeader 
-        title="Comments" 
+    <StoreLayout params={params}>
+      <div className="p-4">
+      <PageHeader
+        title="Comments"
         description="Manage and moderate user comments"
       />
 
@@ -114,7 +118,7 @@ export default function CommentsPage() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        
+
         <Select value={postFilter} onValueChange={setPostFilter}>
           <SelectTrigger>
             <SelectValue placeholder="Post" />
@@ -265,7 +269,7 @@ export default function CommentsPage() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                  
+
                   {!comment.is_approved && (
                     <Button size="sm" onClick={() => handleApprove(comment.id)} disabled={isUpdating}>
                       Approve
@@ -285,6 +289,7 @@ export default function CommentsPage() {
           )) || <TableRow><TableCell colSpan={8}>No comments found</TableCell></TableRow>}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </StoreLayout>
   );
 }

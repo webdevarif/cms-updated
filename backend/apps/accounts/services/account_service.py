@@ -19,9 +19,10 @@ This will eliminate duplication and provide a single source of truth for all acc
 
 import logging
 
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from django.contrib.auth import login, logout
 from django.utils import timezone
-from rest_framework_simplejwt.tokens import RefreshToken
 
 logger = logging.getLogger(__name__)
 

@@ -51,7 +51,7 @@ export function DarkModeTest() {
           This should change colors when dark mode is toggled.
         </p>
       </div>
-      
+
       <div className="p-4 bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-200 dark:border-blue-700 transition-colors">
         <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
           Blue Theme Test
@@ -60,7 +60,7 @@ export function DarkModeTest() {
           This blue theme should also adapt to dark mode.
         </p>
       </div>
-      
+
       <div className="p-4 bg-green-50 dark:bg-green-900 rounded-lg border border-green-200 dark:border-green-700 transition-colors">
         <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">
           Green Theme Test
@@ -69,7 +69,7 @@ export function DarkModeTest() {
           This green theme should also adapt to dark mode.
         </p>
       </div>
-      
+
       <div className="flex gap-2">
         <div className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm text-gray-700 dark:text-gray-300">
           Gray 100/800

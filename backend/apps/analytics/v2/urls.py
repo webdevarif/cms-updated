@@ -2,8 +2,9 @@
 V2 URL configuration for analytics app.
 """
 
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
 
 from .views import AnalyticsViewSet, EventLogViewSet, SearchLogViewSet
 

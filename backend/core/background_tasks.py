@@ -9,6 +9,7 @@ import threading
 import time
 
 from core.celery import app
+
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)

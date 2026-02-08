@@ -4,6 +4,7 @@ Signals for posts app.
 
 from apps.analytics.services.event_service import EventService
 from apps.notifications.services import NotificationService
+
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 

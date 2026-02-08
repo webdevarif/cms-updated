@@ -616,6 +616,7 @@ class StoreAccessService:
     def send_verification_email(store):
         """Send store verification email"""
         from apps.smtp.services.smtp_service import send_email
+
         from django.conf import settings
 
         verification_url = f"{settings.FRONTEND_URL}/verify-store/{store.verification_token}"
@@ -719,6 +720,7 @@ class StoreOnboardingService:
     def send_welcome_email(store):
         """Send welcome email after store activation"""
         from apps.smtp.services.smtp_service import send_email
+
         from django.conf import settings
 
         send_email(

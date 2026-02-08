@@ -5,11 +5,12 @@ Tests for dashboard ecommerce API - analytics.
 from apps.accounts.models import User
 from apps.ecommerce.models import Product, ProductCategory, Review
 from core.models import Store
+from rest_framework import status
+from rest_framework.test import APITestCase
+
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 
 class ReviewAnalyticsTests(APITestCase):

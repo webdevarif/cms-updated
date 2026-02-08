@@ -19,7 +19,7 @@ urlpatterns = [
     ),
     path(
         "webhooks/status/",
-        views.WebhookStatusView.as_view(),
+        views.WebhookStatusListView.as_view(),
         name="webhook-status-list",
     ),
 ]

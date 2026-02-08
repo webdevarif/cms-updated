@@ -216,10 +216,10 @@ export const createPageMetadataWithParams = async (
   params?: Record<string, string | number> | Promise<Record<string, string | number>>
 ): Promise<Metadata> => {
   let { title, description } = baseOptions;
-  
+
   // Handle Promise-based params (Next.js 16)
   const resolvedParams = params && typeof params.then === 'function' ? await params : params;
-  
+
   // Replace placeholders in title and description with actual values
   if (resolvedParams) {
     Object.entries(resolvedParams).forEach(([key, value]) => {
@@ -230,7 +230,7 @@ export const createPageMetadataWithParams = async (
       }
     });
   }
-  
+
   return createPageMetadata({
     ...baseOptions,
     title,
@@ -247,10 +247,10 @@ export const createEntityPageMetadata = async (
 ): Promise<Metadata> => {
   const actionText = {
     view: 'View',
-    edit: 'Edit', 
+    edit: 'Edit',
     create: 'Create'
   }[action];
-  
+
   return createLocalizedMetadata(locale, {
     title: `${actionText} ${entityName}`,
     description: `${actionText} ${entityName} ${action === 'create' ? 'form' : `with ID: ${entityId}`}`,
@@ -270,7 +270,7 @@ export const createDynamicRouteMetadata = async (
 ): Promise<Metadata> => {
   const resolvedParams = await params;
   const { locale, ...routeParams } = resolvedParams;
-  
+
   return createPageMetadataWithParams(
     {
       ...metadataOptions,

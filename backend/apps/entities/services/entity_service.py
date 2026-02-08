@@ -5,6 +5,7 @@ Services for entities app.
 import logging
 
 from apps.analytics.services.event_service import EventService
+
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction

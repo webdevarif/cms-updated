@@ -3,12 +3,13 @@ Customer entities views - authenticated interface for entity interactions.
 """
 
 from apps.entities.models import EntityAction, EntityInteraction
-from django.contrib.contenttypes.models import ContentType
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
+
+from django.contrib.contenttypes.models import ContentType
 
 from .serializers import (
     CustomerEntityActionSerializer,

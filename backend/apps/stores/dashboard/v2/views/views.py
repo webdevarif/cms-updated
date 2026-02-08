@@ -24,6 +24,9 @@ class StoreDashboardViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Filter to user's owned stores"""
+        if getattr(self, "swagger_fake_view", False):
+            # Return empty queryset for schema generation
+            return Store.objects.none()
         return Store.objects.filter(owner=self.request.user)
 
     def perform_create(self, serializer):
@@ -53,7 +56,7 @@ class StoreDashboardViewSet(viewsets.ModelViewSet):
         return Response(analytics)
 
     @action(detail=True, methods=["get", "put", "patch"])
-    def settings(self, request, pk=None):
+    def store_settings(self, request, pk=None):
         """Manage store settings"""
         store = self.get_object()
 

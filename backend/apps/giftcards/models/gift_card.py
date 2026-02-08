@@ -6,6 +6,7 @@ import secrets
 import uuid
 
 from core.models import TenantModel
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -62,7 +63,7 @@ class GiftCard(TenantModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        "auth.User",
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

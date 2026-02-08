@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import { useStore } from '@/hooks/stores';
+import { useStoreContext } from '@/lib/store-context';
 
 interface StoreClientLayoutProps {
   children: React.ReactNode;
@@ -11,11 +12,24 @@ interface StoreClientLayoutProps {
 
 export default function StoreClientLayout({ children, storeId }: StoreClientLayoutProps) {
   const { data: store, isLoading, error } = useStore(storeId);
+  const { stores, currentStore, setCurrentStore } = useStoreContext();
   const router = useRouter();
 
+  // Sync URL storeId with StoreContext
+  useEffect(() => {
+    if (store && stores.length > 0) {
+      // Check if this store is in the user's accessible stores
+      const accessibleStore = stores.find(s => s.id.toString() === storeId);
+      if (accessibleStore && accessibleStore.id !== currentStore?.id) {
+        // Update the current store in context
+        setCurrentStore(accessibleStore);
+      }
+    }
+  }, [store, stores, storeId, currentStore, setCurrentStore]);
+
   // Handle authentication errors
-  const isAuthError = error && typeof error === 'object' && 'response' in error && 
-      error.response && typeof error.response === 'object' && 
+  const isAuthError = error && typeof error === 'object' && 'response' in error &&
+      error.response && typeof error.response === 'object' &&
       'status' in error.response && error.response.status === 401;
 
   // Redirect to login on authentication error
@@ -24,7 +38,7 @@ export default function StoreClientLayout({ children, storeId }: StoreClientLayo
       const timer = setTimeout(() => {
         router.push('/auth/login');
       }, 1500); // Brief delay to show message
-      
+
       return () => clearTimeout(timer);
     }
   }, [router, isAuthError]);

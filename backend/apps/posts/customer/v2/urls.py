@@ -1,8 +1,9 @@
 """Customer posts API urls."""
 
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
+
+from django.urls import include, path
 
 from .views import CommentCustomerViewSet, CustomerPostViewSet
 

@@ -9,6 +9,7 @@ from apps.notifications.models import Notification, NotificationPreference
 from apps.notifications.services import NotificationService
 from apps.posts.v2.models import Post, PostType
 from apps.stores.models import Store
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 

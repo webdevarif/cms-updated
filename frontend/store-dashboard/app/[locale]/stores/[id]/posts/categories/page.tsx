@@ -9,29 +9,30 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 import { Category } from '@/types/posts.types';
+import StoreLayout from '@/components/layouts/store-layout';
 
-export default function CategoriesPage() {
+export default function CategoriesPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const { data: categories, error, isLoading } = useCategories();
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
-  const [isActiveFilter, setIsActiveFilter] = useState('');
-  const [parentFilter, setParentFilter] = useState('');
+  const [isActiveFilter, setIsActiveFilter] = useState('all');
+  const [parentFilter, setParentFilter] = useState('all');
 
   // Memoized filtered categories
   const filteredCategories = useMemo(() => {
     return categories?.filter((category: Category) => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         category.slug?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         category.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesActive = isActiveFilter === '' || 
+
+      const matchesActive = isActiveFilter === 'all' ||
         (isActiveFilter === 'true' ? category.is_active : !category.is_active);
-      
-      const matchesParent = parentFilter === '' || 
+
+      const matchesParent = parentFilter === 'all' ||
         (parentFilter === 'none' ? !category.parent : category.parent?.id === parentFilter);
-      
+
       return matchesSearch && matchesActive && matchesParent;
     });
   }, [categories, searchTerm, isActiveFilter, parentFilter]);
@@ -51,7 +52,8 @@ export default function CategoriesPage() {
   if (error) return <div>Error loading categories: {(error as Error).message}</div>;
 
   return (
-    <div className="p-4">
+    <StoreLayout params={params}>
+      <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Categories</h1>
         <Button asChild>
@@ -66,13 +68,13 @@ export default function CategoriesPage() {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        
+
         <Select value={isActiveFilter} onValueChange={setIsActiveFilter}>
           <SelectTrigger>
             <SelectValue placeholder="Active Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All</SelectItem>
+            <SelectItem value="all">All</SelectItem>
             <SelectItem value="true">Active</SelectItem>
             <SelectItem value="false">Inactive</SelectItem>
           </SelectContent>
@@ -83,7 +85,7 @@ export default function CategoriesPage() {
             <SelectValue placeholder="Parent" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Parents</SelectItem>
+            <SelectItem value="all">All Parents</SelectItem>
             {parentOptions.map(option => (
               <SelectItem key={option.id} value={option.id}>
                 {option.name}
@@ -137,6 +139,7 @@ export default function CategoriesPage() {
           )) || <TableRow><TableCell colSpan={8}>No categories found</TableCell></TableRow>}
         </TableBody>
       </Table>
-    </div>
+      </div>
+    </StoreLayout>
   );
 }

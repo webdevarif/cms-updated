@@ -5,6 +5,7 @@ Product service for ecommerce app.
 import logging
 
 from apps.ecommerce.models import Cart, CartItem, Product, ProductVariant
+
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils import timezone

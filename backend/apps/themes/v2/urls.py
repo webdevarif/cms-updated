@@ -17,8 +17,9 @@ from apps.themes.v2.views import (
     ThemeViewSet,
     TypographyViewSet,
 )
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
 
 # API router for themes
 router = DefaultRouter()

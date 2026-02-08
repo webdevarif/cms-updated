@@ -5,6 +5,7 @@ MediaFile model for media management.
 import os
 
 from core.models import TenantModel
+
 from django.contrib.auth import get_user_model
 from django.db import models
 

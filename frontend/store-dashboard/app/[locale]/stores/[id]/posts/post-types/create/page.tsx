@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, use } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { useCreatePostType } from '@/hooks/posts';
 import { postTypeCreateSchema } from '@/schemas/posts.schemas';
 import { Button } from '@/components/ui/button';
@@ -9,27 +9,32 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
-export default function CreatePostTypePage() {
+
+import StoreLayout from '@/components/layouts/store-layout';
+export default function CreatePostTypePage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const [name, setName] = useState('');
   const [key, setKey] = useState('');
   const [description, setDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
   const { createPostType, isLoading } = useCreatePostType();
   const router = useRouter();
+  const params = useParams();
+  const storeId = params.id as string;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const result = postTypeCreateSchema.parse({ name, key, description, is_active: isActive });
-      await createPostType(result);
-      router.push('/posts/post-types');
+      await createPostType({ ...result, store: storeId });
+      router.push(`/stores/${storeId}/posts/post-types`);
     } catch (error) {
       console.error('Error creating post type:', error);
     }
   };
 
   return (
-    <div className="p-4">
+    <StoreLayout params={params}>
+      <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Create New Post Type</h1>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
@@ -73,5 +78,6 @@ export default function CreatePostTypePage() {
         </Button>
       </form>
     </div>
+      </StoreLayout>
   );
 }

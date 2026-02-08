@@ -3,8 +3,9 @@ Customer pages URLs - authenticated user manages own pages.
 Architectural + real implementation for customer pages interface.
 """
 
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
 
 from .views import PageCustomerViewSet
 

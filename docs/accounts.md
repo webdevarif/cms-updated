@@ -912,10 +912,103 @@ class Migration(migrations.Migration):
 
 ---
 
+## � JWT Troubleshooting
+
+### **"User matching query does not exist" Error**
+
+#### **Symptoms**
+- `POST /auth/jwt/refresh/` returns 500 Internal Server Error
+- Error: `User matching query does not exist`
+- JWT token contains `user_id` that doesn't exist in database
+
+#### **Root Cause**
+JWT refresh tokens contain embedded `user_id` values that become invalid when:
+- Database is reset/cleared during development
+- User accounts are deleted
+- User IDs change during migrations
+- Tokens are from old database state
+
+#### **How to Identify**
+Check the refresh token payload:
+```bash
+# Decode JWT token to see user_id
+echo "your_refresh_token_here" | python -c "
+import jwt, sys, base64
+token = sys.stdin.read().strip()
+header, payload, signature = token.split('.')
+decoded = base64.urlsafe_b64decode(payload + '=' * (4 - len(payload) % 4))
+print(decoded.decode())
+"
+```
+
+Expected: `{"user_id": "3", ...}` - if user ID 3 doesn't exist → error
+
+#### **Immediate Fix**
+Generate fresh tokens for current database users:
+
+```bash
+# 1. Check existing users
+python manage.py shell -c "
+from django.contrib.auth import get_user_model
+User = get_user_model()
+for user in User.objects.all():
+    print(f'ID: {user.id}, Email: {user.email}')
+"
+
+# 2. Generate fresh tokens
+python manage.py shell -c "
+from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.tokens import RefreshToken
+
+User = get_user_model()
+user = User.objects.first()  # Or get by email
+if user:
+    refresh = RefreshToken.for_user(user)
+    print(f'Access: {refresh.access_token}')
+    print(f'Refresh: {refresh}')
+"
+```
+
+#### **Prevention**
+- Don't use old refresh tokens after database resets
+- Implement token blacklisting for logout
+- Add token expiration handling in frontend
+- Use fresh login flow after major database changes
+
+#### **Code Example**
+```python
+# In your frontend/client
+function handleJwtRefresh() {
+    const refreshToken = localStorage.getItem('refresh_token');
+
+    return fetch('/auth/jwt/refresh/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({refresh: refreshToken})
+    })
+    .then(response => {
+        if (response.status === 401) {
+            // Token expired/invalid - redirect to login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            window.location.href = '/login';
+        } else if (!response.ok) {
+            // Other errors - handle gracefully
+            throw new Error('Token refresh failed');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Update tokens
+        localStorage.setItem('access_token', data.access);
+        if (data.refresh) {
+            localStorage.setItem('refresh_token', data.refresh);
+        }
+        return data.access;
+    });
+}
+```
+
+---
+
 **🚨 THESE RULES ARE MANDATORY - NO EXCEPTIONS!**
-
-Every accounts app development must follow these rules exactly. Any deviation will result in inconsistent user management and potential security issues.
-
-**Version: 1.0**
-**Last Updated: 2024-01-22**
-**Next Review: 2024-02-22**

@@ -2,8 +2,9 @@
 Dashboard gift cards URLs - admin interface for gift card management.
 """
 
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
 
 from .views import DashboardGiftCardViewSet
 

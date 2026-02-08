@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreateCategory, useCategories } from '@/hooks/posts';
 import { categoryCreateSchema } from '@/schemas/posts.schemas';
@@ -11,7 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 
-export default function CreateCategoryPage() {
+
+import StoreLayout from '@/components/layouts/store-layout';
+export default function CreateCategoryPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const router = useRouter();
   const { data: categories } = useCategories();
   const { createCategory, isLoading } = useCreateCategory();
@@ -34,14 +36,15 @@ export default function CreateCategoryPage() {
         is_active: isActive,
       });
       await createCategory(result);
-      router.push('/posts/categories');
+      router.push(`/stores/${storeId}/posts/categories`);
     } catch (error) {
       console.error('Error creating category:', error);
     }
   };
 
   return (
-    <div className="p-4">
+    <StoreLayout params={params}>
+      <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Create New Category</h1>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
@@ -109,5 +112,6 @@ export default function CreateCategoryPage() {
         </div>
       </form>
     </div>
+      </StoreLayout>
   );
 }

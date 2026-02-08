@@ -4,6 +4,7 @@ Routes WebSocket connections to appropriate consumers.
 """
 
 from consumers import DashboardConsumer, NotificationsConsumer, SearchConsumer
+
 from django.urls import path
 
 websocket_urlpatterns = [
